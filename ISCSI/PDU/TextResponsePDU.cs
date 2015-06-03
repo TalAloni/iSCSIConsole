@@ -1,0 +1,63 @@
+/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Utilities;
+
+namespace ISCSI
+{
+    public class TextResponsePDU : ISCSIPDU
+    {
+        public bool Continue;
+        public ulong LUN;
+        public uint TargetTransferTag;
+        public uint StatSN;
+        public uint ExpCmdSN;
+        public uint MaxCmdSN;
+
+        public string Text;
+
+        public TextResponsePDU() : base()
+        {
+            OpCode = (byte)ISCSIOpCodeName.TextResponse;
+        }
+
+        public TextResponsePDU(byte[] buffer) : base(buffer)
+        {
+            Continue = (OpCodeSpecificHeader[0] & 0x40) != 1;
+
+            LUN = BigEndianConverter.ToUInt64(LUNOrOpCodeSpecific, 0);
+
+            TargetTransferTag = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);
+            StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
+            ExpCmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 8);
+            MaxCmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 12);
+
+            Text = ASCIIEncoding.ASCII.GetString(Data);
+        }
+
+        public override byte[] GetBytes()
+        {
+            if (Continue)
+            {
+                OpCodeSpecificHeader[0] |= 0x40;
+            }
+
+            LUNOrOpCodeSpecific = BigEndianConverter.GetBytes(LUN);
+
+            Array.Copy(BigEndianConverter.GetBytes(TargetTransferTag), 0, OpCodeSpecific, 0, 4);
+            Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
+            Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);
+            Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
+
+            Data = ASCIIEncoding.ASCII.GetBytes(Text);
+
+            return base.GetBytes();
+        }
+    }
+}

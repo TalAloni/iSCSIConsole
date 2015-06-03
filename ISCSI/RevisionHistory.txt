@@ -1,0 +1,42 @@
+Revision History:
+-----------------
+1.0.0 - Initial release.
+
+1.0.1 - Support for multiple connections to the iSCSI server (one connection per session).
+		Disabled unnecessary disk read operations when logging is turned off.
+		
+1.0.2 - Write operation to disk is now performed only when the complete SCSI command data has been received.
+		Support for iSCSI command queue.
+		
+1.0.6 - Fixed protocol related bugs.
+		Properly handle implicit logout.
+		Improved logging.
+
+1.0.7 - Added support for the 'Request Sense' command.
+
+1.0.8 - Nagle's algorithm has been disabled.
+		Unsupported SCSI CDBs are now properly rejected.
+
+1.0.9 - Minor bugfix.
+
+1.1.0 - Minor bugfix.
+
+1.1.1 - Read requests outside LBA range are now returning the proper SCSI status.
+
+1.1.2 - Improved support for multiple connections to the iSCSI server.
+
+1.1.3 - Bugfix: CRC error was reported on all I/O errors.
+
+1.1.4 - Increased receive buffer size to 128KB.
+		Added timestamp to log.
+
+1.1.5 - The log file is now written directly to disk, without passing through the file system cache.
+
+1.1.7 - Bugfix: The NOP-Out response did not have the 'Initiator Task Tag' field set.
+
+1.1.8 - Added support for the Reserve6, Release6 SCSI commands.
+		Added support for the Control mode page (0x0A) PageCode for the ModeSense6 SCSI command.
+
+1.1.9 - Added support for the Read6, Write6 SCSI commands.
+		Added support for the Block Limits (0xB0), Block Device Characteristics (0xB1) VPD pages.
+		Unsupported SCSI commands are now properly reported to the initiator.

@@ -1,0 +1,54 @@
+Revision History:
+-----------------
+1.1.0 - LDM related bugfix.
+		NTFS related bugfix and code clean up.
+		
+1.1.1 - Minor enhancements.
+
+1.1.2 - Better handling of a corrupted LDM database.
+
+1.1.3 - Disabled file system caching for virtual disks.
+
+1.1.4 - Fixed GPT partition size detection bug.
+		Allow reading from disks that are opened for write access by other applications.
+
+1.1.5 - Improved disk detection mechanism.
+		Added limited VMDK support (monolithic flat).
+
+1.1.6 - Use the SetFileValidData() Windows API call to extend virtual disks faster.
+
+1.1.7 - Fixed VMDK related bug (flat files that have a space in their filename).
+		Added support for reading a monolithic sparse VMDK.
+
+1.1.8 - Fixed NTFS related issues.
+
+1.1.9 - Disks are now orderered according to disk number.
+		Code clean up.
+
+1.2.0 - NTFS related bugfixes.
+		Write operations on readonly disks are no longer silently ignored and now raising exceptions, added missing readonly check to VMDK files.
+
+1.2.1 - Minor enhancements and fixes.
+
+1.2.2 - Minor NTFS changes.
+
+1.2.3 - Fixed: LDM extent record now properly support the 0x40 flag.
+		Added helper methods for taking a disk online/offline.
+
+1.2.4 - NTFS related fixes.
+
+1.2.5 - Added support for reading dynamic VHDs.
+
+1.2.6 - More meaningful exceptions types are now thrown on errors.
+		Dynamic VHD related bugfix.
+
+1.2.7 - Minor improvements.
+
+1.2.8 - Bugfix: CRC32 was not updated when GPT partition was extended.
+      - Bugfix: Invalid protective MBR partition was written during GPT disk initialization.
+      - Bugfix: A few usable sectors may have been marked as unusable during GPT disk initialization.
+      - Bugfix: VHD was not extended to the correct size.
+
+1.2.9 - We now use noncached I/O operations when reading virtual disks (Workaround for hosts without KB981166).
+	  - Bugfix: GPT header checksum verification failed if the size of the partition entries was not a multiple of sector size.
+

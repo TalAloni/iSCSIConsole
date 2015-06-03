@@ -1,0 +1,120 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{225ABFC2-FCA5-4C23-B7E3-0874E9A60548}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ISCSI</RootNamespace>
+    <AssemblyName>ISCSI</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Enums\RejectReason.cs" />
+    <Compile Include="Exceptions\UnsupportedSCSICommandException.cs" />
+    <Compile Include="PDU\RejectPDU.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ControlModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockLimitsVPDPage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockDeviceCharacteristicsVPDPage.cs" />
+    <Compile Include="Server\ConnectionParameters.cs" />
+    <Compile Include="Enums\ISCSIOpCodeName.cs" />
+    <Compile Include="Enums\LoginResponseStatusClassName.cs" />
+    <Compile Include="SCSI\Enums\ModePageCodeName.cs" />
+    <Compile Include="SCSI\Enums\SCSIOpCodeName.cs" />
+    <Compile Include="SCSI\Enums\SCSIStatusCodeName.cs" />
+    <Compile Include="SCSI\Enums\ServiceAction.cs" />
+    <Compile Include="SCSI\Enums\VitalProductDataPageName.cs" />
+    <Compile Include="Server\ISCSIConnection.cs" />
+    <Compile Include="Server\ISCSIServer.cs" />
+    <Compile Include="Server\SessionParameters.cs" />
+    <Compile Include="Server\ISCSITarget.cs" />
+    <Compile Include="ISCSITester.cs" />
+    <Compile Include="KeyValuePairUtils.cs" />
+    <Compile Include="PDU\ISCSIPDU.cs" />
+    <Compile Include="PDU\LoginRequestPDU.cs" />
+    <Compile Include="PDU\LoginResponsePDU.cs" />
+    <Compile Include="PDU\LogoutRequestPDU.cs" />
+    <Compile Include="PDU\LogoutResponsePDU.cs" />
+    <Compile Include="PDU\NOPInPDU.cs" />
+    <Compile Include="PDU\NOPOutPDU.cs" />
+    <Compile Include="PDU\ReadyToTransferPDU.cs" />
+    <Compile Include="PDU\SCSICommandPDU.cs" />
+    <Compile Include="PDU\SCSIDataInPDU.cs" />
+    <Compile Include="PDU\SCSIDataOutPDU.cs" />
+    <Compile Include="PDU\SCSIResponsePDU.cs" />
+    <Compile Include="PDU\TextRequestPDU.cs" />
+    <Compile Include="PDU\TextResponsePDU.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\InquiryCommandDescriptorBlock.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\ModeSense6CommandDescriptorBlock.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\SCSICommandDescriptorBlock.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\SCSICommandDescriptorBlock10.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\SCSICommandDescriptorBlock12.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\SCSICommandDescriptorBlock16.cs" />
+    <Compile Include="SCSI\SCSICommandDescriptorBlock\SCSICommandDescriptorBlock6.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\CachingParametersPage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\InformationalExceptionsControlModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModePage0.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModeParameterHeader6.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ShortLBAModeParameterBlockDescriptor.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\VendorSpecificPage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ReadCapacity10Parameter.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ReadCapacity16Parameter.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ReportLUNsParameter.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\SenseDataParameter.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\StandardInquiryData.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\DeviceIdentificationVPDPage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\IdentificationDescriptor.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\SupportedVitaLProductDataPages.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\UnitSerialNumberVPDPage.cs" />
+    <Compile Include="Server\ServerResponseHelper.cs" />
+    <Compile Include="Server\StateObject.cs" />
+    <Compile Include="Server\TargetResponseHelper.cs" />
+    <Compile Include="Utilities\SocketUtils.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj">
+      <Project>{000D0367-63A1-475D-982D-67A0B93BABEB}</Project>
+      <Name>DiskAccessLibrary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Utilities\Utilities.csproj">
+      <Project>{6E0F2D1E-6167-4032-BA90-DEE3A99207D0}</Project>
+      <Name>Utilities</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="RevisionHistory.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
