@@ -51,7 +51,7 @@ namespace Utilities
                 int bytesRead = input.Read(buffer, 0, numberOfBytesToRead);
                 totalBytesRead += bytesRead;
                 output.Write(buffer, 0, bytesRead);
-                if (bytesRead < numberOfBytesToRead) // no more bytes to read from input stream
+                if (bytesRead == 0) // no more bytes to read from input stream
                 {
                     return totalBytesRead;
                 }

@@ -23,6 +23,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static void MoveExtentToAnotherDisk(List<DynamicDisk> disks, DynamicVolume volume, DynamicDiskExtent sourceExtent, DiskExtent relocatedExtent, ref long bytesCopied)
         {
             DiskGroupDatabase database = DiskGroupDatabase.ReadFromDisks(disks, volume.DiskGroupGuid);
+            if (database == null)
+            {
+                throw new DatabaseNotFoundException();
+            }
+
             // copy the data
             long transferSizeLBA = Settings.MaximumTransferSizeLBA;
             for (long sectorIndex = 0; sectorIndex < relocatedExtent.TotalSectors; sectorIndex += transferSizeLBA)
@@ -51,6 +56,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static void MoveExtentWithinSameDisk(List<DynamicDisk> disks, DynamicVolume volume, DynamicDiskExtent sourceExtent, DiskExtent relocatedExtent, ref long bytesCopied)
         {
             DiskGroupDatabase database = DiskGroupDatabase.ReadFromDisks(disks, volume.DiskGroupGuid);
+            if (database == null)
+            {
+                throw new DatabaseNotFoundException();
+            }
 
             MoveExtentOperationBootRecord resumeRecord = new MoveExtentOperationBootRecord();
             // If there will be a power failure during the move, a RAID volume will resync during boot,
@@ -174,6 +183,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private static void MoveExtentRight(List<DynamicDisk> disks, DynamicVolume volume, MoveExtentOperationBootRecord resumeRecord, ref long bytesCopied)
         {
             DiskGroupDatabase database = DiskGroupDatabase.ReadFromDisks(disks, volume.DiskGroupGuid);
+            if (database == null)
+            {
+                throw new DatabaseNotFoundException();
+            }
 
             int extentIndex = DynamicDiskExtentHelper.GetIndexOfExtentID(volume.DynamicExtents, resumeRecord.ExtentID);
             DynamicDiskExtent sourceExtent = volume.DynamicExtents[extentIndex];
@@ -207,6 +220,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private static void MoveExtentLeft(List<DynamicDisk> disks, DynamicVolume volume, MoveExtentOperationBootRecord resumeRecord, ref long bytesCopied)
         {
             DiskGroupDatabase database = DiskGroupDatabase.ReadFromDisks(disks, volume.DiskGroupGuid);
+            if (database == null)
+            {
+                throw new DatabaseNotFoundException();
+            }
 
             DynamicDiskExtent relocatedExtent = DynamicDiskExtentHelper.GetByExtentID(volume.DynamicExtents, resumeRecord.ExtentID);
             if (resumeRecord.OldStartSector == (ulong)relocatedExtent.FirstSector)

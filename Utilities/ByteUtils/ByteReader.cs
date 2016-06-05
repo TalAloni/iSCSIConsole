@@ -102,9 +102,9 @@ namespace Utilities
 
         public static byte[] ReadBytes(Stream stream, int count)
         {
-            byte[] buffer = new byte[count];
-            stream.Read(buffer, 0, count);
-            return buffer;
+            MemoryStream temp = new MemoryStream();
+            ByteUtils.CopyStream(stream, temp, count);
+            return temp.ToArray();
         }
 
         /// <summary>
@@ -112,9 +112,9 @@ namespace Utilities
         /// </summary>
         public static byte[] ReadAllBytes(Stream stream)
         {
-            byte[] buffer = new byte[stream.Length - stream.Position];
-            stream.Read(buffer, 0, buffer.Length);
-            return buffer;
+            MemoryStream temp = new MemoryStream();
+            ByteUtils.CopyStream(stream, temp);
+            return temp.ToArray();
         }
     }
 }

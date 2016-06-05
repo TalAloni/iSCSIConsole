@@ -1,7 +1,14 @@
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using System.Text;
 using DiskAccessLibrary;
+using ISCSI.Server;
 using Utilities;
 
 namespace ISCSIConsole
@@ -24,7 +31,7 @@ namespace ISCSIConsole
                     m_debug = true;
                 }
 
-                if (parameters.ContainsKey("commandqueue"))
+                if (parameters.ContainsKey("CommandQueue".ToLower()))
                 {
                     int requestedCommandQueueSize = Conversion.ToInt32(parameters.ValueOf("commandqueue"), 0);
                     if (requestedCommandQueueSize < 0)
@@ -33,7 +40,7 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSI.ISCSIServer.CommandQueueSize = (uint)requestedCommandQueueSize;
+                    SessionParameters.DefaultCommandQueueSize = (uint)requestedCommandQueueSize;
                 }
 
                 if (parameters.ContainsKey("MaxRecvDataSegmentLength".ToLower()))
@@ -45,8 +52,8 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSI.ISCSIServer.MaxRecvDataSegmentLength = (uint)requestedMaxRecvDataSegmentLength;
-                    Console.WriteLine("MaxRecvDataSegmentLength has been set to " + ISCSI.ISCSIServer.OfferedMaxBurstLength);
+                    ConnectionParameters.DeclaredMaxRecvDataSegmentLength = requestedMaxRecvDataSegmentLength;
+                    Console.WriteLine("MaxRecvDataSegmentLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
                 }
 
                 if (parameters.ContainsKey("MaxBurstLength".ToLower()))
@@ -58,13 +65,13 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSI.ISCSIServer.OfferedMaxBurstLength = (uint)requestedMaxBurstLength;
-                    Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSI.ISCSIServer.OfferedMaxBurstLength);
-                    if (ISCSI.ISCSIServer.OfferedMaxBurstLength < ISCSI.ISCSIServer.OfferedFirstBurstLength)
+                    ISCSIServer.OfferedMaxBurstLength = requestedMaxBurstLength;
+                    Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
+                    if (ISCSIServer.OfferedMaxBurstLength < ISCSIServer.OfferedFirstBurstLength)
                     {
                         // FirstBurstLength MUST NOT exceed MaxBurstLength
-                        ISCSI.ISCSIServer.OfferedFirstBurstLength = ISCSI.ISCSIServer.OfferedMaxBurstLength;
-                        Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSI.ISCSIServer.OfferedFirstBurstLength);
+                        ISCSIServer.OfferedFirstBurstLength = ISCSIServer.OfferedMaxBurstLength;
+                        Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.OfferedFirstBurstLength);
                     }
                 }
 
@@ -77,13 +84,13 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSI.ISCSIServer.OfferedFirstBurstLength = (uint)requestedFirstBurstLength;
-                    Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSI.ISCSIServer.OfferedFirstBurstLength);
-                    if (ISCSI.ISCSIServer.OfferedMaxBurstLength < ISCSI.ISCSIServer.OfferedFirstBurstLength)
+                    ISCSIServer.OfferedFirstBurstLength = requestedFirstBurstLength;
+                    Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.OfferedFirstBurstLength);
+                    if (ISCSIServer.OfferedMaxBurstLength < ISCSIServer.OfferedFirstBurstLength)
                     {
                         // FirstBurstLength MUST NOT exceed MaxBurstLength
-                        ISCSI.ISCSIServer.OfferedMaxBurstLength = ISCSI.ISCSIServer.OfferedFirstBurstLength;
-                        Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSI.ISCSIServer.OfferedMaxBurstLength);
+                        ISCSIServer.OfferedMaxBurstLength = ISCSIServer.OfferedFirstBurstLength;
+                        Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
                     }
                 }
             }

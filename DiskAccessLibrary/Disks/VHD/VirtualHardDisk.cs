@@ -74,6 +74,16 @@ namespace DiskAccessLibrary
             m_sectorsPerTrack = sectorsPerTrack;
         }
 
+        public override bool ExclusiveLock()
+        {
+            return m_file.ExclusiveLock();
+        }
+
+        public override bool ReleaseLock()
+        {
+            return m_file.ReleaseLock();
+        }
+
         /// <summary>
         /// Sector refers to physical disk sector, we can only read complete sectors
         /// </summary>
@@ -127,12 +137,10 @@ namespace DiskAccessLibrary
             if (m_vhdFooter.DiskType == VirtualHardDiskType.Fixed)
             {
                 long length = this.Size; // does not include the footer
-                FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FileOptions.WriteThrough);
-                stream.SetLength(length + additionalNumberOfBytes + VHDFooter.Length);
-                stream.Seek(length + additionalNumberOfBytes, SeekOrigin.Begin);
+                m_file.Extend(additionalNumberOfBytes);
                 m_vhdFooter.CurrentSize += (ulong)additionalNumberOfBytes;
-                stream.Write(m_vhdFooter.GetBytes(), 0, VHDFooter.Length);
-                stream.Close();
+                byte[] footerBytes = m_vhdFooter.GetBytes();
+                m_file.WriteSectors((length + additionalNumberOfBytes) / this.BytesPerSector, footerBytes);
             }
             else
             {
@@ -161,14 +169,6 @@ namespace DiskAccessLibrary
             get
             {
                 return m_sectorsPerTrack;
-            }
-        }
-
-        public override int BytesPerSector
-        {
-            get
-            {
-                return BytesPerDiskImageSector;
             }
         }
 

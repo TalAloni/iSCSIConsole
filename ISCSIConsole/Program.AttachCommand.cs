@@ -1,9 +1,15 @@
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using System.IO;
 using DiskAccessLibrary;
 using DiskAccessLibrary.LogicalDiskManager;
-using ISCSI;
+using ISCSI.Server;
 using Utilities;
 
 namespace ISCSIConsole
@@ -50,13 +56,7 @@ namespace ISCSIConsole
                             DiskImage disk = (DiskImage)m_selectedDisk;
                             string defaultStorageTargetName = Path.GetFileNameWithoutExtension(disk.Path);
                             string defaultTargetName = DefaultTargetIQN + ":" + defaultStorageTargetName.Replace(" ", ""); // spaces are not allowed
-                            bool success = AttachISCSIDisk(disk, defaultTargetName, parameters);
-                            if (!success)
-                            {
-                                Console.WriteLine();
-                                Console.WriteLine("Invalid parameter.");
-                                HelpAttach();
-                            }
+                            AttachISCSIDisk(disk, defaultTargetName, parameters);
                             break;
                         }
                     case "disk":
@@ -104,13 +104,7 @@ namespace ISCSIConsole
                             }
                             string defaultStorageTargetName = string.Format("disk{0}", disk.PhysicalDiskIndex);
                             string defaultTargetName = DefaultTargetIQN + ":" + defaultStorageTargetName;
-                            bool success = AttachISCSIDisk(disk, defaultTargetName, parameters);
-                            if (!success)
-                            {
-                                Console.WriteLine();
-                                Console.WriteLine("Invalid parameter.");
-                                HelpAttach();
-                            }
+                            AttachISCSIDisk(disk, defaultTargetName, parameters);
                             break;
                         }
                     case "volume":
@@ -179,14 +173,7 @@ namespace ISCSIConsole
                                     Console.WriteLine("Warning: if this volume is mounted locally, data corruption may occur!");
                                 }
                             }
-                            bool success = AttachISCSIDisk(virtualDisk, defaultTargetName, parameters);                            
-
-                            if (!success)
-                            {
-                                Console.WriteLine();
-                                Console.WriteLine("Invalid parameter.");
-                                HelpAttach();
-                            }
+                            AttachISCSIDisk(virtualDisk, defaultTargetName, parameters);
                             break;
                         }
                     default:
@@ -212,12 +199,21 @@ namespace ISCSIConsole
             Console.WriteLine("ATTACH VOLUME [READONLY] [TARGET=<NAME>] - Attach selected volume");
         }
 
-        public static bool AttachISCSIDisk(Disk disk, string defaultTargetName, KeyValuePairList<string, string> parameters)
+        public static void AttachISCSIDisk(Disk disk, string defaultTargetName, KeyValuePairList<string, string> parameters)
         {
             if (VerifyParameters(parameters, "readonly", "target"))
             {
                 bool isReadOnly = parameters.ContainsKey("readonly");
                 disk.IsReadOnly |= isReadOnly;
+                if (disk is DiskImage)
+                {
+                    bool isLocked = ((DiskImage)disk).ExclusiveLock();
+                    if (!isLocked)
+                    {
+                        Console.WriteLine("Error: Cannot lock the disk image for exclusive access");
+                        return;
+                    }
+                }
 
                 ISCSITarget target = null;
                 string targetName = defaultTargetName;
@@ -234,8 +230,8 @@ namespace ISCSIConsole
                     }
                     else
                     {
-                        // The caller will display invalid parameter error
-                        return false;
+                        Console.WriteLine("Invalid parameter.");
+                        HelpAttach();
                     }
                 }
 
@@ -248,11 +244,10 @@ namespace ISCSIConsole
 
                 target.Disks.Add(disk);
                 Console.WriteLine("Disk added to target: {0}", target.TargetName);
-                return true;
             }
             else
             {
-                return false;
+                HelpAttach();
             }
         }
 

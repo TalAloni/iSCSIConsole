@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -18,8 +18,8 @@ namespace ISCSI
         public bool ResidualOverflow;
         public bool ResidualUnderflow;
         public bool StatusPresent; // indicate that the Command Status field contains status
-        public byte Status;
-        public ulong LUN;
+        public SCSIStatusCodeName Status;
+        public LUNStructure LUN;
         public uint TargetTransferTag;
         public uint StatSN;
         public uint ExpCmdSN;
@@ -30,19 +30,19 @@ namespace ISCSI
 
         public SCSIDataInPDU()
         {
-            OpCode = (byte)ISCSIOpCodeName.SCSIDataIn;
+            OpCode = ISCSIOpCodeName.SCSIDataIn;
         }
 
         public SCSIDataInPDU(byte[] buffer) : base(buffer)
         {
-            Acknowledge = (OpCodeSpecificHeader[0] & 0x40) != 1;
-            ResidualOverflow = (OpCodeSpecificHeader[0] & 0x04) != 1;
-            ResidualUnderflow = (OpCodeSpecificHeader[0] & 0x02) != 1;
-            StatusPresent = (OpCodeSpecificHeader[0] & 0x01) != 1;
+            Acknowledge = (OpCodeSpecificHeader[0] & 0x40) != 0;
+            ResidualOverflow = (OpCodeSpecificHeader[0] & 0x04) != 0;
+            ResidualUnderflow = (OpCodeSpecificHeader[0] & 0x02) != 0;
+            StatusPresent = (OpCodeSpecificHeader[0] & 0x01) != 0;
 
-            Status = OpCodeSpecificHeader[2];
+            Status = (SCSIStatusCodeName)OpCodeSpecificHeader[2];
 
-            LUN = BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 0);
+            LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
 
             TargetTransferTag = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);
             StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
@@ -74,9 +74,9 @@ namespace ISCSI
                 Final = true;
             }
 
-            OpCodeSpecificHeader[2] = Status;
+            OpCodeSpecificHeader[2] = (byte)Status;
 
-            LUNOrOpCodeSpecific = BigEndianConverter.GetBytes(LUN);
+            LUNOrOpCodeSpecific = LUN.GetBytes();
 
             Array.Copy(BigEndianConverter.GetBytes(TargetTransferTag), 0, OpCodeSpecific, 0, 4);
             Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);

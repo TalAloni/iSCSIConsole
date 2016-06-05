@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,8 +13,8 @@ namespace ISCSI
 {
     public class LoginRequestPDU : ISCSIPDU
     {
-        public bool Transit;
-        public bool Continue;
+        public bool Transit; // indicates that the initiator is ready to transit to the next stage
+        public bool Continue; // indicates that the text (set of key=value pairs) in this Login Request is not complete
         public byte CurrentStage; // 0..3
         public byte NextStage;    // 0..3
 
@@ -31,7 +31,7 @@ namespace ISCSI
 
         public LoginRequestPDU() : base()
         {
-            OpCode = (byte)ISCSIOpCodeName.LoginRequest;
+            OpCode = ISCSIOpCodeName.LoginRequest;
             ImmediateDelivery = true;
         }
 
@@ -45,7 +45,7 @@ namespace ISCSI
             VersionMax = OpCodeSpecificHeader[1];
             VersionMin = OpCodeSpecificHeader[2];
 
-            ISID = BigEndianConverter.ToUInt32(LUNOrOpCodeSpecific, 0) << 16 | BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 4);
+            ISID = (ulong)BigEndianConverter.ToUInt32(LUNOrOpCodeSpecific, 0) << 16 | BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 4);
             TSIH = BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 6);
 
             CID = BigEndianConverter.ToUInt16(OpCodeSpecific, 0);
@@ -79,7 +79,7 @@ namespace ISCSI
             Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);
             Array.Copy(BigEndianConverter.GetBytes(ExpStatSN), 0, OpCodeSpecific, 8, 4);
 
-            string parametersString = KeyValuePairUtils.GetNullDelimitedKeyValuePair(LoginParameters);
+            string parametersString = KeyValuePairUtils.ToNullDelimitedString(LoginParameters);
             Data = ASCIIEncoding.ASCII.GetBytes(parametersString);
 
             return base.GetBytes();

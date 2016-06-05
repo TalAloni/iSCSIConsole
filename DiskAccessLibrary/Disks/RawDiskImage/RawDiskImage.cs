@@ -14,8 +14,43 @@ namespace DiskAccessLibrary
 {
     public partial class RawDiskImage : DiskImage
     {
+        const FileOptions FILE_FLAG_NO_BUFFERING = (FileOptions)0x20000000;
+        private bool m_isExclusiveLock;
+        private FileStream m_stream;
+
         public RawDiskImage(string rawDiskImagePath) : base(rawDiskImagePath)
         {
+        }
+
+        public override bool ExclusiveLock()
+        {
+            if (!m_isExclusiveLock)
+            {
+                m_isExclusiveLock = true;
+                FileAccess fileAccess = IsReadOnly ? FileAccess.Read : FileAccess.ReadWrite;
+                // We should use noncached I/O operations to avoid excessive RAM usage.
+                // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
+                m_stream = new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public override bool ReleaseLock()
+        {
+            if (m_isExclusiveLock)
+            {
+                m_isExclusiveLock = false;
+                m_stream.Close();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -24,13 +59,20 @@ namespace DiskAccessLibrary
         public override byte[] ReadSectors(long sectorIndex, int sectorCount)
         {
             CheckBoundaries(sectorIndex, sectorCount);
-            // We should use noncached I/O operations in case KB981166 is not installed on the host.
-            FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000, FileOptions.WriteThrough);
+            if (!m_isExclusiveLock)
+            {
+                // We should use noncached I/O operations to avoid excessive RAM usage.
+                // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
+                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+            }
             long offset = sectorIndex * BytesPerSector;
-            stream.Seek(offset, SeekOrigin.Begin);
+            m_stream.Seek(offset, SeekOrigin.Begin);
             byte[] result = new byte[BytesPerSector * sectorCount];
-            stream.Read(result, 0, BytesPerSector * sectorCount);
-            stream.Close();
+            m_stream.Read(result, 0, BytesPerSector * sectorCount);
+            if (!m_isExclusiveLock)
+            {
+                m_stream.Close();
+            }
             return result;
         }
 
@@ -42,13 +84,20 @@ namespace DiskAccessLibrary
             }
 
             CheckBoundaries(sectorIndex, data.Length / this.BytesPerSector);
-            // We must avoid using the file system cache for writing, using it will negatively affect the performance and reliability.
-            // Note: once the file system cache is filled, Windows may delay any (cache-dependent) pending write operations, which will create a deadlock.
-            FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FileOptions.WriteThrough);
+            if (!m_isExclusiveLock)
+            {
+                // We should use noncached I/O operations to avoid excessive RAM usage.
+                // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
+                // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
+                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+            }
             long offset = sectorIndex * BytesPerSector;
-            stream.Seek(offset, SeekOrigin.Begin);
-            stream.Write(data, 0, data.Length);
-            stream.Close();
+            m_stream.Seek(offset, SeekOrigin.Begin);
+            m_stream.Write(data, 0, data.Length);
+            if (!m_isExclusiveLock)
+            {
+                m_stream.Close();
+            }
         }
 
         public override void Extend(long additionalNumberOfBytes)
@@ -59,9 +108,15 @@ namespace DiskAccessLibrary
             }
 
             long length = this.Size;
-            FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FileOptions.WriteThrough);
-            stream.SetLength(length + additionalNumberOfBytes);
-            stream.Close();
+            if (!m_isExclusiveLock)
+            {
+                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+            }
+            m_stream.SetLength(length + additionalNumberOfBytes);
+            if (m_isExclusiveLock)
+            {
+                m_stream.Close();
+            }
         }
 
         public override int BytesPerSector

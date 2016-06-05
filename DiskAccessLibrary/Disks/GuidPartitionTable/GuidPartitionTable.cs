@@ -80,6 +80,23 @@ namespace DiskAccessLibrary
                 // less than 1MB will cause the conversion to dynamic disk to fail.
                 throw new ArgumentException("Reserved partition size must be at least 1MB");
             }
+
+            List<GuidPartitionEntry> partitionEntries = new List<GuidPartitionEntry>();
+            if (reservedPartitionSizeLBA > 0)
+            {
+                GuidPartitionEntry reservedEntry = new GuidPartitionEntry();
+                reservedEntry.PartitionGuid = Guid.NewGuid();
+                reservedEntry.PartitionTypeGuid = GPTPartition.MicrosoftReservedPartititionTypeGuid;
+                reservedEntry.FirstLBA = (ulong)firstUsableLBA;
+                reservedEntry.LastLBA = (ulong)(firstUsableLBA + reservedPartitionSizeLBA - 1);
+                reservedEntry.PartitionName = "Microsoft reserved partition";
+                partitionEntries.Add(reservedEntry);
+            }
+            InitializeDisk(disk, firstUsableLBA, partitionEntries);
+        }
+
+        public static void InitializeDisk(Disk disk, long firstUsableLBA, List<GuidPartitionEntry> partitionEntries)
+        {
             MasterBootRecord mbr = new MasterBootRecord();
             mbr.DiskSignature = (uint)new Random().Next(Int32.MaxValue);
             mbr.PartitionTable[0].PartitionTypeName = PartitionTypeName.EFIGPT;
@@ -106,15 +123,9 @@ namespace DiskAccessLibrary
             primaryHeader.SizeOfPartitionEntry = DefaultSizeOfEntry;
             byte[] partitionTableEntries = new byte[partitionEntriesLength];
 
-            if (reservedPartitionSizeLBA > 0)
+            for(int index = 0; index < partitionEntries.Count; index++)
             {
-                GuidPartitionEntry reservedEntry = new GuidPartitionEntry();
-                reservedEntry.PartitionGuid = Guid.NewGuid();
-                reservedEntry.PartitionTypeGuid = GPTPartition.MicrosoftReservedPartititionTypeGuid;
-                reservedEntry.FirstLBA = (ulong)firstUsableLBA;
-                reservedEntry.LastLBA = (ulong)(firstUsableLBA + reservedPartitionSizeLBA - 1);
-                reservedEntry.PartitionName = "Microsoft reserved partition";
-                reservedEntry.WriteBytes(partitionTableEntries, 0);
+                partitionEntries[index].WriteBytes(partitionTableEntries, index * DefaultSizeOfEntry);
             }
             primaryHeader.PartitionArrayCRC32 = CRC32.Compute(partitionTableEntries);
 

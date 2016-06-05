@@ -15,11 +15,13 @@ namespace ISCSI
         LogoutRequest = 0x06,
         NOPIn = 0x20,
         SCSIResponse = 0x21,
+        //SCSITaskManagementFunctionResponse = 0x22,
         LoginResponse = 0x23,
         TextResponse = 0x24,
         SCSIDataIn = 0x25,
         LogoutResponse = 0x26,
         ReadyToTransfer = 0x31,
+        //AsynchronousMessage = 0x32,
         Reject = 0x3F,
     }
 }

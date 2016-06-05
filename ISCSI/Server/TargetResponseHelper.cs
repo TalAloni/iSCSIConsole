@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -12,33 +12,28 @@ using System.Runtime.InteropServices;
 using DiskAccessLibrary;
 using Utilities;
 
-namespace ISCSI
+namespace ISCSI.Server
 {
     public class TargetResponseHelper
     {
-        // Target Transfer Tag:
-        // There are no protocol specific requirements with regard to the value of these tags,
-        // but it is assumed that together with the LUN, they will enable the target to associate data with an R2T
-        public static object m_transferTagLock = new object();
-        public static uint m_nextTransferTag; // TargetTransferTag
-
         private enum ErrorToReport { None, IncorrectLUN, CRCError, UnitAttention, OutOfRange, UnsupportedCommandCode };
 
-        internal static List<ISCSIPDU> GetSCSIResponsePDU(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        internal static List<ISCSIPDU> GetSCSIResponsePDU(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             // We return either SCSIResponsePDU or SCSIDataInPDU
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
             
             ErrorToReport errorToReport = ErrorToReport.None;
+            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
 
             if (command.CommandDescriptorBlock.OpCode == SCSIOpCodeName.TestUnitReady)
             {
                 if (LUN < target.Disks.Count)
                 {
                     SCSIResponsePDU response = new SCSIResponsePDU();
-                    PrepareSCSIResponsePDU(response, command, connection);
+                    response.InitiatorTaskTag = command.InitiatorTaskTag;
                     response.Status = SCSIStatusCodeName.Good;
                     responseList.Add(response);
                 }
@@ -53,7 +48,7 @@ namespace ISCSI
                 if (LUN < target.Disks.Count)
                 {
                     SCSIResponsePDU response = new SCSIResponsePDU();
-                    PrepareSCSIResponsePDU(response, command, connection);
+                    response.InitiatorTaskTag = command.InitiatorTaskTag;
                     response.Status = SCSIStatusCodeName.Good;
                     response.Data = FormatSenseData(SenseDataParameter.GetNoSenseSenseData());
                     responseList.Add(response);
@@ -67,7 +62,7 @@ namespace ISCSI
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIDataInPDU response = Inquiry(command, target, connection);
+                    SCSIDataInPDU response = Inquiry(command, target);
                     responseList.Add(response);
                 }
                 else
@@ -80,7 +75,7 @@ namespace ISCSI
                 if (LUN < target.Disks.Count)
                 {
                     SCSIResponsePDU response = new SCSIResponsePDU();
-                    PrepareSCSIResponsePDU(response, command, connection);
+                    response.InitiatorTaskTag = command.InitiatorTaskTag;
                     response.Status = SCSIStatusCodeName.Good;
                     responseList.Add(response);
                 }
@@ -94,7 +89,7 @@ namespace ISCSI
                 if (LUN < target.Disks.Count)
                 {
                     SCSIResponsePDU response = new SCSIResponsePDU();
-                    PrepareSCSIResponsePDU(response, command, connection);
+                    response.InitiatorTaskTag = command.InitiatorTaskTag;
                     response.Status = SCSIStatusCodeName.Good;
                     responseList.Add(response);
                 }
@@ -107,7 +102,7 @@ namespace ISCSI
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIDataInPDU response = ModeSense6(command, target, connection);
+                    SCSIDataInPDU response = ModeSense6(command, target);
                     responseList.Add(response);
                 }
                 else
@@ -119,7 +114,7 @@ namespace ISCSI
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIDataInPDU response = ReadCapacity10(command, target, connection);
+                    SCSIDataInPDU response = ReadCapacity10(command, target);
                     EnforceAllocationLength(response, command.ExpectedDataTransferLength);
                     responseList.Add(response);
                 }
@@ -174,7 +169,7 @@ namespace ISCSI
                 {
                     try
                     {
-                        ISCSIPDU response = Write(command, target, connection);
+                        ISCSIPDU response = Write(command, target, session, connection);
                         responseList.Add(response);
                     }
                     catch (ArgumentOutOfRangeException)
@@ -197,7 +192,7 @@ namespace ISCSI
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIResponsePDU response = Verify(command, target, connection);
+                    SCSIResponsePDU response = Verify(command, target);
                     responseList.Add(response);
                 }
                 else
@@ -209,7 +204,7 @@ namespace ISCSI
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIResponsePDU response = SynchronizeCache10(command, target, connection);
+                    SCSIResponsePDU response = SynchronizeCache10(command, target);
                     responseList.Add(response);
                 }
                 else
@@ -218,11 +213,11 @@ namespace ISCSI
                 }
             }
             else if (command.CommandDescriptorBlock.OpCode == SCSIOpCodeName.ServiceActionIn &&
-                     command.CommandDescriptorBlock.ServiceAction == (byte)ServiceAction.ReadCapacity16)
+                     command.CommandDescriptorBlock.ServiceAction == ServiceAction.ReadCapacity16)
             {
                 if (LUN < target.Disks.Count)
                 {
-                    SCSIDataInPDU response = ReadCapacity16(command, target, connection);
+                    SCSIDataInPDU response = ReadCapacity16(command, target);
                     EnforceAllocationLength(response, command.ExpectedDataTransferLength);
                     responseList.Add(response);
                 }
@@ -233,24 +228,24 @@ namespace ISCSI
             }
             else if (command.CommandDescriptorBlock.OpCode == SCSIOpCodeName.ReportLUNs)
             {
-                SCSIDataInPDU response = ReportLUNs(command, target, connection);
+                SCSIDataInPDU response = ReportLUNs(command, target);
                 responseList.Add(response);
             }
             else
             {
-                ISCSIServer.Log("[{0}][GetSCSIResponsePDU] Unsupported SCSI Command (0x{1})", connection.Identifier, command.CommandDescriptorBlock.OpCode.ToString("X"));
+                ISCSIServer.Log("[{0}][GetSCSIResponsePDU] Unsupported SCSI Command (0x{1})", connectionIdentifier, command.CommandDescriptorBlock.OpCode.ToString("X"));
                 errorToReport = ErrorToReport.UnsupportedCommandCode;
             }
 
             if (errorToReport != ErrorToReport.None)
             {
                 SCSIResponsePDU response = new SCSIResponsePDU();
-                PrepareSCSIResponsePDU(response, command, connection);
+                response.InitiatorTaskTag = command.InitiatorTaskTag;
                 response.Status = SCSIStatusCodeName.CheckCondition;
                 if (errorToReport == ErrorToReport.IncorrectLUN)
                 {
                     response.Data = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                    ISCSIServer.Log("[{0}][GetSCSIResponsePDU] Incorrect LUN", connection.Identifier);
+                    ISCSIServer.Log("[{0}][GetSCSIResponsePDU] Incorrect LUN", connectionIdentifier);
                 }
                 else if (errorToReport == ErrorToReport.CRCError)
                 {
@@ -274,71 +269,7 @@ namespace ISCSI
             return responseList;
         }
 
-        internal static uint AllocateTransferTag()
-        {
-            uint transferTag;
-            lock (m_transferTagLock)
-            {
-                transferTag = m_nextTransferTag;
-                m_nextTransferTag++;
-            }
-            return transferTag;
-        }
-
-        internal static uint AllocateR2TSN(ISCSIConnection connection, uint transferTag)
-        {
-            uint nextR2TSN = connection.NextR2TSN[transferTag];
-            connection.NextR2TSN[transferTag]++;
-            return nextR2TSN;
-        }
-
-        internal static void PrepareSCSIResponsePDU(SCSIResponsePDU response, SCSICommandPDU command, ISCSIConnection connection)
-        {
-            response.InitiatorTaskTag = command.InitiatorTaskTag;
-            response.StatSN = connection.StatSN;
-            response.ExpCmdSN = command.CmdSN + 1;
-            response.MaxCmdSN = command.CmdSN + 1 + ISCSIServer.CommandQueueSize;
-
-            connection.ExpCmdSN = command.CmdSN + 1;
-            connection.StatSN++;
-        }
-
-        internal static void PrepareSCSIResponsePDU(SCSIResponsePDU response, SCSIDataOutPDU request, ISCSIConnection connection)
-        {
-            response.InitiatorTaskTag = request.InitiatorTaskTag;
-            response.StatSN = connection.StatSN;
-            response.ExpCmdSN = connection.ExpCmdSN;
-            response.MaxCmdSN = connection.ExpCmdSN + ISCSIServer.CommandQueueSize;
-
-            connection.StatSN++;
-        }
-
-        internal static void PrepareReadyToTransferPDU(ReadyToTransferPDU response, SCSICommandPDU command, ISCSIConnection connection)
-        {
-            response.InitiatorTaskTag = command.InitiatorTaskTag;
-            response.StatSN = connection.StatSN;
-            response.ExpCmdSN = command.CmdSN + 1;
-            response.MaxCmdSN = command.CmdSN + 1 + ISCSIServer.CommandQueueSize;
-
-            response.R2TSN = 0; // R2Ts are sequenced per command and must start with 0 for each new command
-            connection.ExpCmdSN = command.CmdSN + 1;
-            // The StatSN for this connection is not advanced after this PDU is sent
-        }
-
-        internal static void PrepareReadyToTransferPDU(ReadyToTransferPDU response, SCSIDataOutPDU request, ISCSIConnection connection)
-        {
-            response.InitiatorTaskTag = request.InitiatorTaskTag;
-            response.StatSN = connection.StatSN;
-            response.ExpCmdSN = connection.ExpCmdSN;
-            response.MaxCmdSN = connection.ExpCmdSN + ISCSIServer.CommandQueueSize;
-            
-            response.TargetTransferTag = request.TargetTransferTag;
-            response.R2TSN = AllocateR2TSN(connection, request.TargetTransferTag);
-
-            // The StatSN for this connection is not advanced after this PDU is sent
-        }
-
-        internal static void PrepareSCSIDataInPDU(SCSIDataInPDU response, SCSICommandPDU command, ISCSIConnection connection, Nullable<SCSIStatusCodeName> status)
+        internal static void PrepareSCSIDataInPDU(SCSIDataInPDU response, SCSICommandPDU command, Nullable<SCSIStatusCodeName> status)
         {
             // StatSN, Status, and Residual Count only have meaningful content if the S bit is set to 1
             response.InitiatorTaskTag = command.InitiatorTaskTag;
@@ -346,14 +277,8 @@ namespace ISCSI
             {
                 response.StatusPresent = true;
                 response.Final = true; // If the S bit is set to 1, the F bit MUST also be set to 1
-                response.Status = (byte)status.Value;
-                response.StatSN = connection.StatSN;
-                connection.StatSN++;
+                response.Status = status.Value;
             }
-            response.ExpCmdSN = command.CmdSN + 1;
-            response.MaxCmdSN = command.CmdSN + 1 + ISCSIServer.CommandQueueSize;
-
-            connection.ExpCmdSN = command.CmdSN + 1;
         }
 
         public static void EnforceAllocationLength(SCSIDataInPDU response, uint allocationLength)
@@ -373,8 +298,9 @@ namespace ISCSI
             }
         }
 
-        internal static ISCSIPDU GetSCSIDataOutResponsePDU(SCSIDataOutPDU request, ISCSITarget target, ISCSIConnection connection)
+        internal static ISCSIPDU GetSCSIDataOutResponsePDU(SCSIDataOutPDU request, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
+            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
             if (connection.Transfers.ContainsKey(request.TargetTransferTag))
             { 
                 byte LUN = (byte)request.LUN;
@@ -389,25 +315,25 @@ namespace ISCSI
                     byte[] commandData = connection.TransferData[request.TargetTransferTag];
                     Array.Copy(request.Data, 0, commandData, offset, request.DataSegmentLength);
                     
-                    ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connection.Identifier, offset, totalLength));
+                    ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connectionIdentifier, offset, totalLength));
 
                     if (offset + request.DataSegmentLength == totalLength)
                     {
                         // Last Data-out PDU
-                        ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Last Data-out PDU", connection.Identifier);
+                        ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Last Data-out PDU", connectionIdentifier);
                         
                         if (!disk.IsReadOnly)
                         {
                             long sectorIndex = (long)connection.Transfers[request.TargetTransferTag].Key;
                             ISCSIServer.LogWrite(disk, sectorIndex, commandData); // must come before the actual write as it logs changes
-                            lock (connection.WriteLock)
+                            lock (session.WriteLock)
                             {
                                 disk.WriteSectors(sectorIndex, commandData);
                             }
                         }
 
                         SCSIResponsePDU response = new SCSIResponsePDU();
-                        PrepareSCSIResponsePDU(response, request, connection);
+                        response.InitiatorTaskTag = request.InitiatorTaskTag;
                         if (disk.IsReadOnly)
                         {
                             response.Status = SCSIStatusCodeName.CheckCondition;
@@ -420,25 +346,27 @@ namespace ISCSI
                         }
                         connection.Transfers.Remove(request.TargetTransferTag);
                         connection.TransferData.Remove(request.TargetTransferTag);
-                        connection.NextR2TSN.Remove(request.TargetTransferTag);
+                        session.NextR2TSN.Remove(request.TargetTransferTag);
                         return response;
                     }
                     else
                     {
                         // Send R2T
                         ReadyToTransferPDU response = new ReadyToTransferPDU();
-                        PrepareReadyToTransferPDU(response, request, connection);
+                        response.InitiatorTaskTag = request.InitiatorTaskTag;
+                        response.TargetTransferTag = request.TargetTransferTag;
+                        response.R2TSN = session.GetNextR2TSN(request.TargetTransferTag);
                         response.BufferOffset = offset + request.DataSegmentLength; // where we left off
-                        response.DesiredDataTransferLength = Math.Min(ISCSIServer.MaxRecvDataSegmentLength, totalLength - response.BufferOffset);
+                        response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
                         
                         return response;
                     }
                 }
                 else
                 {
-                    ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Incorrect LUN", connection.Identifier);
+                    ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Incorrect LUN", connectionIdentifier);
                     SCSIResponsePDU response = new SCSIResponsePDU();
-                    PrepareSCSIResponsePDU(response, request, connection);
+                    response.InitiatorTaskTag = request.InitiatorTaskTag;
                     response.Status = SCSIStatusCodeName.CheckCondition;
                     response.Data = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
                     return response;
@@ -446,21 +374,21 @@ namespace ISCSI
             }
             else
             {
-                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Unfamiliar TargetTransferTag", connection.Identifier);
+                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Unfamiliar TargetTransferTag", connectionIdentifier);
                 SCSIResponsePDU response = new SCSIResponsePDU();
-                PrepareSCSIResponsePDU(response, request, connection);
+                response.InitiatorTaskTag = request.InitiatorTaskTag;
                 response.Status = SCSIStatusCodeName.CheckCondition;
                 response.Data = FormatSenseData(SenseDataParameter.GetIllegalRequestSenseData());
                 return response;
             }
         }
 
-        public static SCSIDataInPDU Inquiry(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIDataInPDU Inquiry(SCSICommandPDU command, ISCSITarget target)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             SCSIDataInPDU response = new SCSIDataInPDU();
-            PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+            PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
 
             InquiryCommand inquiryCommand = (InquiryCommand)command.CommandDescriptorBlock;
             if (!inquiryCommand.EVPD)
@@ -493,7 +421,7 @@ namespace ISCSI
                             UnitSerialNumberVPDPage page = new UnitSerialNumberVPDPage();
                             // Older products that only support the Product Serial Number parameter will have a page length of 08h, while newer products that support both parameters (Vendor Unique field from the StandardInquiryData) will have a page length of 14h
                             // Microsoft iSCSI Target uses values such as "34E5A6FC-3ACC-452D-AEDA-6EE2EFF20FB4"
-                            ulong serialNumber = (uint)target.TargetName.GetHashCode() + command.LUN;
+                            ulong serialNumber = (ulong)target.TargetName.GetHashCode() << 32 + command.LUN;
                             page.ProductSerialNumber = serialNumber.ToString("00000000");
                             response.Data = page.GetBytes();
                             break;
@@ -529,7 +457,7 @@ namespace ISCSI
                         }
                     default:
                         {
-                            response.Status = (byte)SCSIStatusCodeName.CheckCondition;
+                            response.Status = SCSIStatusCodeName.CheckCondition;
                             response.Data = FormatSenseData(SenseDataParameter.GetIllegalRequestParameterNotSupportedSenseData());
                             ISCSIServer.Log("[Inquiry] Unsupported VPD Page request (0x{0})", inquiryCommand.PageCode.ToString("X"));
                             break;
@@ -542,12 +470,12 @@ namespace ISCSI
             return response;
         }
 
-        public static SCSIDataInPDU ModeSense6(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIDataInPDU ModeSense6(SCSICommandPDU command, ISCSITarget target)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             SCSIDataInPDU response = new SCSIDataInPDU();
-            PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+            PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
 
             ModeSense6CommandDescriptorBlock modeSense6Command = (ModeSense6CommandDescriptorBlock)command.CommandDescriptorBlock;
             
@@ -614,7 +542,7 @@ namespace ISCSI
                     }
                 default:
                     {
-                        response.Status = (byte)SCSIStatusCodeName.CheckCondition;
+                        response.Status = SCSIStatusCodeName.CheckCondition;
                         response.Data = FormatSenseData(SenseDataParameter.GetIllegalRequestParameterNotSupportedSenseData());
                         ISCSIServer.Log("[ModeSense6] ModeSense6 page 0x{0} is not implemented", modeSense6Command.PageCode.ToString("x"));
                         break;
@@ -629,12 +557,12 @@ namespace ISCSI
             return response;
         }
 
-        public static SCSIDataInPDU ReadCapacity10(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIDataInPDU ReadCapacity10(SCSICommandPDU command, ISCSITarget target)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             SCSIDataInPDU response = new SCSIDataInPDU();
-            PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+            PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
 
             ReadCapacity10Parameter parameter = new ReadCapacity10Parameter(target.Disks[LUN].Size, (uint)target.Disks[LUN].BytesPerSector);
             response.Data = parameter.GetBytes();
@@ -642,12 +570,12 @@ namespace ISCSI
             return response;
         }
 
-        public static SCSIDataInPDU ReadCapacity16(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIDataInPDU ReadCapacity16(SCSICommandPDU command, ISCSITarget target)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             SCSIDataInPDU response = new SCSIDataInPDU();
-            PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+            PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
 
             ReadCapacity16Parameter parameter = new ReadCapacity16Parameter(target.Disks[LUN].Size, (uint)target.Disks[LUN].BytesPerSector);
             response.Data = parameter.GetBytes();
@@ -655,10 +583,10 @@ namespace ISCSI
             return response;
         }
 
-        public static SCSIDataInPDU ReportLUNs(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIDataInPDU ReportLUNs(SCSICommandPDU command, ISCSITarget target)
         {
             SCSIDataInPDU response = new SCSIDataInPDU();
-            PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+            PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
 
             ReportLUNsParameter parameter = new ReportLUNsParameter(target.Disks.Count);
             response.Data = parameter.GetBytes();
@@ -668,21 +596,20 @@ namespace ISCSI
             return response;
         }
 
-        public static List<SCSIDataInPDU> Read(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static List<SCSIDataInPDU> Read(SCSICommandPDU command, ISCSITarget target, ConnectionParameters connection)
         {
-            byte LUN = command.LUN;
-            ConnectionParameters connectionParameters = connection.ConnectionParameters;
-
+            ushort LUN = command.LUN;
+            
             Disk disk = target.Disks[LUN];
             int sectorCount = (int)command.CommandDescriptorBlock.TransferLength;
             byte[] data = disk.ReadSectors((long)command.CommandDescriptorBlock.LogicalBlockAddress64, sectorCount);
             ISCSIServer.LogRead((long)command.CommandDescriptorBlock.LogicalBlockAddress64, sectorCount);
             List<SCSIDataInPDU> responseList = new List<SCSIDataInPDU>();
 
-            if (data.Length <= connectionParameters.InitiatorMaxRecvDataSegmentLength)
+            if (data.Length <= connection.InitiatorMaxRecvDataSegmentLength)
             {
                 SCSIDataInPDU response = new SCSIDataInPDU();
-                PrepareSCSIDataInPDU(response, command, connection, SCSIStatusCodeName.Good);
+                PrepareSCSIDataInPDU(response, command, SCSIStatusCodeName.Good);
                 response.Data = data;
                 responseList.Add(response);
             }
@@ -697,11 +624,11 @@ namespace ISCSI
                     if (bytesLeftToSend == data.Length)
                     {
                         // first segment in many
-                        dataSegmentLength = connectionParameters.InitiatorMaxRecvDataSegmentLength;
+                        dataSegmentLength = connection.InitiatorMaxRecvDataSegmentLength;
                     }
                     else
                     {
-                        dataSegmentLength = Math.Min(connectionParameters.InitiatorMaxRecvDataSegmentLength, bytesLeftToSend);
+                        dataSegmentLength = Math.Min(connection.InitiatorMaxRecvDataSegmentLength, bytesLeftToSend);
                     }
 
                     int dataOffset = data.Length - bytesLeftToSend;
@@ -715,7 +642,7 @@ namespace ISCSI
                         // last Data-In PDU
                         status = SCSIStatusCodeName.Good;
                     }
-                    PrepareSCSIDataInPDU(response, command, connection, status);
+                    PrepareSCSIDataInPDU(response, command, status);
                     response.BufferOffset = (uint)dataOffset;
                     response.DataSN = dataSN;
                     dataSN++;
@@ -729,9 +656,9 @@ namespace ISCSI
             return responseList;
         }
 
-        public static ISCSIPDU Write(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static ISCSIPDU Write(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
-            byte LUN = command.LUN;
+            ushort LUN = command.LUN;
 
             Disk disk = target.Disks[LUN];
             // when InitialR2T = Yes, and ImmediateData = No, the initiators will wait for R2T before sending any data
@@ -740,14 +667,14 @@ namespace ISCSI
                 if (!disk.IsReadOnly)
                 {
                     ISCSIServer.LogWrite(disk, (long)command.CommandDescriptorBlock.LogicalBlockAddress64, command.Data); // must come before the actual write as it logs changes
-                    lock (connection.WriteLock)
+                    lock (session.WriteLock)
                     {
                         disk.WriteSectors((long)command.CommandDescriptorBlock.LogicalBlockAddress64, command.Data);
                     }
                 }
 
                 SCSIResponsePDU response = new SCSIResponsePDU();
-                PrepareSCSIResponsePDU(response, command, connection);
+                response.InitiatorTaskTag = command.InitiatorTaskTag;
                 if (disk.IsReadOnly)
                 {
                     response.Status = SCSIStatusCodeName.CheckCondition;
@@ -763,7 +690,7 @@ namespace ISCSI
             }
             else // the request is splitted to multiple PDUs
             {
-                uint transferTag = AllocateTransferTag();
+                uint transferTag = session.GetNextTransferTag();
                 
                 // Store segment (we only execute the command after receiving all of its data)
                 byte[] commandData = new byte[command.ExpectedDataTransferLength];
@@ -773,31 +700,32 @@ namespace ISCSI
 
                 // Send R2T
                 ReadyToTransferPDU response = new ReadyToTransferPDU();
-                PrepareReadyToTransferPDU(response, command, connection);
+                response.InitiatorTaskTag = command.InitiatorTaskTag;
+                response.R2TSN = 0; // R2Ts are sequenced per command and must start with 0 for each new command;
                 response.TargetTransferTag = transferTag;
                 response.BufferOffset = command.DataSegmentLength;
-                response.DesiredDataTransferLength = Math.Min(ISCSIServer.MaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
+                response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
 
                 // We store the next R2TSN to be used
-                connection.NextR2TSN.Add(transferTag, 1);
+                session.NextR2TSN.Add(transferTag, 1);
 
                 return response;
             }
         }
 
-        public static SCSIResponsePDU Verify(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIResponsePDU Verify(SCSICommandPDU command, ISCSITarget target)
         {
             SCSIResponsePDU response = new SCSIResponsePDU();
-            PrepareSCSIResponsePDU(response, command, connection);
+            response.InitiatorTaskTag = command.InitiatorTaskTag;
             response.Status = SCSIStatusCodeName.Good;
 
             return response;
         }
 
-        public static SCSIResponsePDU SynchronizeCache10(SCSICommandPDU command, ISCSITarget target, ISCSIConnection connection)
+        public static SCSIResponsePDU SynchronizeCache10(SCSICommandPDU command, ISCSITarget target)
         {
             SCSIResponsePDU response = new SCSIResponsePDU();
-            PrepareSCSIResponsePDU(response, command, connection);
+            response.InitiatorTaskTag = command.InitiatorTaskTag;
             response.Status = SCSIStatusCodeName.Good;
 
             return response;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@ namespace ISCSI
     {
         public SCSIOpCodeName OpCode;
         public byte MiscellaneousCDBInformationHeader;
-        public byte ServiceAction;
+        public ServiceAction ServiceAction;
         public uint AdditionalCDBdata;
         public uint LogicalBlockAddress;
         public uint TransferLength; // number of blocks, also doubles as Parameter list length /  Allocation length
@@ -78,6 +78,55 @@ namespace ISCSI
             }
         }
 
+        public static SCSICommandDescriptorBlock Create(SCSIOpCodeName opCode)
+        {
+            switch (opCode)
+            {
+                case SCSIOpCodeName.TestUnitReady:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.RequestSense:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.Read6:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.Write6:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.Inquiry:
+                    return new InquiryCommand();
+                case SCSIOpCodeName.Reserve6:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.Release6:
+                    return new SCSICommandDescriptorBlock6(opCode);
+                case SCSIOpCodeName.ModeSense6:
+                    return new ModeSense6CommandDescriptorBlock();
+                case SCSIOpCodeName.ReadCapacity10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.Read10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.Write10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.Verify10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.SynchronizeCache10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.WriteSame10:
+                    return new SCSICommandDescriptorBlock10(opCode);
+                case SCSIOpCodeName.Read16:
+                    return new SCSICommandDescriptorBlock16(opCode);
+                case SCSIOpCodeName.Write16:
+                    return new SCSICommandDescriptorBlock16(opCode);
+                case SCSIOpCodeName.Verify16:
+                    return new SCSICommandDescriptorBlock16(opCode);
+                case SCSIOpCodeName.WriteSame16:
+                    return new SCSICommandDescriptorBlock16(opCode);
+                case SCSIOpCodeName.ServiceActionIn:
+                    return new SCSICommandDescriptorBlock16(opCode);
+                case SCSIOpCodeName.ReportLUNs:
+                    return new SCSICommandDescriptorBlock12(opCode);
+                default:
+                    throw new NotImplementedException("SCSI opcode not implemented");
+            }
+        }
+
         public ulong LogicalBlockAddress64
         {
             get
@@ -91,6 +140,18 @@ namespace ISCSI
                 else
                 {
                     return this.LogicalBlockAddress;
+                }
+            }
+            set
+            {
+                if (this is SCSICommandDescriptorBlock16)
+                {
+                    this.LogicalBlockAddress = (uint)(value >> 32);
+                    this.AdditionalCDBdata = (uint)(value & 0xFFFFFFFF);
+                }
+                else
+                {
+                    this.LogicalBlockAddress = (uint)value;
                 }
             }
         }

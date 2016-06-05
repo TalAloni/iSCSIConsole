@@ -12,25 +12,24 @@ using Utilities;
 
 namespace DiskAccessLibrary.VMDK
 {
-    public class SparseExtent : Disk
+    public partial class SparseExtent : DiskImage
     {
-        private string m_path;
+        private RawDiskImage m_file;
         private SparseExtentHeader m_header;
         private VirtualMachineDiskDescriptor m_descriptor;
         private Nullable<uint> m_grainTableStartSector;
 
-        public SparseExtent(string path)
+        public SparseExtent(string path) : base(path)
         {
-            m_path = path;
-
-            byte[] headerBytes = ReadFileSectors(0, 1);
+            m_file = new RawDiskImage(path);
+            byte[] headerBytes = m_file.ReadSector(0);
             m_header = new SparseExtentHeader(headerBytes);
 
             if (m_header.IsValidAndSupported)
             {
                 if (m_header.DescriptorOffset > 0)
                 {
-                    byte[] descriptorBytes = ReadFileSectors((long)m_header.DescriptorOffset, (int)m_header.DescriptorSize);
+                    byte[] descriptorBytes = m_file.ReadSectors((long)m_header.DescriptorOffset, (int)m_header.DescriptorSize);
                     string text = ASCIIEncoding.ASCII.GetString(descriptorBytes);
                     List<string> lines = VirtualMachineDiskDescriptor.GetLines(text);
                     m_descriptor = new VirtualMachineDiskDescriptor(lines);
@@ -38,23 +37,21 @@ namespace DiskAccessLibrary.VMDK
             }
         }
 
-        public byte[] ReadFileSectors(long sectorIndex, int sectorCount)
+        public override bool ExclusiveLock()
         {
-            // We should use noncached I/O operations in case KB981166 is not installed on the host.
-            FileStream stream = new FileStream(m_path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000, FileOptions.WriteThrough);
-            long offset = sectorIndex * BytesPerSector;
-            stream.Seek(offset, SeekOrigin.Begin);
-            byte[] result = new byte[BytesPerSector * sectorCount];
-            stream.Read(result, 0, BytesPerSector * sectorCount);
-            stream.Close();
-            return result;
+            return m_file.ExclusiveLock();
+        }
+
+        public override bool ReleaseLock()
+        {
+            return m_file.ReleaseLock();
         }
 
         private KeyValuePairList<long, int> MapSectors(long sectorIndex, int sectorCount)
         {
             if (m_grainTableStartSector == null)
             {
-                byte[] grainDirectoryBytes = ReadFileSectors((long)m_header.GDOffset, 1);
+                byte[] grainDirectoryBytes = m_file.ReadSectors((long)m_header.GDOffset, 1);
                 m_grainTableStartSector = LittleEndianConverter.ToUInt32(grainDirectoryBytes, 0);
             }
 
@@ -62,7 +59,7 @@ namespace DiskAccessLibrary.VMDK
             long grainSectorIndexInTable = grainIndex / 128;
             int grainIndexInBuffer = (int)grainIndex % 128;
             int sectorsToReadFromTable = (int)Math.Max(Math.Ceiling((double)(sectorCount - (128 - grainIndexInBuffer)) / 4), 1);
-            byte[] grainTableBuffer = ReadFileSectors(m_grainTableStartSector.Value + grainSectorIndexInTable, sectorsToReadFromTable);
+            byte[] grainTableBuffer = m_file.ReadSectors(m_grainTableStartSector.Value + grainSectorIndexInTable, sectorsToReadFromTable);
 
             long sectorIndexInGrain = sectorIndex % (long)m_header.GrainSize;
 
@@ -110,7 +107,7 @@ namespace DiskAccessLibrary.VMDK
                 }
                 else
                 {
-                    temp = ReadFileSectors(entry.Key, entry.Value);
+                    temp = m_file.ReadSectors(entry.Key, entry.Value);
                 }
                 Array.Copy(temp, 0, result, offset, temp.Length);
                 offset += temp.Length;
@@ -124,20 +121,9 @@ namespace DiskAccessLibrary.VMDK
             throw new Exception("The method or operation is not implemented.");
         }
 
-        public void CheckBoundaries(long sectorIndex, int sectorCount)
+        public override void Extend(long additionalNumberOfBytes)
         {
-            if (sectorIndex < 0 || sectorIndex + (sectorCount - 1) >= this.TotalSectors)
-            {
-                throw new ArgumentOutOfRangeException("Attempted to access data outside of disk");
-            }
-        }
-
-        public override int BytesPerSector
-        {
-            get
-            {
-                return VirtualMachineDisk.BytesPerDiskImageSector;
-            }
+            throw new Exception("The method or operation is not implemented.");
         }
 
         public override long Size

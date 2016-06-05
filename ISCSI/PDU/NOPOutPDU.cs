@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,20 +14,20 @@ namespace ISCSI
     // NOP-Out = Sent from the initiator to the target
     public class NOPOutPDU : ISCSIPDU
     {
-        public ulong LUN;
+        public LUNStructure LUN;
         public uint TargetTransferTag;
         public uint CmdSN;
         public uint ExpStatSN;
         
         public NOPOutPDU()
         {
-            OpCode = (byte)ISCSIOpCodeName.NOPOut;
+            OpCode = ISCSIOpCodeName.NOPOut;
             Final = true;
         }
 
         public NOPOutPDU(byte[] buffer) : base(buffer)
         {
-            LUN = BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 0);
+            LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
 
             TargetTransferTag = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);
             CmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
@@ -36,7 +36,7 @@ namespace ISCSI
 
         public override byte[] GetBytes()
         {
-            LUNOrOpCodeSpecific = BigEndianConverter.GetBytes(LUN);
+            LUNOrOpCodeSpecific = LUN.GetBytes();
 
             Array.Copy(BigEndianConverter.GetBytes(TargetTransferTag), 0, OpCodeSpecific, 0, 4);
             Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);

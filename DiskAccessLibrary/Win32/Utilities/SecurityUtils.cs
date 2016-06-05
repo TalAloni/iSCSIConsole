@@ -95,8 +95,8 @@ namespace DiskAccessLibrary
                 // GetLastError returns one of the following values when the function succeeds:
                 // ERROR_SUCCESS, ERROR_NOT_ALL_ASSIGNED
 
-                int error = Marshal.GetLastWin32Error();
-                return (error == (int)Win32Error.ERROR_SUCCESS);
+                int errorCode = Marshal.GetLastWin32Error();
+                return (errorCode == (int)Win32Error.ERROR_SUCCESS);
             }
         }
     }

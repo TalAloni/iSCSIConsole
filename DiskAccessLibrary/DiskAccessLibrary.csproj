@@ -57,6 +57,7 @@
     <Compile Include="Disks\VMDK\VirtualMachineDiskDescriptor.cs" />
     <Compile Include="Disks\VMDK\VirtualMachineDiskExtentEntry.cs" />
     <Compile Include="Disks\VMDK\VirtualMachineDiskType.cs" />
+    <Compile Include="Exceptions\DeviceNotReadyException.cs" />
     <Compile Include="FileSystems\FileSystemHelper.cs" />
     <Compile Include="FileSystems\IDiskFileSystem.cs" />
     <Compile Include="FileSystems\NTFS\AttributeRecord\FileNameAttributeRecord.cs" />
@@ -65,10 +66,11 @@
     <Compile Include="FileSystems\NTFS\NTFSFileStream.cs" />
     <Compile Include="Helpers\MoveHelper.cs" />
     <Compile Include="LogicalDiskManagerHelpers\RetainHelper.cs" />
+    <Compile Include="LogicalDiskManager\Exceptions\DatabaseNotFoundException.cs" />
+    <Compile Include="LogicalDiskManager\Exceptions\MissingDatabaseRecordException.cs" />
     <Compile Include="Volumes\RemovableVolume.cs" />
     <Compile Include="Disks\VHD\VHDFooter.cs" />
     <Compile Include="Disks\VHD\VirtualHardDisk.cs" />
-    <Compile Include="Exceptions\SectorNotFoundException.cs" />
     <Compile Include="Exceptions\SharingViolationException.cs" />
     <Compile Include="Helpers\BasicDiskHelper.cs" />
     <Compile Include="Helpers\DiskExtentHelper.cs" />
@@ -148,6 +150,7 @@
     <Compile Include="Volumes\SpannedVolume.cs" />
     <Compile Include="Volumes\StripedVolume.cs" />
     <Compile Include="Win32\Disks\DiskImage.Win32.cs" />
+    <Compile Include="Win32\Disks\VMDK\SparseExtent.Win32.cs" />
     <Compile Include="Win32\Disks\VMDK\VirtualMachineDisk.Win32.cs" />
     <Compile Include="Win32\Enums\Win32Error.cs" />
     <Compile Include="Win32\Helpers\DiskOfflineHelper.cs" />

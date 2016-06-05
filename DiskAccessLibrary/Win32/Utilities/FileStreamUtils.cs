@@ -33,8 +33,8 @@ namespace DiskAccessLibrary
             bool success = SetFileValidData(fileStream.SafeFileHandle, validDataLength);
             if (!success)
             {
-                int error = Marshal.GetLastWin32Error();
-                string message = String.Format("Unable to set valid file length, Win32 Error: {0}", error);
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Unable to set valid file length, Win32 Error: {0}", errorCode);
                 throw new IOException(message);
             }
             return success;

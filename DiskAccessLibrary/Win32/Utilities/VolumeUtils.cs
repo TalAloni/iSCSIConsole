@@ -144,8 +144,8 @@ namespace DiskAccessLibrary
                 bool success = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 if (!success)
                 {
-                    int error = Marshal.GetLastWin32Error();
-                    if (error == (int)Win32Error.ERROR_ACCESS_DENIED)
+                    int errorCode = Marshal.GetLastWin32Error();
+                    if (errorCode == (int)Win32Error.ERROR_ACCESS_DENIED)
                     {
                         throw new UnauthorizedAccessException();
                     }
@@ -166,8 +166,8 @@ namespace DiskAccessLibrary
                 bool success = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 if (!success)
                 {
-                    int error = Marshal.GetLastWin32Error();
-                    if (error == (int)Win32Error.ERROR_ACCESS_DENIED)
+                    int errorCode = Marshal.GetLastWin32Error();
+                    if (errorCode == (int)Win32Error.ERROR_ACCESS_DENIED)
                     {
                         throw new UnauthorizedAccessException();
                     }

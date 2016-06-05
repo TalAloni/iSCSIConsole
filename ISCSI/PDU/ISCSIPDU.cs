@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,7 +14,7 @@ namespace ISCSI
     public class ISCSIPDU
     {
         public bool ImmediateDelivery;   // I-Bit - first byte
-        public byte OpCode;              // first byte
+        public ISCSIOpCodeName OpCode;              // first byte
         public bool Final;               // F-Bit - first byte
         public byte[] OpCodeSpecificHeader = new byte[3]; // Final bit is removed!
         public byte TotalAHSLength;
@@ -31,7 +31,7 @@ namespace ISCSI
         protected ISCSIPDU(byte[] buffer)
         {
             ImmediateDelivery = (buffer[0] & 0x40) != 0;
-            OpCode = (byte)(buffer[0] & 0x3F);
+            OpCode = (ISCSIOpCodeName)(buffer[0] & 0x3F);
             Final = (buffer[1] & 0x80) != 0;
             Array.Copy(buffer, 1, OpCodeSpecificHeader, 0, 3);
             OpCodeSpecificHeader[0] &= 0x7F; // remove the final bit
@@ -51,7 +51,7 @@ namespace ISCSI
             DataSegmentLength = (uint)Data.Length; // We must update DataSegmentLength for all subsequest length calculations
             
             byte[] buffer = new byte[this.Length]; // include padding bytes
-            buffer[0x00] = OpCode;
+            buffer[0x00] = (byte)OpCode;
             if (ImmediateDelivery)
             {
                 buffer[0] |= 0x40;
@@ -66,9 +66,8 @@ namespace ISCSI
             buffer[6] = (byte)((DataSegmentLength >> 8) & 0xFF);
             buffer[7] = (byte)((DataSegmentLength >> 0) & 0xFF);
             Array.Copy(LUNOrOpCodeSpecific, 0, buffer, 8, 8);
-            Array.Copy(BigEndianConverter.GetBytes(InitiatorTaskTag), 0, buffer, 16, 4);
+            BigEndianWriter.WriteUInt32(buffer, 16, InitiatorTaskTag);
             Array.Copy(OpCodeSpecific, 0, buffer, 20, 28);
-
             Array.Copy(Data, 0, buffer, 48, DataSegmentLength);
 
             return buffer;

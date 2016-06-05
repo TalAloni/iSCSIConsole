@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,7 +13,7 @@ namespace ISCSI
 {
     public class LogoutRequestPDU : ISCSIPDU
     {
-        public byte ReasonCode;
+        public LogoutReasonCode ReasonCode;
         
         public ushort CID;
         public uint CmdSN;
@@ -21,13 +21,13 @@ namespace ISCSI
 
         public LogoutRequestPDU() : base()
         {
-            OpCode = (byte)ISCSIOpCodeName.LogoutRequest;
+            OpCode = ISCSIOpCodeName.LogoutRequest;
             Final = true;
         }
 
         public LogoutRequestPDU(byte[] buffer) : base(buffer)
         {
-            ReasonCode = (byte)(OpCodeSpecificHeader[0] & 0x7F);
+            ReasonCode = (LogoutReasonCode)(OpCodeSpecificHeader[0] & 0x7F);
             CID = BigEndianConverter.ToUInt16(OpCodeSpecific, 0);
             CmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
             ExpStatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 8);
@@ -35,7 +35,7 @@ namespace ISCSI
 
         public override byte[] GetBytes()
         {
-            OpCodeSpecificHeader[0] = ReasonCode; // Final bit will be added by base.GetBytes()
+            OpCodeSpecificHeader[0] = (byte)ReasonCode; // Final bit will be added by base.GetBytes()
 
             Array.Copy(BigEndianConverter.GetBytes(CID), 0, OpCodeSpecific, 0, 2);
             Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);

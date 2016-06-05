@@ -34,6 +34,10 @@ namespace DiskAccessLibrary
 
         public abstract void Extend(long additionalNumberOfBytes);
 
+        public abstract bool ExclusiveLock();
+
+        public abstract bool ReleaseLock();
+
         public override int BytesPerSector
         {
             get

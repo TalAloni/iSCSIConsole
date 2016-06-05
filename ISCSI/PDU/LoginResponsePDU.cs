@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -15,8 +15,8 @@ namespace ISCSI
     {
         public bool Transit;
         public bool Continue;
-        public int CurrentStage; // 0..3
-        public int NextStage;    // 0..3
+        public byte CurrentStage; // 0..3
+        public byte NextStage;    // 0..3
 
         public byte VersionMax;
         public byte VersionActive;
@@ -31,20 +31,19 @@ namespace ISCSI
 
         public LoginResponsePDU() : base()
         {
-            OpCode = (byte)ISCSIOpCodeName.LoginResponse;
-            ImmediateDelivery = false;
+            OpCode = ISCSIOpCodeName.LoginResponse;
         }
 
         public LoginResponsePDU(byte[] buffer) : base(buffer)
         {
             Transit = Final; // the Transit bit replaces the Final bit
             Continue = (OpCodeSpecificHeader[0] & 0x40) != 0;
-            CurrentStage = (OpCodeSpecificHeader[0] & 0x0C) >> 2;
-            NextStage = (OpCodeSpecificHeader[0] & 0x03);
+            CurrentStage = (byte)((OpCodeSpecificHeader[0] & 0x0C) >> 2);
+            NextStage = (byte)(OpCodeSpecificHeader[0] & 0x03);
 
             VersionMax = OpCodeSpecificHeader[1];
             VersionActive = OpCodeSpecificHeader[2];
-            ISID = BigEndianConverter.ToUInt32(LUNOrOpCodeSpecific, 0) << 16 | BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 4);
+            ISID = (ulong)BigEndianConverter.ToUInt32(LUNOrOpCodeSpecific, 0) << 16 | BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 4);
             TSIH = BigEndianConverter.ToUInt16(LUNOrOpCodeSpecific, 6);
 
             StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
@@ -79,7 +78,7 @@ namespace ISCSI
             Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
             Array.Copy(BigEndianConverter.GetBytes((ushort)Status), 0, OpCodeSpecific, 16, 2);
 
-            string parametersString = KeyValuePairUtils.GetNullDelimitedKeyValuePair(LoginParameters);
+            string parametersString = KeyValuePairUtils.ToNullDelimitedString(LoginParameters);
             Data = ASCIIEncoding.ASCII.GetBytes(parametersString);
             
             return base.GetBytes();

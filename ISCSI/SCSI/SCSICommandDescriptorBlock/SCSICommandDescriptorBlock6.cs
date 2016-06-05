@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,11 +14,12 @@ namespace ISCSI
     // 6-byte command
     public class SCSICommandDescriptorBlock6 : SCSICommandDescriptorBlock
     {
-        public SCSICommandDescriptorBlock6() : base()
-        { 
+        public SCSICommandDescriptorBlock6(SCSIOpCodeName opCode) : base()
+        {
+            this.OpCode = opCode;
         }
 
-        public SCSICommandDescriptorBlock6(byte[] buffer, int offset)
+        public SCSICommandDescriptorBlock6(byte[] buffer, int offset) : base()
         {
             OpCode = (SCSIOpCodeName)buffer[offset + 0];
             MiscellaneousCDBInformationHeader = (byte)((buffer[offset + 1] & 0xE0) >> 5);

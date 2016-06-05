@@ -49,6 +49,22 @@ Revision History:
       - Bugfix: A few usable sectors may have been marked as unusable during GPT disk initialization.
       - Bugfix: VHD was not extended to the correct size.
 
-1.2.9 - We now use noncached I/O operations when reading virtual disks (Workaround for hosts without KB981166).
+1.2.9 - We now use the same caching policy for virtual disk read and write operations. (Workaround for hosts without KB981166).
 	  - Bugfix: GPT header checksum verification failed if the size of the partition entries was not a multiple of sector size.
 
+1.3.0 - Fixed a bug related to the RESUME boot sector.
+
+1.3.1 - Adding a disk to RAID-5 volume is now faster thanks to multithreaded parity calculation (when applicable).
+
+1.3.2 - Adding a disk to RAID-5 volume now use less read / write cache so it requires less RAM.
+
+1.3.3 - Better handling of removable disks.
+
+1.3.4 - Disk images can now be locked for exclusive access.
+
+1.3.5 - We now use noncached I/O operations when working with virtual disks.
+
+1.3.6 - Improved handling of disk read errors.
+        API to retrieve disk description and serial number.
+
+1.3.7 - Proper handling of disks with no serial number.

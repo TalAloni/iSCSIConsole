@@ -25,7 +25,7 @@ namespace DiskAccessLibrary
 
         public string Signature = ValidSignature;
         public byte RecordRevision = 1; // Must be 1
-        protected RAID5ManagerOperation Operation; // byte
+        protected RAID5ManagerOperation Operation; // 2 bytes
         // reserved 5 bytes
 
         public RAID5ManagerBootRecord()
@@ -70,7 +70,7 @@ namespace DiskAccessLibrary
         {
             string signature = ByteReader.ReadAnsiString(buffer, 0, 8);
             byte recordRevision = ByteReader.ReadByte(buffer, 8);
-            RAID5ManagerOperation operation = (RAID5ManagerOperation)ByteReader.ReadByte(buffer, 9);
+            RAID5ManagerOperation operation = (RAID5ManagerOperation)BigEndianConverter.ToUInt16(buffer, 9);
             if (signature == ValidSignature && recordRevision == 1)
             {
                 if (operation == RAID5ManagerOperation.AddDiskToArray)
@@ -83,6 +83,12 @@ namespace DiskAccessLibrary
                 }
             }
             return null;
+        }
+
+        public static bool HasValidSignature(byte[] buffer)
+        {
+            string signature = ByteReader.ReadAnsiString(buffer, 0, 8);
+            return (signature == ValidSignature);
         }
     }
 }

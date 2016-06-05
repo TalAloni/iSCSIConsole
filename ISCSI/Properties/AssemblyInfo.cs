@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tal Aloni")]
 [assembly: AssemblyProduct("ISCSI")]
-[assembly: AssemblyCopyright("Copyright © Tal Aloni 2012")]
+[assembly: AssemblyCopyright("Copyright © Tal Aloni 2012-2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -31,5 +31,5 @@ using System.Runtime.InteropServices;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("1.1.9.0")]
-[assembly: AssemblyFileVersion("1.1.9.0")]
+[assembly: AssemblyVersion("1.2.2.0")]
+[assembly: AssemblyFileVersion("1.2.2.0")]

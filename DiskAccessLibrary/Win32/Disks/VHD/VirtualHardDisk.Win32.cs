@@ -25,25 +25,10 @@ namespace DiskAccessLibrary
             if (m_vhdFooter.DiskType == VirtualHardDiskType.Fixed)
             {
                 long length = this.Size; // does not include the footer
-                bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
-                FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FileOptions.WriteThrough);
-                try
-                {
-                    stream.SetLength(length + additionalNumberOfBytes + VHDFooter.Length);
-                }
-                catch
-                {
-                    stream.Close();
-                    throw;
-                }
-                if (hasManageVolumePrivilege)
-                {
-                    FileStreamUtils.SetValidLength(stream, length + additionalNumberOfBytes + VHDFooter.Length);
-                }
-                stream.Seek(length + additionalNumberOfBytes, SeekOrigin.Begin);
+                m_file.ExtendFast(additionalNumberOfBytes);
                 m_vhdFooter.CurrentSize += (ulong)additionalNumberOfBytes;
-                stream.Write(m_vhdFooter.GetBytes(), 0, VHDFooter.Length);
-                stream.Close();
+                byte[] footerBytes = m_vhdFooter.GetBytes();
+                m_file.WriteSectors((length + additionalNumberOfBytes) / this.BytesPerSector, footerBytes);
             }
             else
             {

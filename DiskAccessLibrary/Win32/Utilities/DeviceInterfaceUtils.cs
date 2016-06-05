@@ -132,8 +132,8 @@ namespace DiskAccessLibrary
             IntPtr hDevInfo = SetupDiGetClassDevs(ref classGuid, IntPtr.Zero, IntPtr.Zero, flags);
             if (hDevInfo.ToInt64() == INVALID_HANDLE_VALUE)
             {
-                int error = Marshal.GetLastWin32Error();
-                string message = String.Format("Unable to retrieve class devices, Win32 Error: {0}", error);
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Unable to retrieve class devices, Win32 Error: {0}", errorCode);
                 throw new IOException(message);
             }
             else
@@ -147,8 +147,8 @@ namespace DiskAccessLibrary
             bool success = DeviceInterfaceUtils.SetupDiDestroyDeviceInfoList(hDevInfo);
             if (!success)
             {
-                int error = Marshal.GetLastWin32Error();
-                string message = String.Format("Unable to destroy device info list, Win32 Error: {0}", error);
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Unable to destroy device info list, Win32 Error: {0}", errorCode);
                 throw new IOException(message);
             }
         }
@@ -164,8 +164,8 @@ namespace DiskAccessLibrary
             bool success = SetupDiGetDeviceInterfaceDetail(hDevInfo, ref deviceInterfaceData, IntPtr.Zero, 0, out requiredSize, IntPtr.Zero);
             if (!success)
             {
-                int error = Marshal.GetLastWin32Error();
-                if (error == (int)Win32Error.ERROR_INSUFFICIENT_BUFFER)
+                int errorCode = Marshal.GetLastWin32Error();
+                if (errorCode == (int)Win32Error.ERROR_INSUFFICIENT_BUFFER)
                 {
                     uint size = requiredSize;
                     // cbSize should parallel to sizeof (SP_INTERFACE_DEVICE_DETAIL_DATA) in C
@@ -189,15 +189,15 @@ namespace DiskAccessLibrary
 
                     if (!success)
                     {
-                        error = Marshal.GetLastWin32Error();
-                        string message = String.Format("Unable to retrieve device interface detail data, Win32 Error: {0}", error);
+                        errorCode = Marshal.GetLastWin32Error();
+                        string message = String.Format("Unable to retrieve device interface detail data, Win32 Error: {0}", errorCode);
                         throw new IOException(message);
                     }
                 }
                 else
                 {
-                    error = Marshal.GetLastWin32Error();
-                    string message = String.Format("Unable to retrieve device interface detail data, Win32 Error: {0}", error);
+                    errorCode = Marshal.GetLastWin32Error();
+                    string message = String.Format("Unable to retrieve device interface detail data, Win32 Error: {0}", errorCode);
                     throw new IOException(message);
                 }
             }
@@ -219,14 +219,14 @@ namespace DiskAccessLibrary
                 bool success = DeviceInterfaceUtils.SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref deviceClassGuid, index, ref deviceInterfaceData);
                 if (!success)
                 {
-                    int error = Marshal.GetLastWin32Error();
-                    if (error == (int)Win32Error.ERROR_NO_MORE_ITEMS)
+                    int errorCode = Marshal.GetLastWin32Error();
+                    if (errorCode == (int)Win32Error.ERROR_NO_MORE_ITEMS)
                     {
                         break;
                     }
                     else
                     {
-                        string message = String.Format("Unable to enumerate device interfaces, Win32 Error: {0}", error);
+                        string message = String.Format("Unable to enumerate device interfaces, Win32 Error: {0}", errorCode);
                         throw new IOException(message);
                     }
                 }

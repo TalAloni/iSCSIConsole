@@ -22,13 +22,39 @@ namespace Utilities
         /// </summary>
         public static void For(int fromInclusive, int toExclusive, ForDelegate forDelegate)
         {
-            // chunkSize = 1 makes items to be processed in order.
-            // Bigger chunk size should reduce lock waiting time and thus
-            // increase paralelism.
             int chunkSize = 4;
+            For(fromInclusive, toExclusive, chunkSize, forDelegate);
+        }
 
-            // number of process() threads
+        /// <summary>
+        /// Parallel for loop. Invokes given action, passing arguments
+        /// fromInclusive - toExclusive on multiple threads.
+        /// Returns when loop finished.
+        /// </summary>
+        /// <param name="chunkSize">
+        /// chunkSize = 1 makes items to be processed in order.
+        /// Bigger chunk size should reduce lock waiting time and thus
+        /// increase paralelism.
+        /// </param>
+        public static void For(int fromInclusive, int toExclusive, int chunkSize, ForDelegate forDelegate)
+        {
             int threadCount = Environment.ProcessorCount;
+            For(fromInclusive, toExclusive, chunkSize, threadCount, forDelegate);
+        }
+
+        /// <summary>
+        /// Parallel for loop. Invokes given action, passing arguments
+        /// fromInclusive - toExclusive on multiple threads.
+        /// Returns when loop finished.
+        /// </summary>
+        /// <param name="chunkSize">
+        /// chunkSize = 1 makes items to be processed in order.
+        /// Bigger chunk size should reduce lock waiting time and thus
+        /// increase paralelism.
+        /// </param>
+        /// <param name="threadCount">number of process() threads</param>
+        public static void For(int fromInclusive, int toExclusive, int chunkSize, int threadCount, ForDelegate forDelegate)
+        {
             int index = fromInclusive - chunkSize;
             // locker object shared by all the process() delegates
             object locker = new object();

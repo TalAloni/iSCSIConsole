@@ -17,6 +17,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
             List<DatabaseRecord> records = new List<DatabaseRecord>();
 
             VolumeRecord volumeRecord = database.FindVolumeByVolumeGuid(volumeGuid);
+            if (volumeRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Volume record is missing");
+            }
             volumeRecord = (VolumeRecord)volumeRecord.Clone();
             volumeRecord.VolumeTypeString = "gen";
             volumeRecord.ReadPolicy = ReadPolicyName.Select;
@@ -24,6 +28,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
             records.Add(volumeRecord);
 
             ComponentRecord componentRecord = database.FindComponentsByVolumeID(volumeRecord.VolumeId)[0];
+            if (componentRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Component record is missing");
+            }
             componentRecord = (ComponentRecord)componentRecord.Clone();
             componentRecord.ExtentLayout = ExtentLayoutName.Stripe;
             records.Add(componentRecord);
@@ -36,6 +44,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
             List<DatabaseRecord> records = new List<DatabaseRecord>();
 
             VolumeRecord volumeRecord = database.FindVolumeByVolumeGuid(volumeGuid);
+            if (volumeRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Volume record is missing");
+            }
             volumeRecord = (VolumeRecord)volumeRecord.Clone();
             volumeRecord.VolumeTypeString = "raid5";
             volumeRecord.ReadPolicy = ReadPolicyName.RAID;
@@ -43,6 +55,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
             records.Add(volumeRecord);
 
             ComponentRecord componentRecord = database.FindComponentsByVolumeID(volumeRecord.VolumeId)[0];
+            if (componentRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Component record is missing");
+            }
             componentRecord = (ComponentRecord)componentRecord.Clone();
             componentRecord.ExtentLayout = ExtentLayoutName.RAID5;
             records.Add(componentRecord);
@@ -62,17 +78,29 @@ namespace DiskAccessLibrary.LogicalDiskManager
             List<DatabaseRecord> records = new List<DatabaseRecord>();
 
             VolumeRecord volumeRecord = database.FindVolumeByVolumeGuid(volume.VolumeGuid);
+            if (volumeRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Volume record is missing");
+            }
             volumeRecord = (VolumeRecord)volumeRecord.Clone();
             volumeRecord.SizeLBA += (ulong)newExtent.TotalSectors;
             records.Add(volumeRecord);
 
             ComponentRecord componentRecord = database.FindComponentsByVolumeID(volumeRecord.VolumeId)[0];
+            if (componentRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Component record is missing");
+            }
             componentRecord = (ComponentRecord)componentRecord.Clone();
             componentRecord.NumberOfExtents++;
             componentRecord.NumberOfColumns++;
             records.Add(componentRecord);
 
             DiskRecord diskRecord = database.FindDiskByDiskGuid(privateHeader.DiskGuid);
+            if (diskRecord == null)
+            {
+                throw new MissingDatabaseRecordException("Disk record is missing");
+            }
             diskRecord = (DiskRecord)diskRecord.Clone();
             records.Add(diskRecord);
 
@@ -91,10 +119,18 @@ namespace DiskAccessLibrary.LogicalDiskManager
             foreach (DynamicDiskExtent extent in volume.Extents)
             {
                 ExtentRecord extentRecord = database.FindExtentByExtentID(extent.ExtentID);
+                if (extentRecord == null)
+                {
+                    throw new MissingDatabaseRecordException("Extent record is missing");
+                }
                 extentRecord = (ExtentRecord)extentRecord.Clone();
                 records.Add(extentRecord);
 
                 diskRecord = database.FindDiskByDiskID(extentRecord.DiskId);
+                if (diskRecord == null)
+                {
+                    throw new MissingDatabaseRecordException("Disk record is missing");
+                }
                 // there could be multiple extents on the same disk, make sure we only add each disk once
                 if (!records.Contains(diskRecord))
                 {

@@ -19,8 +19,8 @@ namespace DiskAccessLibrary
 
         private string m_descriptorPath;
         private VirtualMachineDiskDescriptor m_descriptor;
-        
-        private Disk m_extent;
+
+        private DiskImage m_extent;
 
         public VirtualMachineDisk(string descriptorPath) : base(descriptorPath)
         {
@@ -88,6 +88,16 @@ namespace DiskAccessLibrary
                 DiskImage extent = new RawDiskImage(directory + @"\" + entry.FileName);
                 m_extent = extent;
             }
+        }
+
+        public override bool ExclusiveLock()
+        {
+            return m_extent.ExclusiveLock();
+        }
+
+        public override bool ReleaseLock()
+        {
+            return m_extent.ReleaseLock();
         }
 
         public override byte[] ReadSectors(long sectorIndex, int sectorCount)

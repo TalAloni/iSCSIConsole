@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -16,7 +16,7 @@ namespace ISCSI
         public bool Read;
         public bool Write;
         public byte TaskAttributes;
-        public byte LUN; // the command specify 8 bytes, but we only support Single Level LUN Structures (up to 256 LUNs)
+        public LUNStructure LUN;
         public uint ExpectedDataTransferLength; // in bytes (for the whole operation and not just this command)
         public uint CmdSN;
         public uint ExpStatSN;
@@ -24,7 +24,7 @@ namespace ISCSI
 
         public SCSICommandPDU() : base()
         {
-            OpCode = (byte)ISCSIOpCodeName.SCSICommand;
+            OpCode = ISCSIOpCodeName.SCSICommand;
         }
 
         public SCSICommandPDU(byte[] buffer) : this(buffer, true)
@@ -37,8 +37,7 @@ namespace ISCSI
             Write = (OpCodeSpecificHeader[0] & 0x20) != 0;
             TaskAttributes = (byte)(OpCodeSpecificHeader[0] & 0x7);
 
-            // Single Level LUN Structure as per SAM-2 (i.e, byte 0 is zero, byte 1 contains the LUN value, and the remaining 6 bytes are zero)
-            LUN = LUNOrOpCodeSpecific[1];
+            LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
 
             ExpectedDataTransferLength = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);
             CmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
@@ -62,8 +61,7 @@ namespace ISCSI
             }
             OpCodeSpecificHeader[0] |= TaskAttributes;
 
-            // Single Level LUN Structure as per SAM-2 (i.e, byte 0 is zero, byte 1 contains the LUN value, and the remaining 6 bytes are zero)
-            LUNOrOpCodeSpecific[1] = LUN;
+            LUNOrOpCodeSpecific = LUN.GetBytes();
 
             Array.Copy(BigEndianConverter.GetBytes(ExpectedDataTransferLength), 0, OpCodeSpecific, 0, 4);
             Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);

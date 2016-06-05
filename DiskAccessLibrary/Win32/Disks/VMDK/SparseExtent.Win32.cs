@@ -4,18 +4,17 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace System
+namespace DiskAccessLibrary.VMDK
 {
-    public class SectorNotFoundException : IOException
+    public partial class SparseExtent
     {
-        public SectorNotFoundException() : base()
+        public override void ExtendFast(long additionalNumberOfBytes)
         {
-        }
-
-        public SectorNotFoundException(string message) : base(message)
-        {
+            throw new Exception("The method or operation is not implemented.");
         }
     }
 }

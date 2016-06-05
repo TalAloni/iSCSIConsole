@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,15 +13,16 @@ namespace ISCSI
 {
     public class SCSICommandDescriptorBlock12 : SCSICommandDescriptorBlock
     {
-        public SCSICommandDescriptorBlock12() : base()
-        { 
+        public SCSICommandDescriptorBlock12(SCSIOpCodeName opCode) : base()
+        {
+            this.OpCode = opCode;
         }
 
-        public SCSICommandDescriptorBlock12(byte[] buffer, int offset)
+        public SCSICommandDescriptorBlock12(byte[] buffer, int offset) : base()
         {
             OpCode = (SCSIOpCodeName)buffer[offset + 0];
             MiscellaneousCDBInformationHeader = (byte)((buffer[offset + 1] & 0xE0) >> 5);
-            ServiceAction = (byte)((buffer[offset + 1] & 0x1F));
+            ServiceAction = (ServiceAction)((buffer[offset + 1] & 0x1F));
 
             LogicalBlockAddress = BigEndianConverter.ToUInt32(buffer, offset + 2);
             TransferLength = BigEndianConverter.ToUInt32(buffer, offset + 6);
@@ -34,7 +35,7 @@ namespace ISCSI
             byte[] buffer = new byte[16];
             buffer[0] = (byte)OpCode;
             buffer[1] |= (byte)(MiscellaneousCDBInformationHeader << 5);
-            buffer[1] |= (byte)(ServiceAction & 0x1F);
+            buffer[1] |= (byte)((byte)ServiceAction & 0x1F);
             Array.Copy(BigEndianConverter.GetBytes(LogicalBlockAddress), 0, buffer, 2, 4);
             Array.Copy(BigEndianConverter.GetBytes(TransferLength), 0, buffer, 6, 4);
             buffer[10] = MiscellaneousCDBinformation;

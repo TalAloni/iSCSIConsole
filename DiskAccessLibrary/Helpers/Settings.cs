@@ -14,6 +14,6 @@ namespace DiskAccessLibrary
     {
         // Note: The benefits beyond 16MB buffer are not very significant,
         // e.g. 512MB will only give ~5.6% speed boost over 64MB, ~7.9% over 32MB, and ~10.1% over 16MB.
-        public static int MaximumTransferSizeLBA = 131072; // 64 MB (assuming 512-byte sectors)
+        public static int MaximumTransferSizeLBA = 65536; // 32 MB (assuming 512-byte sectors)
     }
 }

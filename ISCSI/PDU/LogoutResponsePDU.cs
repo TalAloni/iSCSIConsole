@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2015 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,7 +13,7 @@ namespace ISCSI
 {
     public class LogoutResponsePDU : ISCSIPDU
     {
-        public byte Response;
+        public LogoutResponse Response;
 
         public uint StatSN;
         public uint ExpCmdSN;
@@ -23,13 +23,13 @@ namespace ISCSI
 
         public LogoutResponsePDU() : base()
         {
-            OpCode = (byte)ISCSIOpCodeName.LogoutResponse;
+            OpCode = ISCSIOpCodeName.LogoutResponse;
             Final = true;
         }
 
         public LogoutResponsePDU(byte[] buffer) : base(buffer)
         {
-            Response = OpCodeSpecificHeader[1];
+            Response = (LogoutResponse)OpCodeSpecificHeader[1];
             StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
             ExpCmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 8);
             MaxCmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 12);
@@ -40,7 +40,7 @@ namespace ISCSI
 
         public override byte[] GetBytes()
         {
-            OpCodeSpecificHeader[1] = Response;
+            OpCodeSpecificHeader[1] = (byte)Response;
 
             Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
             Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);

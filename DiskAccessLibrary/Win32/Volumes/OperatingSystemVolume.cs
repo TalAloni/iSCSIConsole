@@ -65,12 +65,18 @@ namespace DiskAccessLibrary
             {
                 FileStreamEx stream = new FileStreamEx(handle, FileAccess.Read);
                 byte[] buffer = new byte[m_bytesPerSector * sectorCount];
-                stream.Seek(sectorIndex * m_bytesPerSector, SeekOrigin.Begin);
-                stream.Read(buffer, 0, m_bytesPerSector * sectorCount);
-                stream.Close(releaseHandle);
-                if (releaseHandle)
+                try
                 {
-                    VolumeHandlePool.ReleaseHandle(m_volumeGuid);
+                    stream.Seek(sectorIndex * m_bytesPerSector, SeekOrigin.Begin);
+                    stream.Read(buffer, 0, m_bytesPerSector * sectorCount);
+                }
+                finally
+                {
+                    stream.Close(releaseHandle);
+                    if (releaseHandle)
+                    {
+                        VolumeHandlePool.ReleaseHandle(m_volumeGuid);
+                    }
                 }
                 return buffer;
             }
@@ -79,8 +85,8 @@ namespace DiskAccessLibrary
                 // we always release invalid handle
                 VolumeHandlePool.ReleaseHandle(m_volumeGuid);
                 // get error code and throw
-                int error = Marshal.GetLastWin32Error();
-                string message = String.Format("Can't read sector {0} from volume {1}, Win32 Error: {2}", sectorIndex, m_volumeGuid, error);
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Can't read sector {0} from volume {1}, Win32 Error: {2}", sectorIndex, m_volumeGuid, errorCode);
                 throw new IOException(message);
             }
         }
@@ -124,13 +130,19 @@ namespace DiskAccessLibrary
                 if (!handle.IsInvalid)
                 {
                     FileStreamEx stream = new FileStreamEx(handle, FileAccess.Write);
-                    stream.Seek(sectorIndex * m_bytesPerSector, SeekOrigin.Begin);
-                    stream.Write(data, 0, data.Length);
-                    stream.Flush();
-                    stream.Close(releaseHandle);
-                    if (releaseHandle)
+                    try
                     {
-                        VolumeHandlePool.ReleaseHandle(m_volumeGuid);
+                        stream.Seek(sectorIndex * m_bytesPerSector, SeekOrigin.Begin);
+                        stream.Write(data, 0, data.Length);
+                        stream.Flush();
+                    }
+                    finally
+                    {
+                        stream.Close(releaseHandle);
+                        if (releaseHandle)
+                        {
+                            VolumeHandlePool.ReleaseHandle(m_volumeGuid);
+                        }
                     }
                 }
                 else
@@ -138,8 +150,8 @@ namespace DiskAccessLibrary
                     // we always release invalid handle
                     VolumeHandlePool.ReleaseHandle(m_volumeGuid);
                     // get error code and throw
-                    int error = Marshal.GetLastWin32Error();
-                    string message = String.Format("Can't write to sector {0} of volume {1}, Win32 error: {2}", sectorIndex, m_volumeGuid, error);
+                    int errorCode = Marshal.GetLastWin32Error();
+                    string message = String.Format("Can't write to sector {0} of volume {1}, Win32 errorCode: {2}", sectorIndex, m_volumeGuid, errorCode);
                     throw new IOException(message);
                 }
             }

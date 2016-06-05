@@ -17,6 +17,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static void AddDiskToRaid5Volume(List<DynamicDisk> disks, Raid5Volume volume, DiskExtent newExtent, ref long bytesCopied)
         {
             DiskGroupDatabase database = DiskGroupDatabase.ReadFromDisks(disks, volume.DiskGroupGuid);
+            if (database == null)
+            {
+                throw new DatabaseNotFoundException();
+            }
             // If there will be a power failure during the conversion, our RAID volume will resync during boot,
             // To prevent destruction of the data, we temporarily convert the array to striped volume
             VolumeManagerDatabaseHelper.ConvertRaidToStripedVolume(database, volume.VolumeGuid);
@@ -70,9 +74,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             
             // The number of sectors in extent / column is always a multiple of SectorsPerStripe.
 
-            // we read enoguh stripes to write a vertical stripe segment in the new array
-            // We will write MaximumTransferSizeLBA to each column
-            int maximumStripesToTransfer = (Settings.MaximumTransferSizeLBA / volume.SectorsPerStripe) * (newColumnCount - 1);
+            // We read enough stripes to write a vertical stripe segment in the new array,
+            // We will read MaximumTransferSizeLBA and make sure maximumStripesToTransfer is multiple of (NumberOfColumns - 1).
+            int maximumStripesToTransfer = (Settings.MaximumTransferSizeLBA / volume.SectorsPerStripe) / (newColumnCount - 1) * (newColumnCount - 1);
             long totalStripesInVolume = volume.TotalStripes;
 
             long stripeIndexInVolume = resumeFromStripe;
@@ -158,7 +162,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 columnData[index] = new byte[dataLengthPerColumn];
             }
 
-            for (int stripeOffsetInColumn = 0; stripeOffsetInColumn < stripesToWritePerColumn; stripeOffsetInColumn++)
+            Parallel.For(0, stripesToWritePerColumn, delegate(int stripeOffsetInColumn)
             {
                 long stripeIndexInColumn = firstStripeIndexInColumn + stripeOffsetInColumn;
                 int parityColumnIndex = (newArray.Count - 1) - (int)(stripeIndexInColumn % newArray.Count);
@@ -174,7 +178,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     parityData = Raid5Volume.XOR(parityData, columnData[columnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
                 }
                 Array.Copy(parityData, 0, columnData[parityColumnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
-            }
+            });
 
             // write the data
             long firstSectorIndexInColumn = firstStripeIndexInColumn * volume.SectorsPerStripe;

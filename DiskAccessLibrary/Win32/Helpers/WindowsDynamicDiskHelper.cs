@@ -56,6 +56,10 @@ namespace DiskAccessLibrary
                     // The disk must have been removed from the system
                     continue;
                 }
+                catch (DeviceNotReadyException)
+                {
+                    continue;
+                }
                 catch (SharingViolationException) // skip this disk, it's probably being used
                 {
                     continue;

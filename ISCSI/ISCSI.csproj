@@ -33,22 +33,33 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Enums\RejectReason.cs" />
+    <Compile Include="Client\ClientHelper.cs" />
+    <Compile Include="Client\ConnectionParameters.cs" />
+    <Compile Include="Client\ISCSIDisk.cs" />
+    <Compile Include="Client\PDUHelper.cs" />
+    <Compile Include="Client\SessionParameters.cs" />
+    <Compile Include="Client\StateObject.cs" />
+    <Compile Include="Client\ISCSIClient.cs" />
+    <Compile Include="PDU\Enums\LogoutReasonCode.cs" />
+    <Compile Include="PDU\Enums\LogoutResponse.cs" />
+    <Compile Include="PDU\Enums\RejectReason.cs" />
     <Compile Include="Exceptions\UnsupportedSCSICommandException.cs" />
     <Compile Include="PDU\RejectPDU.cs" />
+    <Compile Include="SCSI\Enums\AddressingMethod.cs" />
+    <Compile Include="SCSI\LUNStructure.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ControlModePage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockLimitsVPDPage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockDeviceCharacteristicsVPDPage.cs" />
     <Compile Include="Server\ConnectionParameters.cs" />
-    <Compile Include="Enums\ISCSIOpCodeName.cs" />
-    <Compile Include="Enums\LoginResponseStatusClassName.cs" />
+    <Compile Include="PDU\Enums\ISCSIOpCodeName.cs" />
+    <Compile Include="PDU\Enums\LoginResponseStatusClassName.cs" />
     <Compile Include="SCSI\Enums\ModePageCodeName.cs" />
     <Compile Include="SCSI\Enums\SCSIOpCodeName.cs" />
     <Compile Include="SCSI\Enums\SCSIStatusCodeName.cs" />
     <Compile Include="SCSI\Enums\ServiceAction.cs" />
     <Compile Include="SCSI\Enums\VitalProductDataPageName.cs" />
-    <Compile Include="Server\ISCSIConnection.cs" />
     <Compile Include="Server\ISCSIServer.cs" />
+    <Compile Include="Server\PDUHelper.cs" />
     <Compile Include="Server\SessionParameters.cs" />
     <Compile Include="Server\ISCSITarget.cs" />
     <Compile Include="ISCSITester.cs" />

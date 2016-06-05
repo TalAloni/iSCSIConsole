@@ -41,3 +41,7 @@ Revision History:
 1.1.9 - Added support for the Read6, Write6 SCSI commands.
 		Added support for the Block Limits (0xB0), Block Device Characteristics (0xB1) VPD pages.
 		Unsupported SCSI commands are now properly reported to the initiator.
+
+1.2.0 - Disk images are now locked for exclusive access.
+
+1.2.1 - We now use noncached I/O operations when working with virtual disks.

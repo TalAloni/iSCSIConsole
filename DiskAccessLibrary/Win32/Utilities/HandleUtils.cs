@@ -30,14 +30,12 @@ namespace DiskAccessLibrary
         private const uint GENERIC_READ = 0x80000000;
         private const uint GENERIC_WRITE = 0x40000000;
 
-        //private const uint FILE_SHARE_READ = 0x00000001;
-        //private const uint FILE_SHARE_WRITE = 0x00000002;
-
         private const uint OPEN_EXISTING = 3;
-        private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
-
-        private const int FILE_FLAG_BACKUP_SEMANTICS = 0x02000000; // needed for directories
-
+        
+        public const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+        public const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000; // needed for directories
+        public const uint FILE_FLAG_NO_BUFFERING = 0x20000000;
+        public const uint FILE_FLAG_WRITE_THROUGH = 0x80000000;
 
         public static SafeFileHandle GetDiskHandle(int physicalDiskIndex, FileAccess access, ShareMode shareMode)
         {
@@ -71,14 +69,18 @@ namespace DiskAccessLibrary
 
         public static SafeFileHandle GetFileHandle(string fileName, FileAccess access, ShareMode shareMode, bool isDirectory)
         {
-            uint desiredAccess = GetDesiredAccess(access);
-
-            uint flags = FILE_ATTRIBUTE_NORMAL;
+            uint flagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
             if (isDirectory)
             {
-                flags |= FILE_FLAG_BACKUP_SEMANTICS;
+                flagsAndAttributes |= FILE_FLAG_BACKUP_SEMANTICS;
             }
-            SafeFileHandle handle = CreateFile(fileName, desiredAccess, (uint)shareMode, IntPtr.Zero, OPEN_EXISTING, flags, new SafeFileHandle(IntPtr.Zero, true));
+            return GetFileHandle(fileName, access, shareMode, flagsAndAttributes);
+        }
+
+        public static SafeFileHandle GetFileHandle(string fileName, FileAccess access, ShareMode shareMode, uint flagsAndAttributes)
+        {
+            uint desiredAccess = GetDesiredAccess(access);
+            SafeFileHandle handle = CreateFile(fileName, desiredAccess, (uint)shareMode, IntPtr.Zero, OPEN_EXISTING, flagsAndAttributes, new SafeFileHandle(IntPtr.Zero, true));
             return handle;
         }
 

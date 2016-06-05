@@ -75,6 +75,10 @@ namespace ISCSIConsole
                                     {
                                         Console.WriteLine("Unsupported virtual disk format");
                                     }
+                                    catch (IOException ex)
+                                    {
+                                        Console.WriteLine("Cannot read file: " + ex.Message);
+                                    }
                                 }
                                 else
                                 {

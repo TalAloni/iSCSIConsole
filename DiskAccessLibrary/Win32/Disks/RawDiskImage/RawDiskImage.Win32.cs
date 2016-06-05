@@ -22,7 +22,7 @@ namespace DiskAccessLibrary
 
             long length = this.Size;
             bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
-            FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FileOptions.WriteThrough);
+            FileStream stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
             try
             {
                 stream.SetLength(length + additionalNumberOfBytes);

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using Utilities;
+using ISCSI.Server;
 
 namespace ISCSI
 {
