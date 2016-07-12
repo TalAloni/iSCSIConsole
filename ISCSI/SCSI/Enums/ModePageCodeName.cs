@@ -6,6 +6,7 @@ namespace ISCSI
         VendorSpecificPage = 0x00, // Microsoft iSCSI initiator on Windows 2000 will request this page
         CachingParametersPage = 0x08,
         ControlModePage = 0x0A,
+        PowerConditionModePage = 0x1A,
         InformationalExceptionsControlModePage = 0x1C,
         ReturnAllPages = 0x3F,
     }

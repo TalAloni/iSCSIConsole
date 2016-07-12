@@ -58,7 +58,7 @@ namespace ISCSI
             BigEndianWriter.WriteUInt16(buffer, 8, Obsolete2);
             BigEndianWriter.WriteUInt16(buffer, 10, Obsolete3);
 
-            return base.GetBytes();
+            return buffer;
         }
     }
 }

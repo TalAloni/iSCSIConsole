@@ -17,7 +17,7 @@ namespace ISCSI
         public bool BidirectionalReadResidualUnderflow;
         public bool ResidualOverflow;
         public bool ResidualUnderflow;
-        public byte Response;
+        public ISCSIResponseName Response;
         public SCSIStatusCodeName Status;
         public uint SNACKTag;
         public uint StatSN;
@@ -39,7 +39,7 @@ namespace ISCSI
             BidirectionalReadResidualUnderflow = (OpCodeSpecificHeader[0] & 0x08) != 0;
             ResidualOverflow = (OpCodeSpecificHeader[0] & 0x04) != 0;
             ResidualUnderflow = (OpCodeSpecificHeader[0] & 0x02) != 0;
-            Response = OpCodeSpecificHeader[1];
+            Response = (ISCSIResponseName)OpCodeSpecificHeader[1];
             Status = (SCSIStatusCodeName)OpCodeSpecificHeader[2];
 
             SNACKTag = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);
@@ -69,7 +69,7 @@ namespace ISCSI
             {
                 OpCodeSpecificHeader[0] |= 0x02;
             }
-            OpCodeSpecificHeader[1] = Response;
+            OpCodeSpecificHeader[1] = (byte)Response;
             OpCodeSpecificHeader[2] = (byte)Status;
 
             Array.Copy(BigEndianConverter.GetBytes(SNACKTag), 0, OpCodeSpecific, 0, 4);

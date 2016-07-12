@@ -29,11 +29,11 @@ namespace ISCSI.Server
         public int TargetMaxRecvDataSegmentLength = DeclaredMaxRecvDataSegmentLength;
 
         public uint StatSN = 0; // Initial StatSN, any number will do
-        // Dictionary of current transfers: <transfer-tag, <offset, length>>
+        // Dictionary of current transfers: <transfer-tag, <command-bytes, length>>
         // offset - logical block address (sector)
         // length - data transfer length in bytes
         // Note: here incoming means data write operations to the target
-        public Dictionary<uint, KeyValuePair<ulong, uint>> Transfers = new Dictionary<uint, KeyValuePair<ulong, uint>>();
+        public Dictionary<uint, KeyValuePair<byte[], uint>> Transfers = new Dictionary<uint, KeyValuePair<byte[], uint>>();
 
         // Dictionary of transfer data: <transfer-tag, command-data>
         public Dictionary<uint, byte[]> TransferData = new Dictionary<uint, byte[]>();

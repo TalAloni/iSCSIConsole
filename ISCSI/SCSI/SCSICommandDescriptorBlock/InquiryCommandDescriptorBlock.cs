@@ -13,7 +13,7 @@ namespace ISCSI
 {
     public class InquiryCommand : SCSICommandDescriptorBlock
     {
-        public bool EVPD;
+        public bool EVPD; // Enable Vital Product Data
         public VitalProductDataPageName PageCode;
 
         public InquiryCommand() : base()

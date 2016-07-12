@@ -18,8 +18,6 @@ namespace ISCSI.Server
     {
         internal static List<ISCSIPDU> GetSCSIResponsePDU(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
-            ushort LUN = command.LUN;
-
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
             
@@ -32,7 +30,7 @@ namespace ISCSI.Server
                 // Store segment (we only execute the command after receiving all of its data)
                 byte[] commandData = new byte[command.ExpectedDataTransferLength];
                 Array.Copy(command.Data, 0, commandData, 0, command.DataSegmentLength);
-                connection.Transfers.Add(transferTag, new KeyValuePair<ulong, uint>(command.CommandDescriptorBlock.LogicalBlockAddress64, command.ExpectedDataTransferLength));
+                connection.Transfers.Add(transferTag, new KeyValuePair<byte[], uint>(command.CommandDescriptorBlock, command.ExpectedDataTransferLength));
                 connection.TransferData.Add(transferTag, commandData);
 
                 // Send R2T
@@ -52,12 +50,17 @@ namespace ISCSI.Server
 
             byte[] scsiResponse;
             SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);
-            if (!command.Read)
+            if (!command.Read || status != SCSIStatusCodeName.Good)
             {
+                // RFC 3720: if the command is completed with an error, then the response and sense data MUST be sent in a SCSI Response PDU
                 SCSIResponsePDU response = new SCSIResponsePDU();
                 response.InitiatorTaskTag = command.InitiatorTaskTag;
                 response.Status = status;
                 response.Data = scsiResponse;
+                if (command.Read)
+                {
+                    EnforceExpectedDataTransferLength(response, command.ExpectedDataTransferLength);
+                }
                 responseList.Add(response);
             }
             else if (scsiResponse.Length <= connection.InitiatorMaxRecvDataSegmentLength)
@@ -128,10 +131,13 @@ namespace ISCSI.Server
                     // Last Data-out PDU
                     ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Last Data-out PDU", connectionIdentifier);
                     
-                    long sectorIndex = (long)connection.Transfers[request.TargetTransferTag].Key;
+                    byte[] commandBytes = connection.Transfers[request.TargetTransferTag].Key;
+                    byte[] scsiResponse;
+                    SCSIStatusCodeName status = target.ExecuteCommand(commandBytes, request.LUN, commandData, out scsiResponse);
                     SCSIResponsePDU response = new SCSIResponsePDU();
                     response.InitiatorTaskTag = request.InitiatorTaskTag;
-                    response.Status = target.Write(request.LUN, sectorIndex, commandData, out response.Data);
+                    response.Status = status;
+                    response.Data = scsiResponse;
                     connection.Transfers.Remove(request.TargetTransferTag);
                     connection.TransferData.Remove(request.TargetTransferTag);
                     session.NextR2TSN.Remove(request.TargetTransferTag);
@@ -153,12 +159,27 @@ namespace ISCSI.Server
             }
             else
             {
-                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Unfamiliar TargetTransferTag", connectionIdentifier);
-                SCSIResponsePDU response = new SCSIResponsePDU();
-                response.InitiatorTaskTag = request.InitiatorTaskTag;
-                response.Status = SCSIStatusCodeName.CheckCondition;
-                response.Data = SCSITarget.FormatSenseData(SenseDataParameter.GetIllegalRequestSenseData());
-                return response;
+                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Invalid TargetTransferTag", connectionIdentifier);
+                RejectPDU reject = new RejectPDU();
+                reject.InitiatorTaskTag = request.InitiatorTaskTag;
+                reject.Reason = RejectReason.InvalidPDUField;
+                reject.Data = ByteReader.ReadBytes(request.GetBytes(), 0, 48);
+                return reject;
+            }
+        }
+
+        public static void EnforceExpectedDataTransferLength(SCSIResponsePDU response, uint expectedDataTransferLength)
+        {
+            if (response.Data.Length > expectedDataTransferLength)
+            {
+                response.ResidualOverflow = true;
+                response.ResidualCount = (uint)(expectedDataTransferLength - response.Data.Length);
+                response.Data = ByteReader.ReadBytes(response.Data, 0, (int)expectedDataTransferLength);
+            }
+            else if (response.Data.Length < expectedDataTransferLength)
+            {
+                response.ResidualUnderflow = true;
+                response.ResidualCount = (uint)(expectedDataTransferLength - response.Data.Length);
             }
         }
 

@@ -13,7 +13,7 @@ namespace ISCSI
 {
     public class ModeSense6CommandDescriptorBlock : SCSICommandDescriptorBlock
     {
-        public bool DBD;
+        public bool DBD; // Disable block descriptors
         public byte PC; // Page Control
         public ModePageCodeName PageCode;
         public byte SubpageCode;

@@ -64,6 +64,70 @@ namespace ISCSI
             return buffer;
         }
 
+        public static SenseDataParameter GetDataProtectSenseData()
+        {
+            SenseDataParameter senseData = new SenseDataParameter();
+            senseData.Valid = true;
+            senseData.ResponseCode = 0x70; // current errors
+            senseData.SenseKey = 0x07;     // DATA PROTECT
+            senseData.AdditionalSenseCode = 0x27; // Command not allowed
+            senseData.AdditionalSenseCodeQualifier = 0x00;
+            return senseData;
+        }
+
+        public static SenseDataParameter GetIllegalRequestSenseData(byte additionalSenseCode, byte additionalSenseCodeQualifier)
+        {
+            SenseDataParameter senseData = new SenseDataParameter();
+            senseData.Valid = true;
+            senseData.ResponseCode = 0x70; // current errors
+            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
+            senseData.AdditionalSenseCode = additionalSenseCode;
+            senseData.AdditionalSenseCodeQualifier = additionalSenseCodeQualifier;
+            return senseData;
+        }
+
+        public static SenseDataParameter GetIllegalRequestInvalidFieldInCDBSenseData()
+        {
+            return GetIllegalRequestSenseData(0x24, 0x00); // Invalid field in CDB
+        }
+
+        public static SenseDataParameter GetIllegalRequestInvalidLUNSenseData()
+        {
+            return GetIllegalRequestSenseData(0x25, 0x00); // Invalid LUN
+        }
+
+        public static SenseDataParameter GetIllegalRequestLBAOutOfRangeSenseData()
+        {
+            return GetIllegalRequestSenseData(0x21, 0x00); // LBA out of range
+        }
+
+        public static SenseDataParameter GetIllegalRequestUnsupportedCommandCodeSenseData()
+        {
+            return GetIllegalRequestSenseData(0x20, 0x00); // Invalid / unsupported command code
+        }
+
+        public static SenseDataParameter GetMediumErrorUnrecoverableReadErrorSenseData()
+        {
+            SenseDataParameter senseData = new SenseDataParameter();
+            senseData.Valid = true;
+            senseData.ResponseCode = 0x70; // current errors
+            senseData.SenseKey = 0x03;     // MEDIUM ERROR
+            senseData.AdditionalSenseCode = 0x11; // Peripheral Device Write Fault
+            senseData.AdditionalSenseCodeQualifier = 0x00;
+            return senseData;
+        }
+
+        public static SenseDataParameter GetMediumErrorWriteFaultSenseData()
+        {
+            SenseDataParameter senseData = new SenseDataParameter();
+            senseData.Valid = true;
+            senseData.ResponseCode = 0x70; // current errors
+            senseData.SenseKey = 0x03;     // MEDIUM ERROR
+            senseData.AdditionalSenseCode = 0x03; // Peripheral Device Write Fault
+            senseData.AdditionalSenseCodeQualifier = 0x00;
+            return senseData;
+        }
+
         public static SenseDataParameter GetNoSenseSenseData()
         {
             SenseDataParameter senseData = new SenseDataParameter();
@@ -83,77 +147,8 @@ namespace ISCSI
             senseData.Valid = true;
             senseData.ResponseCode = 0x70; // current errors
             senseData.SenseKey = 0x03;     // MEDIUM ERROR
-            senseData.AdditionalSenseCode = 0x00; // Peripheral Device Write Fault
-            return senseData;
-        }
-
-        public static SenseDataParameter GetIllegalRequestSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
-            senseData.AdditionalSenseCode = 0x00;
-            return senseData;
-        }
-
-        public static SenseDataParameter GetIllegalRequestUnsupportedCommandCodeSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
-            senseData.AdditionalSenseCode = 0x20; // Invalid / unsupported command code
-            return senseData;
-        }
-
-        public static SenseDataParameter GetIllegalRequestLBAOutOfRangeSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
-            senseData.AdditionalSenseCode = 0x21; // LBA out of range
-            return senseData;
-        }
-
-        public static SenseDataParameter GetIllegalRequestInvalidLUNSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
-            senseData.AdditionalSenseCode = 0x25; // Invalid LUN
-            return senseData;
-        }
-
-        public static SenseDataParameter GetIllegalRequestParameterNotSupportedSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x05;     // ILLEGAL REQUEST
-            senseData.AdditionalSenseCode = 0x26; // Parameter not supported
-            return senseData;
-        }
-
-        public static SenseDataParameter GetUnitAttentionSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x06;     // UNIT ATTENTION
-            senseData.AdditionalSenseCode = 0x00;
-            return senseData;
-        }
-
-        public static SenseDataParameter GetDataProtectSenseData()
-        {
-            SenseDataParameter senseData = new SenseDataParameter();
-            senseData.Valid = true;
-            senseData.ResponseCode = 0x70; // current errors
-            senseData.SenseKey = 0x07;     // DATA PROTECT
-            senseData.AdditionalSenseCode = 0x00;
+            senseData.AdditionalSenseCode = 0x03; // Peripheral Device Write Fault
+            senseData.AdditionalSenseCodeQualifier = 0x00;
             return senseData;
         }
     }

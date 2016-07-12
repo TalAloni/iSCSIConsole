@@ -40,6 +40,7 @@
     <Compile Include="Client\SessionParameters.cs" />
     <Compile Include="Client\StateObject.cs" />
     <Compile Include="Client\ISCSIClient.cs" />
+    <Compile Include="PDU\Enums\ISCSIResponseName.cs" />
     <Compile Include="PDU\Enums\LogoutReasonCode.cs" />
     <Compile Include="PDU\Enums\LogoutResponse.cs" />
     <Compile Include="PDU\Enums\RejectReason.cs" />
@@ -48,8 +49,12 @@
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\LUNStructure.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ControlModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\PowerConditionModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\PowerConsumptionModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\SubModePage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockLimitsVPDPage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockDeviceCharacteristicsVPDPage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\VPDPages\Enums\IdentifierTypeName.cs" />
     <Compile Include="Server\ConnectionParameters.cs" />
     <Compile Include="PDU\Enums\ISCSIOpCodeName.cs" />
     <Compile Include="PDU\Enums\LoginResponseStatusClassName.cs" />
@@ -63,7 +68,6 @@
     <Compile Include="Server\SCSITarget.cs" />
     <Compile Include="Server\SessionParameters.cs" />
     <Compile Include="Server\ISCSITarget.cs" />
-    <Compile Include="ISCSITester.cs" />
     <Compile Include="KeyValuePairUtils.cs" />
     <Compile Include="PDU\ISCSIPDU.cs" />
     <Compile Include="PDU\LoginRequestPDU.cs" />

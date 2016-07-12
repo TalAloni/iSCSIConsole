@@ -39,15 +39,24 @@ namespace ISCSI
         public bool CmdQue;  // Command Queuing
         public bool VS2;     // Vendor specific
 
+        /// <summary>
+        /// 8 characters
+        /// </summary>
         public string VendorIdentification;
+        /// <summary>
+        /// 16 characters
+        /// </summary>
         public string ProductIdentification;
+        /// <summary>
+        /// 4 characters
+        /// </summary>
         public string ProductRevisionLevel;
         public ulong DriveSerialNumber;
         // Vendor Unique
         public byte Clocking;
         public bool QAS;
         public bool IUS;
-        public byte[] VersionDescriptor = new byte[16];
+        public List<ushort> VersionDescriptors = new List<ushort>(); // 8 descriptors (16 bytes)
 
         public StandardInquiryData()
         {
@@ -99,7 +108,11 @@ namespace ISCSI
             QAS = (buffer[offset + 56] & 0x02) != 0;
             IUS = (buffer[offset + 56] & 0x01) != 0;
 
-            Array.Copy(buffer, offset + 58, VersionDescriptor, 0, 16);
+            for (int index = 0; index < 8; index++)
+            {
+                ushort versionDescriptor = BigEndianConverter.ToUInt16(buffer, offset + 58 + index * 2);
+                VersionDescriptors.Add(versionDescriptor);
+            }
         }
 
         public byte[] GetBytes()
@@ -197,7 +210,15 @@ namespace ISCSI
                 buffer[56] |= 0x01;
             }
 
-            Array.Copy(VersionDescriptor, 0, buffer, 58, 16);
+            for (int index = 0; index < 8; index++)
+            {
+                ushort versionDescriptor = 0;
+                if (index < VersionDescriptors.Count)
+                {
+                    versionDescriptor = VersionDescriptors[index];
+                }
+                BigEndianWriter.WriteUInt16(buffer, 58 + index * 2, versionDescriptor);
+            }
 
             return buffer;
         }

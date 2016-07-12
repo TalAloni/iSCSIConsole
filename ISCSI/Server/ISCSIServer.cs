@@ -187,7 +187,6 @@ namespace ISCSI.Server
                 return;
             }
 
-            Log("[{0}][ReceiveCallback] Received {1} bytes", state.ConnectionIdentifier, numberOfBytesReceived);
             byte[] currentBuffer = ByteReader.ReadBytes(state.ReceiveBuffer, 0, numberOfBytesReceived);
             ProcessCurrentBuffer(currentBuffer, state);
 
@@ -235,17 +234,12 @@ namespace ISCSI.Server
                 }
                 else
                 {
-                    Log("[{0}][ProcessCurrentBuffer] PDU is being processed, Length: {1}", state.ConnectionIdentifier, pduLength);
                     byte[] pduBytes = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, pduLength);
                     bytesLeftInBuffer -= pduLength;
                     ISCSIPDU pdu = null;
                     try
                     {
                         pdu = ISCSIPDU.GetPDU(pduBytes);
-                    }
-                    catch (UnsupportedSCSICommandException)
-                    {
-                        pdu = new SCSICommandPDU(pduBytes, false);
                     }
                     catch (Exception ex)
                     {
@@ -264,6 +258,7 @@ namespace ISCSI.Server
                             Log("[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.ConnectionIdentifier, pdu.OpCode.ToString("X"));
                             // Unsupported PDU
                             RejectPDU reject = new RejectPDU();
+                            reject.InitiatorTaskTag = pdu.InitiatorTaskTag;
                             reject.Reason = RejectReason.CommandNotSupported;
                             reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
                             TrySendPDU(state, reject);
@@ -277,7 +272,10 @@ namespace ISCSI.Server
                     if (!clientSocket.Connected)
                     {
                         // Do not continue to process the buffer if the other side closed the connection
-                        Log("[{0}][ProcessCurrentBuffer] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
+                        if (bytesLeftInBuffer > 0)
+                        {
+                            Log("[{0}][ProcessCurrentBuffer] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
+                        }
                         return;
                     }
                 }
@@ -296,9 +294,9 @@ namespace ISCSI.Server
         public void ProcessPDU(ISCSIPDU pdu, StateObject state)
         {
             Socket clientSocket = state.ClientSocket;
-            Log("[{0}][ProcessPDU] Received PDU from initiator, Operation: {1}, Size: {2}", state.ConnectionIdentifier, (ISCSIOpCodeName)pdu.OpCode, pdu.Length);
             
             uint? cmdSN = PDUHelper.GetCmdSN(pdu);
+            Log("[{0}][ProcessPDU] Received PDU from initiator, Operation: {1}, Size: {2}, CmdSN: {3}", state.ConnectionIdentifier, (ISCSIOpCodeName)pdu.OpCode, pdu.Length, cmdSN);
             // RFC 3720: On any connection, the iSCSI initiator MUST send the commands in increasing order of CmdSN,
             // except for commands that are retransmitted due to digest error recovery and connection recovery.
             if (cmdSN.HasValue)
@@ -307,6 +305,7 @@ namespace ISCSI.Server
                 {
                     if (cmdSN != state.SessionParameters.ExpCmdSN)
                     {
+                        Log("[{0}][ProcessPDU] CmdSN outside of expected range", state.ConnectionIdentifier);
                         // We ignore this PDU
                         return;
                     }
@@ -423,26 +422,14 @@ namespace ISCSI.Server
                     else if (pdu is SCSICommandPDU)
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
-                        if (command.CommandDescriptorBlock == null)
+                        ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                        List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
+                        foreach (ISCSIPDU response in scsiResponseList)
                         {
-                            Log("[{0}][ProcessPDU] Unsupported SCSI Command (0x{1})", state.ConnectionIdentifier, command.OpCodeSpecific[12].ToString("X"));
-                            SCSIResponsePDU response = new SCSIResponsePDU();
-                            response.InitiatorTaskTag = command.InitiatorTaskTag;
-                            response.Status = SCSIStatusCodeName.CheckCondition;
-                            response.Data = SCSITarget.FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
                             TrySendPDU(state, response);
-                        }
-                        else
-                        {
-                            ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, SCSI command: {2}, LUN: {3}, Data segment length: {4}, Expected Data Transfer Length: {5}, Final: {6}", state.ConnectionIdentifier, command.CmdSN, (SCSIOpCodeName)command.CommandDescriptorBlock.OpCode, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                            List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
-                            foreach (ISCSIPDU response in scsiResponseList)
+                            if (!clientSocket.Connected)
                             {
-                                TrySendPDU(state, response);
-                                if (!clientSocket.Connected)
-                                {
-                                    return;
-                                }
+                                return;
                             }
                         }
                     }

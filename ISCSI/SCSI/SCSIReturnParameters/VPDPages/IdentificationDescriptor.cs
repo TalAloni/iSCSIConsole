@@ -11,13 +11,40 @@ using Utilities;
 
 namespace ISCSI
 {
+    public enum ProtocolName : byte
+    {
+        FibreChannel = 0,
+        ParallelSCSI = 1,
+        SSA = 2,
+        IEEE1394 = 3,
+        SCSIRDMA = 4,
+        ISCSI = 5,
+        SAS = 6,
+        ADT = 7,
+        ATA = 8,
+    }
+
+    public enum CodeSetName : byte
+    {
+        Binary = 1,
+        ASCII = 2,
+        UTF8 = 3,
+    }
+
+    public enum AssociationName : byte
+    {
+        LogicalUnit = 0,
+        TargetPort = 1,
+        TargetDevice = 2,
+    }
+
     public class IdentificationDescriptor
     {
-        public byte ProtocolIdentifier;
-        public byte CodeSet;
+        public ProtocolName ProtocolIdentifier;
+        public CodeSetName CodeSet;
         public bool PIV;
-        public byte Association;
-        public byte IdentifierType;
+        public AssociationName Association;
+        public IdentifierTypeName IdentifierType;
         public byte IdentifierLength;
         public byte[] Identifier = new byte[0];
 
@@ -25,46 +52,27 @@ namespace ISCSI
         {
         }
 
-        public IdentificationDescriptor(ulong eui64Identifier)
+        public IdentificationDescriptor(IdentifierTypeName identifierType, byte[] identifier)
         {
-            CodeSet = 0x01;
-            IdentifierType = 0x02; // EUI-64
-            Identifier = BigEndianConverter.GetBytes(eui64Identifier);
-        }
-
-        public IdentificationDescriptor(ulong eui64Identifier, ulong wwn)
-        {
-            /*
-             * In Fibre Channel, the unique identity of a device is provided by a 64-bit WWN, whereas the network address is the 24-bit Fibre Channel address.
-             * The WWN convention is also accommodated by iSCSI naming as an IEEE extended unique identifier (EUI) format or “eui.”
-             * The resulting iSCSI name is simply “eui” followed by the hexidecimal WWN (for example, eui.0300732A32598D26). 
-             * */
-            CodeSet = 0x01;
-            IdentifierType = 0x03;
-            Identifier = new byte[16];
-            Array.Copy(BigEndianConverter.GetBytes(eui64Identifier), 0, Identifier, 0, 8);
-            Array.Copy(BigEndianConverter.GetBytes(wwn), 0, Identifier, 8, 8);
-        }
-
-        public IdentificationDescriptor(byte[] identifier)
-        {
-            CodeSet = 0x01; // The IDENTIFIER field shall contain binary values
+            CodeSet = CodeSetName.Binary;
+            IdentifierType = identifierType;
             Identifier = identifier;
         }
 
-        public IdentificationDescriptor(string identifier)
+        public IdentificationDescriptor(IdentifierTypeName identifierType, string identifier)
         {
-            CodeSet = 0x02; // The IDENTIFIER field shall contain ASCII graphic codes
+            CodeSet = CodeSetName.ASCII;
+            IdentifierType = identifierType;
             Identifier = ASCIIEncoding.ASCII.GetBytes(identifier);
         }
 
         public IdentificationDescriptor(byte[] buffer, int offset)
         {
-            ProtocolIdentifier = (byte)((buffer[offset + 0] >> 4) & 0x0F);
-            CodeSet = (byte)(buffer[offset + 0] & 0x0F);
+            ProtocolIdentifier = (ProtocolName)((buffer[offset + 0] >> 4) & 0x0F);
+            CodeSet = (CodeSetName)(buffer[offset + 0] & 0x0F);
             PIV = (buffer[offset + 1] & 0x80) != 0;
-            Association = (byte)((buffer[offset + 1] >> 4) & 0x03);
-            IdentifierType = (byte)(buffer[offset + 1] & 0x0F);
+            Association = (AssociationName)((buffer[offset + 1] >> 4) & 0x03);
+            IdentifierType = (IdentifierTypeName)(buffer[offset + 1] & 0x0F);
 
             IdentifierLength = buffer[offset + 3];
             Identifier = new byte[IdentifierLength];
@@ -76,15 +84,15 @@ namespace ISCSI
             IdentifierLength = (byte)Identifier.Length;
 
             byte[] buffer = new byte[4 + Identifier.Length];
-            buffer[0] |= (byte)(ProtocolIdentifier << 4);
-            buffer[0] |= (byte)(CodeSet & 0x0F);
+            buffer[0] |= (byte)((byte)ProtocolIdentifier << 4);
+            buffer[0] |= (byte)((byte)CodeSet & 0x0F);
             
             if (PIV)
             {
                 buffer[1] |= 0x80;
             }
-            buffer[1] |= (byte)((Association & 0x03) << 4);
-            buffer[1] |= (byte)(IdentifierType & 0x0F);
+            buffer[1] |= (byte)(((byte)Association & 0x03) << 4);
+            buffer[1] |= (byte)((byte)IdentifierType & 0x0F);
             buffer[3] = (byte)Identifier.Length;
             Array.Copy(Identifier, 0, buffer, 4, Identifier.Length);
 
@@ -99,15 +107,38 @@ namespace ISCSI
             }
         }
 
-        public static IdentificationDescriptor GetISCSIIdentifier(string iqn)
+        /// <param name="oui">UInt24</param>
+        public static IdentificationDescriptor GetEUI64Identifier(uint oui, uint vendorSpecific)
         {
-            // RFC 3720: iSCSI names may be transported using both binary and ASCII-based protocols.
-            // Note: Microsoft iSCSI Target uses binary CodeSet
-            iqn += ",t,0x1"; // 't' for SCSI Target Port, 0x1 portal group tag
-            //byte[] bytes = ASCIIEncoding.ASCII.GetBytes(iqn);
-            IdentificationDescriptor result = new IdentificationDescriptor(iqn);
-            result.ProtocolIdentifier = 0x05; // iSCSI
+            byte[] eui64 = new byte[8];
+            WriteUInt24(eui64, 0, oui);
+            // we leave byte 3 zeroed-out
+            BigEndianWriter.WriteUInt32(eui64, 4, vendorSpecific);
+            return new IdentificationDescriptor(IdentifierTypeName.EUI64, eui64);
+        }
+
+        /// <param name="oui">UInt24</param>
+        public static IdentificationDescriptor GetNAAExtendedIdentifier(uint oui, uint vendorSpecific)
+        {
+            byte[] identifier = new byte[8];
+            identifier[0] = 0x02 << 4;
+            WriteUInt24(identifier, 2, oui);
+            WriteUInt24(identifier, 5, vendorSpecific);
+            return new IdentificationDescriptor(IdentifierTypeName.NAA, identifier);
+        }
+
+        public static IdentificationDescriptor GetSCSINameStringIdentifier(string iqn)
+        {
+            IdentificationDescriptor result = new IdentificationDescriptor(IdentifierTypeName.ScsiNameString, iqn);
+            result.Association = AssociationName.TargetDevice;
+            result.ProtocolIdentifier = ProtocolName.ISCSI;
             return result;
+        }
+
+        public static void WriteUInt24(byte[] buffer, int offset, uint value)
+        {
+            byte[] bytes = BigEndianConverter.GetBytes(value);
+            Array.Copy(bytes, 1, buffer, offset, 3);
         }
     }
 }

@@ -229,9 +229,11 @@ namespace ISCSI.Client
 
         internal static SCSICommandPDU GetReportLUNsCommand(SessionParameters session, ConnectionParameters connection, uint allocationLength)
         {
+            SCSICommandDescriptorBlock reportLUNs = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReportLUNs);
+            reportLUNs.TransferLength = allocationLength;
+            
             SCSICommandPDU scsiCommand = new SCSICommandPDU();
-            scsiCommand.CommandDescriptorBlock = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReportLUNs);
-            scsiCommand.CommandDescriptorBlock.TransferLength = allocationLength;
+            scsiCommand.CommandDescriptorBlock = reportLUNs.GetBytes();
             scsiCommand.InitiatorTaskTag = session.GetNextTaskTag();
             scsiCommand.Final = true;
             scsiCommand.Read = true;
@@ -242,9 +244,11 @@ namespace ISCSI.Client
 
         internal static SCSICommandPDU GetReadCapacity10Command(SessionParameters session, ConnectionParameters connection, ushort LUN)
         {
+            SCSICommandDescriptorBlock readCapacity10 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReadCapacity10);
+            readCapacity10.TransferLength = ReadCapacity10Parameter.Length;
+
             SCSICommandPDU scsiCommand = new SCSICommandPDU();
-            scsiCommand.CommandDescriptorBlock = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReadCapacity10);
-            scsiCommand.CommandDescriptorBlock.TransferLength = ReadCapacity10Parameter.Length;
+            scsiCommand.CommandDescriptorBlock = readCapacity10.GetBytes();
             scsiCommand.InitiatorTaskTag = session.GetNextTaskTag();
             scsiCommand.Final = true;
             scsiCommand.Read = true;
@@ -256,10 +260,12 @@ namespace ISCSI.Client
 
         internal static SCSICommandPDU GetReadCapacity16Command(SessionParameters session, ConnectionParameters connection, ushort LUN)
         {
+            SCSICommandDescriptorBlock serviceActionIn = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ServiceActionIn);
+            serviceActionIn.ServiceAction = ServiceAction.ReadCapacity16;
+            serviceActionIn.TransferLength = ReadCapacity16Parameter.Length;
+
             SCSICommandPDU scsiCommand = new SCSICommandPDU();
-            scsiCommand.CommandDescriptorBlock = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ServiceActionIn);
-            scsiCommand.CommandDescriptorBlock.ServiceAction = ServiceAction.ReadCapacity16;
-            scsiCommand.CommandDescriptorBlock.TransferLength = ReadCapacity16Parameter.Length;
+            scsiCommand.CommandDescriptorBlock = serviceActionIn.GetBytes();
             scsiCommand.InitiatorTaskTag = session.GetNextTaskTag();
             scsiCommand.Final = true;
             scsiCommand.Read = true;
@@ -271,10 +277,12 @@ namespace ISCSI.Client
 
         internal static SCSICommandPDU GetRead16Command(SessionParameters session, ConnectionParameters connection, ushort LUN, ulong sectorIndex, uint sectorCount, int bytesPerSector)
         {
+            SCSICommandDescriptorBlock read16 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Read16);
+            read16.LogicalBlockAddress64 = sectorIndex;
+            read16.TransferLength = sectorCount;
+
             SCSICommandPDU scsiCommand = new SCSICommandPDU();
-            scsiCommand.CommandDescriptorBlock = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Read16);
-            scsiCommand.CommandDescriptorBlock.LogicalBlockAddress64 = sectorIndex;
-            scsiCommand.CommandDescriptorBlock.TransferLength = sectorCount;
+            scsiCommand.CommandDescriptorBlock = read16.GetBytes();
             scsiCommand.LUN = LUN;
             scsiCommand.InitiatorTaskTag = session.GetNextTaskTag();
             scsiCommand.Final = true;
@@ -286,10 +294,12 @@ namespace ISCSI.Client
 
         internal static SCSICommandPDU GetWrite16Command(SessionParameters session, ConnectionParameters connection, ushort LUN, ulong sectorIndex, byte[] data, int bytesPerSector)
         {
+            SCSICommandDescriptorBlock write16 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Write16);
+            write16.LogicalBlockAddress64 = sectorIndex;
+            write16.TransferLength = (uint)(data.Length / bytesPerSector);
+
             SCSICommandPDU scsiCommand = new SCSICommandPDU();
-            scsiCommand.CommandDescriptorBlock = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Write16);
-            scsiCommand.CommandDescriptorBlock.LogicalBlockAddress64 = sectorIndex;
-            scsiCommand.CommandDescriptorBlock.TransferLength = (uint)(data.Length / bytesPerSector);
+            scsiCommand.CommandDescriptorBlock = write16.GetBytes();
             if (session.ImmediateData)
             {
                 int immediateDataLength = Math.Min(data.Length, session.FirstBurstLength);

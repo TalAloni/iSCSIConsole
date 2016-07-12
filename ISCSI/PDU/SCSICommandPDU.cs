@@ -20,18 +20,14 @@ namespace ISCSI
         public uint ExpectedDataTransferLength; // in bytes (for the whole operation and not just this command)
         public uint CmdSN;
         public uint ExpStatSN;
-        public SCSICommandDescriptorBlock CommandDescriptorBlock;
+        public byte[] CommandDescriptorBlock;
 
         public SCSICommandPDU() : base()
         {
             OpCode = ISCSIOpCodeName.SCSICommand;
         }
 
-        public SCSICommandPDU(byte[] buffer) : this(buffer, true)
-        {
-        }
-
-        public SCSICommandPDU(byte[] buffer, bool parseCDB) : base(buffer)
+        public SCSICommandPDU(byte[] buffer) : base(buffer)
         {
             Read = (OpCodeSpecificHeader[0] & 0x40) != 0;
             Write = (OpCodeSpecificHeader[0] & 0x20) != 0;
@@ -43,10 +39,7 @@ namespace ISCSI
             CmdSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);
             ExpStatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 8);
 
-            if (parseCDB)
-            {
-                CommandDescriptorBlock = SCSICommandDescriptorBlock.FromBytes(OpCodeSpecific, 12);
-            }
+            CommandDescriptorBlock = ByteReader.ReadBytes(OpCodeSpecific, 12, 16);
         }
 
         public override byte[] GetBytes()
@@ -66,8 +59,7 @@ namespace ISCSI
             Array.Copy(BigEndianConverter.GetBytes(ExpectedDataTransferLength), 0, OpCodeSpecific, 0, 4);
             Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);
             Array.Copy(BigEndianConverter.GetBytes(ExpStatSN), 0, OpCodeSpecific, 8, 4);
-            byte[] cdbBytes = CommandDescriptorBlock.GetBytes();
-            Array.Copy(cdbBytes, 0, OpCodeSpecific, 12, cdbBytes.Length);
+            Array.Copy(CommandDescriptorBlock, 0, OpCodeSpecific, 12, CommandDescriptorBlock.Length);
             
             return base.GetBytes();
         }

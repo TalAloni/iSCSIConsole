@@ -18,8 +18,26 @@ namespace ISCSI.Server
             m_disks = disks;
         }
 
+        public SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        {
+            SCSICommandDescriptorBlock command;
+            try
+            {
+                command = SCSICommandDescriptorBlock.FromBytes(commandBytes, 0);
+            }
+            catch(UnsupportedSCSICommandException)
+            {
+                ISCSIServer.Log("[ExecuteCommand] Unsupported SCSI Command (0x{0})", commandBytes[0].ToString("X"));
+                response = SCSITarget.FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
+                return SCSIStatusCodeName.CheckCondition;
+            }
+
+            return ExecuteCommand(command, lun, data, out response);
+        }
+
         public SCSIStatusCodeName ExecuteCommand(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
+            ISCSIServer.Log("[ExecuteCommand] {0}", command.OpCode);
             if (command.OpCode == SCSIOpCodeName.TestUnitReady)
             {
                 return TestUnitReady(lun, out response);
@@ -96,18 +114,32 @@ namespace ISCSI.Server
 
             if (!command.EVPD)
             {
-                StandardInquiryData inquiryData = new StandardInquiryData();
-                inquiryData.PeripheralDeviceType = 0; // Direct access block device
-                inquiryData.VendorIdentification = "iSCSIConsole";
-                inquiryData.ProductIdentification = "Disk_" + lun.ToString();
-                inquiryData.ProductRevisionLevel = "1.00";
-                inquiryData.DriveSerialNumber = 0;
-                inquiryData.CmdQue = true;
-                inquiryData.Version = 5; // Microsoft iSCSI Target report version 5
-                response = inquiryData.GetBytes();
+                if ((int)command.PageCode == 0)
+                {
+                    StandardInquiryData inquiryData = new StandardInquiryData();
+                    inquiryData.PeripheralDeviceType = 0; // Direct access block device
+                    inquiryData.VendorIdentification = "TalAloni";
+                    inquiryData.ProductIdentification = "iSCSI Disk " + ((ushort)lun).ToString();
+                    inquiryData.ProductRevisionLevel = "1.00";
+                    inquiryData.DriveSerialNumber = 0;
+                    inquiryData.CmdQue = true;
+                    inquiryData.Version = 5; // Microsoft iSCSI Target report version 5
+                    if (this is ISCSITarget)
+                    {
+                        inquiryData.VersionDescriptors.Add(0x0960); // iSCSI
+                    }
+                    response = inquiryData.GetBytes();
+                }
+                else
+                {
+                    ISCSIServer.Log("[Inquiry] Invalid request");
+                    response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
+                    return SCSIStatusCodeName.CheckCondition;
+                }
             }
             else
             {
+                ISCSIServer.Log("[Inquiry] Page code: 0x{0}", command.PageCode.ToString("X"));
                 switch (command.PageCode)
                 {
                     case VitalProductDataPageName.SupportedVPDPages:
@@ -132,13 +164,12 @@ namespace ISCSI.Server
                     case VitalProductDataPageName.DeviceIdentification:
                         {
                             DeviceIdentificationVPDPage page = new DeviceIdentificationVPDPage();
-                            // Identifiers necessity is preliminary, and has not been confirmed:
-                            // WWN identifier is needed to prevent 0xF4 BSOD during Windows setup
-                            // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
-                            page.IdentificationDescriptorList.Add(new IdentificationDescriptor(5, lun));
+                            // NAA identifier is needed to prevent 0xF4 BSOD during Windows setup
+                            page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetNAAExtendedIdentifier(5, lun));
                             if (this is ISCSITarget)
                             {
-                                page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetISCSIIdentifier(((ISCSITarget)this).TargetName));
+                                // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
+                                page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetSCSINameStringIdentifier(((ISCSITarget)this).TargetName));
                             }
                             response = page.GetBytes();
                             break;
@@ -163,7 +194,7 @@ namespace ISCSI.Server
                         }
                     default:
                         {
-                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestParameterNotSupportedSenseData());
+                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             ISCSIServer.Log("[Inquiry] Unsupported VPD Page request (0x{0})", command.PageCode.ToString("X"));
                             return SCSIStatusCodeName.CheckCondition;
                         }
@@ -186,16 +217,8 @@ namespace ISCSI.Server
                 return SCSIStatusCodeName.CheckCondition;
             }
 
-            ShortLBAModeParameterBlockDescriptor descriptor = new ShortLBAModeParameterBlockDescriptor();
-            descriptor.LogicalBlockLength = (uint)m_disks[lun].BytesPerSector;
-
-            ModeParameterHeader6 header = new ModeParameterHeader6();
-            header.WP = m_disks[lun].IsReadOnly; // Write protected, even when set to true, Windows does not always prevent the disk from being written to.
-            header.DPOFUA = true;  // Microsoft iSCSI Target support this
-            header.BlockDescriptorLength = (byte)descriptor.Length;
-            header.ModeDataLength += (byte)descriptor.Length;
-
-            byte[] pageData = new byte[0];
+            ISCSIServer.Log("[ModeSense6] Page code: 0x{0}, Sub page code: 0x{1}", command.PageCode.ToString("X"), command.SubpageCode.ToString("X"));
+            byte[] pageData;
 
             switch ((ModePageCodeName)command.PageCode)
             {
@@ -203,35 +226,47 @@ namespace ISCSI.Server
                     {
                         CachingParametersPage page = new CachingParametersPage();
                         page.RCD = true;
-                        header.ModeDataLength += (byte)page.Length;
-                        pageData = new byte[page.Length];
-                        Array.Copy(page.GetBytes(), pageData, page.Length);
+                        pageData = page.GetBytes();
                         break;
                     }
                 case ModePageCodeName.ControlModePage:
                     {
                         ControlModePage page = new ControlModePage();
-                        header.ModeDataLength += (byte)page.Length;
-                        pageData = new byte[page.Length];
-                        Array.Copy(page.GetBytes(), pageData, page.Length);
+                        pageData = page.GetBytes();
                         break;
+                    }
+                case ModePageCodeName.PowerConditionModePage:
+                    {
+                        if (command.SubpageCode == 0x00)
+                        {
+                            PowerConditionModePage page = new PowerConditionModePage();
+                            pageData = page.GetBytes();
+                            break;
+                        }
+                        else if (command.SubpageCode == 0x01)
+                        {
+                            PowerConsumptionModePage page = new PowerConsumptionModePage();
+                            pageData = page.GetBytes();
+                            break;
+                        }
+                        else
+                        {
+                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
+                            ISCSIServer.Log("[ModeSense6] Power condition subpage 0x{0} is not implemented", command.SubpageCode.ToString("x"));
+                            return SCSIStatusCodeName.CheckCondition;
+                        }
                     }
                 case ModePageCodeName.InformationalExceptionsControlModePage:
                     {
                         InformationalExceptionsControlModePage page = new InformationalExceptionsControlModePage();
-                        header.ModeDataLength += (byte)page.Length;
-                        pageData = new byte[page.Length];
-                        Array.Copy(page.GetBytes(), pageData, page.Length);
+                        pageData = page.GetBytes();
                         break;
                     }
                 case ModePageCodeName.ReturnAllPages:
                     {
                         CachingParametersPage page1 = new CachingParametersPage();
                         page1.RCD = true;
-                        header.ModeDataLength += (byte)page1.Length;
-
                         InformationalExceptionsControlModePage page2 = new InformationalExceptionsControlModePage();
-                        header.ModeDataLength += (byte)page2.Length;
 
                         pageData = new byte[page1.Length + page2.Length];
                         Array.Copy(page1.GetBytes(), pageData, page1.Length);
@@ -242,22 +277,34 @@ namespace ISCSI.Server
                     {
                         // Microsoft iSCSI Target running under Windows 2000 will request this page, we immitate Microsoft iSCSI Target by sending back an empty page
                         VendorSpecificPage page = new VendorSpecificPage();
-                        header.ModeDataLength += (byte)page.Length;
-                        pageData = new byte[page.Length];
-                        Array.Copy(page.GetBytes(), pageData, page.Length);
+                        pageData = page.GetBytes();
                         break;
                     }
                 default:
                     {
-                        response = FormatSenseData(SenseDataParameter.GetIllegalRequestParameterNotSupportedSenseData());
+                        response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                         ISCSIServer.Log("[ModeSense6] ModeSense6 page 0x{0} is not implemented", command.PageCode.ToString("x"));
                         return SCSIStatusCodeName.CheckCondition;
                     }
             }
+
+            ModeParameterHeader6 header = new ModeParameterHeader6();
+            header.WP = m_disks[lun].IsReadOnly; // Write protected, even when set to true, Windows does not always prevent the disk from being written to.
+            header.DPOFUA = true;  // Microsoft iSCSI Target support this
+            byte[] descriptorBytes = new byte[0];
+            if (!command.DBD)
+            {
+                ShortLBAModeParameterBlockDescriptor descriptor = new ShortLBAModeParameterBlockDescriptor();
+                descriptor.LogicalBlockLength = (uint)m_disks[lun].BytesPerSector;
+                descriptorBytes = descriptor.GetBytes();
+            }
+            header.BlockDescriptorLength = (byte)descriptorBytes.Length;
+            header.ModeDataLength += (byte)(descriptorBytes.Length + pageData.Length);
+
             response = new byte[1 + header.ModeDataLength];
             Array.Copy(header.GetBytes(), 0, response, 0, header.Length);
-            Array.Copy(descriptor.GetBytes(), 0, response, header.Length, descriptor.Length);
-            Array.Copy(pageData, 0, response, header.Length + descriptor.Length, pageData.Length);
+            Array.Copy(descriptorBytes, 0, response, header.Length, descriptorBytes.Length);
+            Array.Copy(pageData, 0, response, header.Length + descriptorBytes.Length, pageData.Length);
             return SCSIStatusCodeName.Good;
         }
 
@@ -311,6 +358,7 @@ namespace ISCSI.Server
             }
             catch (ArgumentOutOfRangeException)
             {
+                ISCSIServer.Log("[Read] Read error: LBA out of range");
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -319,13 +367,14 @@ namespace ISCSI.Server
                 int error = Marshal.GetHRForException(ex);
                 if (error == (int)Win32Error.ERROR_CRC)
                 {
+                    ISCSIServer.Log("[Read] Read error: CRC error");
                     response = FormatSenseData(SenseDataParameter.GetWriteFaultSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
                 else
                 {
-                    ISCSIServer.Log("[{0}][Read] Read error:", ex.ToString());
-                    response = FormatSenseData(SenseDataParameter.GetUnitAttentionSenseData());
+                    ISCSIServer.Log("[Read] Read error: {0}", ex.ToString());
+                    response = FormatSenseData(SenseDataParameter.GetMediumErrorUnrecoverableReadErrorSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
             }
@@ -406,11 +455,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName Write(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
-            return Write(lun, (long)command.LogicalBlockAddress64, data, out response);
-        }
-
-        public SCSIStatusCodeName Write(LUNStructure lun, long sectorIndex, byte[] data, out byte[] response)
-        {
             if (lun >= m_disks.Count)
             {
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
@@ -429,19 +473,20 @@ namespace ISCSI.Server
             {
                 try
                 {
-                    disk.WriteSectors(sectorIndex, data);
+                    disk.WriteSectors((long)command.LogicalBlockAddress64, data);
                     response = new byte[0];
                     return SCSIStatusCodeName.Good;
                 }
                 catch (ArgumentOutOfRangeException)
                 {
+                    ISCSIServer.Log("[Write] Write error: LBA out of range");
                     response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
                 catch (IOException ex)
                 {
-                    ISCSIServer.Log("[{0}][Write] Write error:", ex.ToString());
-                    response = FormatSenseData(SenseDataParameter.GetUnitAttentionSenseData());
+                    ISCSIServer.Log("[Write] Write error: {0}", ex.ToString());
+                    response = FormatSenseData(SenseDataParameter.GetMediumErrorWriteFaultSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
             }
