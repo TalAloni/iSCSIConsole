@@ -70,7 +70,13 @@ namespace ISCSI.Server
                 return response;
             }
 
-            if (request.CurrentStage == 0)
+            // RFC 3720:  The login process proceeds in two stages - the security negotiation
+            // stage and the operational parameter negotiation stage.  Both stages are optional
+            // but at least one of them has to be present.
+
+            bool firstLoginRequest = (!session.IsDiscovery && target == null);
+
+            if (firstLoginRequest)
             {
                 string sessionType = request.LoginParameters.ValueOf("SessionType");
                 if (sessionType == "Discovery")
@@ -102,10 +108,13 @@ namespace ISCSI.Server
                         return response;
                     }
                 }
+            }
 
+            if (request.CurrentStage == 0)
+            {
                 response.LoginParameters.Add("AuthMethod", "None");
                 
-                if (request.Transit && request.NextStage != 1)
+                if (request.Transit && request.NextStage != 1 && request.NextStage != 3)
                 {
                     response.Status = LoginResponseStatusName.InitiatorError;
                 }

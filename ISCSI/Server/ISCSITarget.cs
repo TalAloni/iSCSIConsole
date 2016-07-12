@@ -11,15 +11,13 @@ using Utilities;
 
 namespace ISCSI.Server
 {
-    public class ISCSITarget
+    public class ISCSITarget : SCSITarget
     {
         private string m_targetName; // ISCSI name
-        private List<Disk> m_disks;
 
-        public ISCSITarget(string targetName, List<Disk> disks)
+        public ISCSITarget(string targetName, List<Disk> disks) : base(disks)
         {
             m_targetName = targetName;
-            m_disks = disks;
         }
 
         public string TargetName
@@ -27,14 +25,6 @@ namespace ISCSI.Server
             get
             {
                 return m_targetName;
-            }
-        }
-
-        public List<Disk> Disks
-        {
-            get
-            {
-                return m_disks;
             }
         }
     }

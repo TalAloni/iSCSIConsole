@@ -39,5 +39,11 @@ namespace Utilities
                 FullName = FileSystem.GetDirectoryPath(FullName);
             }
         }
+
+        public FileSystemEntry Clone()
+        {
+            FileSystemEntry clone = (FileSystemEntry)MemberwiseClone();
+            return clone;
+        }
     }
 }

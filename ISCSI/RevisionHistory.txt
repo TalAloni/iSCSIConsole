@@ -47,3 +47,8 @@ Revision History:
 
 1.2.2 - Protocol related bugfixes and improvements.
 		Added iSCSI Client implementation.
+
+1.2.3 - Bugfix: login requests starting from stage 1 are now properly handled.
+		Bugfix: Unsupported SCSI commands are now properly handled.
+
+1.2.4 - Improved separation between the iSCSI and SCSI layers.

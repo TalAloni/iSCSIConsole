@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,7 +13,12 @@ using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    public partial class NTFSVolume : FileSystem, IDiskFileSystem
+    /// <summary>
+    /// Implements the low level NTFS volume logic.
+    /// This class can be used by higher level implementation that may include
+    /// functions such as file copy, caching, symbolic links and etc.
+    /// </summary>
+    public partial class NTFSVolume : IExtendableFileSystem
     {
         private Volume m_volume;
         private MasterFileTable m_mft;
@@ -55,9 +60,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 return m_mft.GetFileRecord(MasterFileTable.RootDirSegmentNumber);
             }
 
-            path = path.Substring(1);
-
-            string[] components = path.Split('\\');
+            string[] components = path.Substring(1).Split('\\');
             long directorySegmentNumber = MasterFileTable.RootDirSegmentNumber;
             for (int index = 0; index < components.Length; index++)
             {
@@ -76,21 +79,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 }
                 else // last component
                 {
-                    foreach (KeyValuePair<MftSegmentReference, FileNameRecord> record in records)
-                    {
-                        if (String.Equals(record.Value.FileName, components[index], StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            FileRecord fileRecord = m_mft.GetFileRecord(record.Key);
-                            if (!fileRecord.IsMetaFile)
-                            {
-                                return fileRecord;
-                            }
-                            else
-                            {
-                                return null;
-                            }
-                        }
-                    }
+                    return FindRecord(records, components[index]);
                 }
             }
 
@@ -99,29 +88,21 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         private FileRecord FindDirectoryRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string directoryName)
         {
-            foreach (KeyValuePair<MftSegmentReference, FileNameRecord> record in records)
+            FileRecord directoryRecord = FindRecord(records, directoryName);
+            if (directoryRecord.IsDirectory)
             {
-                if (String.Equals(record.Value.FileName, directoryName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    FileRecord directoryRecord = m_mft.GetFileRecord(record.Key);
-                    if (directoryRecord.IsDirectory && !directoryRecord.IsMetaFile)
-                    {
-                        return directoryRecord;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                return directoryRecord;
             }
             return null;
         }
 
-        private FileRecord FindDirectoryRecord(List<FileRecord> records, string directoryName)
+        private FileRecord FindRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string name)
         {
-            foreach (FileRecord record in records)
+            KeyValuePair<MftSegmentReference, FileNameRecord>? nameRecord = FindFileNameRecord(records, name);
+            if (nameRecord != null)
             {
-                if (record.IsDirectory && String.Equals(record.FileName, directoryName, StringComparison.InvariantCultureIgnoreCase))
+                FileRecord record = m_mft.GetFileRecord(nameRecord.Value.Key);
+                if (record.IsInUse && !record.IsMetaFile)
                 {
                     return record;
                 }
@@ -129,45 +110,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return null;
         }
 
-        public override FileSystemEntry GetEntry(string path)
-        {
-            FileRecord record = GetFileRecord(path);
-            if (record != null)
-            {
-                ulong size = record.IsDirectory ? 0 : record.DataRecord.DataRealSize;
-                FileAttributes attributes = record.StandardInformation.FileAttributes;
-                bool isHidden = (attributes & FileAttributes.Hidden) > 0;
-                bool isReadonly = (attributes & FileAttributes.Readonly) > 0;
-                bool isArchived = (attributes & FileAttributes.Archive) > 0;
-                return new FileSystemEntry(path, record.FileName, record.IsDirectory, size, record.FileNameRecord.CreationTime, record.FileNameRecord.ModificationTime, record.FileNameRecord.LastAccessTime, isHidden, isReadonly, isArchived);
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public override FileSystemEntry CreateFile(string path)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override FileSystemEntry CreateDirectory(string path)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override void Move(string source, string destination)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override void Delete(string path)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public KeyValuePairList<MftSegmentReference, FileNameRecord> GetFileNameRecordsInDirectory(long directoryBaseSegmentNumber)
+        private KeyValuePairList<MftSegmentReference, FileNameRecord> GetFileNameRecordsInDirectory(long directoryBaseSegmentNumber)
         {
             FileRecord record = m_mft.GetFileRecord(directoryBaseSegmentNumber);
             KeyValuePairList<MftSegmentReference, FileNameRecord> result = null;
@@ -204,7 +147,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return result;
         }
 
-        public List<FileRecord> GetFileRecordsInDirectory(long directoryBaseSegmentNumber, bool includeMetaFiles)
+        public List<FileRecord> GetFileRecordsInDirectory(long directoryBaseSegmentNumber)
+        {
+            return GetFileRecordsInDirectory(directoryBaseSegmentNumber, false);
+        }
+
+        private List<FileRecord> GetFileRecordsInDirectory(long directoryBaseSegmentNumber, bool includeMetaFiles)
         {
             KeyValuePairList<MftSegmentReference, FileNameRecord> entries = GetFileNameRecordsInDirectory(directoryBaseSegmentNumber);
             List<FileRecord> result = new List<FileRecord>();
@@ -227,200 +175,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             return result;
         }
-        
-        public override List<FileSystemEntry> ListEntriesInDirectory(string path)
-        {
-            FileRecord directoryRecord = GetFileRecord(path);
-            if (directoryRecord != null && directoryRecord.IsDirectory)
-            {
-                long directoryBaseSegmentNumber = directoryRecord.MftSegmentNumber;
-                List<FileRecord> records = GetFileRecordsInDirectory(directoryBaseSegmentNumber, false);
-                List<FileSystemEntry> result = new List<FileSystemEntry>();
-
-                if (!path.EndsWith(@"\"))
-                {
-                    path = path + @"\";
-                }
-
-                foreach (FileRecord record in records)
-                {
-                    string fullPath = path + record.FileName;
-                    ulong size = record.IsDirectory ? 0 : record.DataRecord.DataRealSize;
-                    FileAttributes attributes = record.StandardInformation.FileAttributes;
-                    bool isHidden = (attributes & FileAttributes.Hidden) > 0;
-                    bool isReadonly = (attributes & FileAttributes.Readonly) > 0;
-                    bool isArchived = (attributes & FileAttributes.Archive) > 0;
-                    FileSystemEntry entry = new FileSystemEntry(fullPath, record.FileName, record.IsDirectory, size, record.FileNameRecord.CreationTime, record.FileNameRecord.ModificationTime, record.FileNameRecord.LastAccessTime, isHidden, isReadonly, isArchived);
-                    result.Add(entry);
-                }
-                return result;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public override Stream OpenFile(string path, FileMode mode, FileAccess access, FileShare share)
-        {
-            if (mode == FileMode.Open || mode == FileMode.Truncate)
-            {
-                FileRecord record = GetFileRecord(path);
-                if (record != null && !record.IsDirectory)
-                {
-                    NTFSFile file = new NTFSFile(this, record.MftSegmentNumber);
-                    NTFSFileStream stream = new NTFSFileStream(file);
-
-                    if (mode == FileMode.Truncate)
-                    {
-                        stream.SetLength(0);
-                    }
-                    return stream;
-                }
-                else
-                {
-                    throw new FileNotFoundException();
-                }
-            }
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override void SetAttributes(string path, bool? isHidden, bool? isReadonly, bool? isArchived)
-        {
-            FileRecord record = GetFileRecord(path);
-            if (isHidden.HasValue)
-            {
-                if (isHidden.Value)
-                {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Hidden;
-                }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Hidden;
-                }
-            }
-
-            if (isReadonly.HasValue)
-            {
-                if (isReadonly.Value)
-                {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Readonly;
-                }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Readonly;
-                }
-            }
-
-            if (isArchived.HasValue)
-            {
-                if (isArchived.Value)
-                {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Archive;
-                }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Archive;
-                }
-            }
-
-            m_mft.UpdateFileRecord(record);
-        }
-
-        public override void SetDates(string path, DateTime? creationDT, DateTime? lastWriteDT, DateTime? lastAccessDT)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        /*
-        [Obsolete]
-        public object GetParentFolderIdentifier(object folderIdentifier)
-        {
-            return GetSegmentNumberOfParentRecord((long)folderIdentifier);
-        }
-
-        [Obsolete]
-        public void CopyFile(object folderIdentifier, string sourceFileName, string destination)
-        {
-            FileRecord record = GetFileRecordFromDirectory((long)folderIdentifier, sourceFileName);
-            CopyFile(record, destination);
-        }
-
-        [Obsolete]
-        public void ListFilesInDirectorySlow(long directoryBaseSegmentNumber)
-        {
-            long maxNumOfRecords = m_mft.GetMaximumNumberOfSegments();
-
-            for (long index = 0; index < maxNumOfRecords; index++)
-            {
-                FileRecord record = m_mft.GetFileRecord(index);
-                if (record != null)
-                {
-                    if (record.ParentDirMftSegmentNumber == directoryBaseSegmentNumber)
-                    {
-                        if (record.IsInUse && record.MftSegmentNumber > MasterFileTable.LastReservedMftSegmentNumber)
-                        {
-                            Console.WriteLine(record.FileName);
-                        }
-                    }
-                }
-            }
-        }
-        
-        [Obsolete]
-        public FileRecord GetFileRecordFromDirectory(long directoryBaseSegmentNumber, string fileName)
-        {
-            List<FileRecord> records = GetRecordsInDirectory(directoryBaseSegmentNumber, true);
-            foreach(FileRecord record in records)
-            {
-                if (record.FileName.Equals(fileName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return record;
-                }
-            }
-
-            return null;
-        }
-
-        [Obsolete]
-        public long GetSegmentNumberOfParentRecord(long baseSegmentNumber)
-        {
-            return m_mft.GetFileRecord(baseSegmentNumber).ParentDirMftSegmentNumber;
-        }
-
-        [Obsolete]
-        public void PrintAllFiles()
-        {
-            long maxNumOfRecords = m_mft.GetMaximumNumberOfSegments();
-
-            for (long index = 0; index < maxNumOfRecords; index++)
-            {
-                FileRecord record = m_mft.GetFileRecord(index);
-                if (record != null)
-                {
-                    Console.WriteLine(record.FileName);
-                }
-            }
-        }
-        
-        [Obsolete]
-        public void CopyFile(FileRecord record, string destination)
-        {
-            if (record.DataRecord != null)
-            {
-                FileStream stream = new FileStream(destination, FileMode.Create, FileAccess.Write);
-
-                int transferSizeInClusters = PhysicalDisk.MaximumDirectTransferSizeLBA / SectorsPerCluster;
-                for(long index = 0; index < record.DataRecord.DataClusterCount; index += transferSizeInClusters)
-                {
-                    long clustersLeft = record.DataRecord.DataClusterCount - index;
-                    int transferSize = (int)Math.Min(transferSizeInClusters, clustersLeft);
-                    byte[] buffer = record.DataRecord.ReadDataClusters(this, index, transferSize);
-                    stream.Write(buffer, 0, buffer.Length);
-                }
-                stream.Close();
-            }
-        }*/
 
         // logical cluster
         public byte[] ReadCluster(long clusterLCN)
@@ -521,22 +275,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return builder.ToString();
         }
 
-        public override string Name
-        {
-            get
-            {
-                return "NTFS";
-            }
-        }
-
-        public long RootFolderIdentifier
-        {
-            get
-            {
-                return MasterFileTable.RootDirSegmentNumber;
-            }
-        }
-
         public bool IsValid
         {
             get
@@ -553,7 +291,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public override long Size
+        public long Size
         {
             get
             {
@@ -561,7 +299,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public override long FreeSpace
+        public long FreeSpace
         {
             get
             {
@@ -638,6 +376,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public KeyValuePairList<ulong, long> AllocateClusters(ulong desiredStartLCN, long numberOfClusters)
         {
             return m_bitmap.AllocateClusters(desiredStartLCN, numberOfClusters);
+        }
+
+        private static KeyValuePair<MftSegmentReference, FileNameRecord>? FindFileNameRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string name)
+        {
+            foreach (KeyValuePair<MftSegmentReference, FileNameRecord> record in records)
+            {
+                if (String.Equals(record.Value.FileName, name, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return record;
+                }
+            }
+            return null;
         }
     }
 }

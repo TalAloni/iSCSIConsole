@@ -59,11 +59,12 @@
     <Compile Include="Disks\VMDK\VirtualMachineDiskType.cs" />
     <Compile Include="Exceptions\DeviceNotReadyException.cs" />
     <Compile Include="FileSystems\FileSystemHelper.cs" />
-    <Compile Include="FileSystems\IDiskFileSystem.cs" />
+    <Compile Include="FileSystems\IExtendableFileSystem.cs" />
     <Compile Include="FileSystems\NTFS\AttributeRecord\FileNameAttributeRecord.cs" />
     <Compile Include="FileSystems\NTFS\AttributeRecord\StandardInformationRecord.cs" />
     <Compile Include="FileSystems\NTFS\Enums\FilenameNamespace.cs" />
-    <Compile Include="FileSystems\NTFS\NTFSFileStream.cs" />
+    <Compile Include="FileSystems\NTFS\Adapters\NTFSFileStream.cs" />
+    <Compile Include="FileSystems\NTFS\Adapters\NTFSFileSystem.cs" />
     <Compile Include="Helpers\MoveHelper.cs" />
     <Compile Include="LogicalDiskManagerHelpers\RetainHelper.cs" />
     <Compile Include="LogicalDiskManager\Exceptions\DatabaseNotFoundException.cs" />

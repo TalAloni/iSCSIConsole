@@ -60,6 +60,7 @@
     <Compile Include="SCSI\Enums\VitalProductDataPageName.cs" />
     <Compile Include="Server\ISCSIServer.cs" />
     <Compile Include="Server\PDUHelper.cs" />
+    <Compile Include="Server\SCSITarget.cs" />
     <Compile Include="Server\SessionParameters.cs" />
     <Compile Include="Server\ISCSITarget.cs" />
     <Compile Include="ISCSITester.cs" />

@@ -45,3 +45,9 @@ Revision History:
 1.2.0 - Disk images are now locked for exclusive access.
 
 1.2.1 - We now use noncached I/O operations when working with virtual disks.
+
+1.2.2 - Updates to the ISCSI library.
+
+1.2.3 - Updates to the ISCSI library.
+
+1.2.4 - Updates to the ISCSI library.

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -34,14 +34,27 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
             else
             {
-                if (clusterVCN == 0)
+                long numberOfClusters = (long)Math.Ceiling((double)((ResidentAttributeRecord)m_record).Data.Length / volume.BytesPerCluster);
+                long highestVCN = Math.Max(numberOfClusters - 1, 0);
+                if (clusterVCN < 0 || clusterVCN > highestVCN)
                 {
-                    return ((ResidentAttributeRecord)m_record).Data;
+                    throw new ArgumentOutOfRangeException("Cluster VCN is not within the valid range");
+                }
+
+                long offset = clusterVCN * volume.BytesPerCluster;
+                int bytesToRead;
+                // last cluster could be partial
+                if (clusterVCN + count < numberOfClusters)
+                {
+                    bytesToRead = count * volume.BytesPerCluster;   
                 }
                 else
                 {
-                    throw new ArgumentException("Invalid clusterVCN for resident attribute record");
+                    bytesToRead = (int)(((ResidentAttributeRecord)m_record).Data.Length - offset);
                 }
+                byte[] data = new byte[bytesToRead];
+                Array.Copy(((ResidentAttributeRecord)m_record).Data, offset, data, 0, bytesToRead);
+                return data;
             }
         }
 
@@ -58,7 +71,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
             else
             {
-                if (clusterVCN > data.Length / volume.BytesPerCluster)
+                int numberOfClusters = (int)Math.Ceiling((double)((ResidentAttributeRecord)m_record).Data.Length / volume.BytesPerCluster);
+                int count = (int)Math.Ceiling((double)data.Length / volume.BytesPerCluster);
+                long highestVCN = Math.Max(numberOfClusters - 1, 0);
+                if (clusterVCN < 0 || clusterVCN > highestVCN)
                 {
                     throw new ArgumentOutOfRangeException("Cluster VCN is not within the valid range");
                 }
@@ -77,7 +93,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
             else
             {
-                // If the resident data record becomes too long, than it will be replaced with a non-resident data record when the file record will be saved
+                // If the resident data record becomes too long, it will be replaced with a non-resident data record when the file record will be saved
                 byte[] data = ((ResidentAttributeRecord)m_record).Data;
                 int currentLength = data.Length;
                 byte[] temp = new byte[currentLength + (int)additionalLength];

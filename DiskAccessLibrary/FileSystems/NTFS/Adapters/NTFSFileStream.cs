@@ -13,7 +13,7 @@ using Utilities;
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
     /// <summary>
-    /// A Stream Wrapper for NTFSFile
+    /// A Stream wrapper for NTFSFile
     /// </summary>
     public class NTFSFileStream : Stream
     {

@@ -45,7 +45,6 @@ namespace ISCSI.Server
 
         public static object m_logSyncLock = new object();
         private static FileStream m_logFile;
-        private static bool m_enableDiskIOLogging = true;
         
         public ISCSIServer(List<ISCSITarget> targets) : this(targets, DefaultPort)
         { }
@@ -246,13 +245,7 @@ namespace ISCSI.Server
                     }
                     catch (UnsupportedSCSICommandException)
                     {
-                        SCSICommandPDU command = new SCSICommandPDU(pduBytes, false);
-                        Log("[{0}][ProcessCurrentBuffer] Unsupported SCSI Command (0x{1})", state.ConnectionIdentifier, command.OpCodeSpecific[12].ToString("X"));
-                        SCSIResponsePDU response = new SCSIResponsePDU();
-                        response.InitiatorTaskTag = command.InitiatorTaskTag;
-                        response.Status = SCSIStatusCodeName.CheckCondition;
-                        response.Data = TargetResponseHelper.FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
-                        TrySendPDU(state, response);
+                        pdu = new SCSICommandPDU(pduBytes, false);
                     }
                     catch (Exception ex)
                     {
@@ -351,7 +344,7 @@ namespace ISCSI.Server
             else if (pdu is LoginRequestPDU)
             {
                 LoginRequestPDU request = (LoginRequestPDU)pdu;
-                Log("[{0}][ReceiveCallback] Login Request parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(request.LoginParameters));
+                Log("[{0}][ReceiveCallback] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
                 if (request.TSIH != 0)
                 {
                     // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
@@ -364,7 +357,7 @@ namespace ISCSI.Server
                             // Perform implicit logout
                             Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
                             SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
-                            lock (m_activeConnections[existingConnectionIndex].SessionParameters.WriteLock)
+                            lock (m_activeConnections[existingConnectionIndex].Target.WriteLock)
                             {
                                 // Wait for pending I/O to complete.
                             }
@@ -400,7 +393,7 @@ namespace ISCSI.Server
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
-                        lock (m_activeConnections[connectionIndex].SessionParameters.WriteLock)
+                        lock (m_activeConnections[connectionIndex].Target.WriteLock)
                         {
                             // Wait for pending I/O to complete.
                         }
@@ -423,21 +416,33 @@ namespace ISCSI.Server
                     if (pdu is SCSIDataOutPDU)
                     {
                         SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
+                        ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
                         ISCSIPDU response = TargetResponseHelper.GetSCSIDataOutResponsePDU(request, state.Target, state.SessionParameters, state.ConnectionParameters);
                         TrySendPDU(state, response);
                     }
                     else if (pdu is SCSICommandPDU)
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, SCSI command: {2}, LUN: {3}, Data segment length: {4}, Expected Data Transfer Length: {5}, Final: {6}", state.ConnectionIdentifier, command.CmdSN, (SCSIOpCodeName)command.CommandDescriptorBlock.OpCode, command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                        List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
-                        foreach (ISCSIPDU response in scsiResponseList)
+                        if (command.CommandDescriptorBlock == null)
                         {
+                            Log("[{0}][ProcessPDU] Unsupported SCSI Command (0x{1})", state.ConnectionIdentifier, command.OpCodeSpecific[12].ToString("X"));
+                            SCSIResponsePDU response = new SCSIResponsePDU();
+                            response.InitiatorTaskTag = command.InitiatorTaskTag;
+                            response.Status = SCSIStatusCodeName.CheckCondition;
+                            response.Data = SCSITarget.FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
                             TrySendPDU(state, response);
-                            if (!clientSocket.Connected)
+                        }
+                        else
+                        {
+                            ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, SCSI command: {2}, LUN: {3}, Data segment length: {4}, Expected Data Transfer Length: {5}, Final: {6}", state.ConnectionIdentifier, command.CmdSN, (SCSIOpCodeName)command.CommandDescriptorBlock.OpCode, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                            List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
+                            foreach (ISCSIPDU response in scsiResponseList)
                             {
-                                return;
+                                TrySendPDU(state, response);
+                                if (!clientSocket.Connected)
+                                {
+                                    return;
+                                }
                             }
                         }
                     }
@@ -518,33 +523,6 @@ namespace ISCSI.Server
         public static void Log(string message, params object[] args)
         {
             Log(String.Format(message, args));
-        }
-
-        public static void LogRead(long sectorIndex, int sectorCount)
-        {
-            if (m_enableDiskIOLogging)
-            {
-                Log("[LogRead] Sector: {0}, Sector count: {1}", sectorIndex, sectorCount);
-            }
-        }
-
-        public static void LogWrite(Disk disk, long sectorIndex, byte[] data)
-        {
-            if (m_logFile != null && m_enableDiskIOLogging)
-            {
-                Log("[LogWrite] Sector: {0}, Data Length: {1}", sectorIndex, data.Length);
-            }
-        }
-
-        public static string GetByteArrayString(byte[] array)
-        {
-            StringBuilder builder = new StringBuilder();
-            foreach (byte b in array)
-            {
-                builder.Append(b.ToString("X2")); // 2 digit hex
-                builder.Append(" ");
-            }
-            return builder.ToString();
         }
     }
 }

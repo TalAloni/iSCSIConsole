@@ -68,3 +68,5 @@ Revision History:
         API to retrieve disk description and serial number.
 
 1.3.7 - Proper handling of disks with no serial number.
+
+1.3.8 - Minor improvements.
