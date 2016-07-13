@@ -11,6 +11,20 @@ using Utilities;
 
 namespace ISCSI.Server
 {
+    public class TransferEntry
+    {
+        public byte[] CommandBytes;
+        public byte[] CommandDataBuffer;
+        public uint NextR2NSN;
+
+        public TransferEntry(byte[] commandBytes, byte[] commandDataBuffer, uint nextR2NSN)
+        {
+            CommandBytes = commandBytes;
+            CommandDataBuffer = commandDataBuffer;
+            NextR2NSN = nextR2NSN;
+        }
+    }
+
     public class ConnectionParameters
     {
         /// <summary>
@@ -29,13 +43,26 @@ namespace ISCSI.Server
         public int TargetMaxRecvDataSegmentLength = DeclaredMaxRecvDataSegmentLength;
 
         public uint StatSN = 0; // Initial StatSN, any number will do
-        // Dictionary of current transfers: <transfer-tag, <command-bytes, length>>
-        // offset - logical block address (sector)
-        // length - data transfer length in bytes
-        // Note: here incoming means data write operations to the target
-        public Dictionary<uint, KeyValuePair<byte[], uint>> Transfers = new Dictionary<uint, KeyValuePair<byte[], uint>>();
+        // Dictionary of current transfers: <transfer-tag, TransferEntry>
+        private Dictionary<uint, TransferEntry> n_transfers = new Dictionary<uint, TransferEntry>();
 
-        // Dictionary of transfer data: <transfer-tag, command-data>
-        public Dictionary<uint, byte[]> TransferData = new Dictionary<uint, byte[]>();
+        public TransferEntry AddTransfer(uint transferTag, byte[] commandBytes, byte[] commandDataBuffer, uint nextR2NSN)
+        {
+            TransferEntry entry = new TransferEntry(commandBytes, commandDataBuffer, nextR2NSN);
+            n_transfers.Add(transferTag, entry);
+            return entry;
+        }
+
+        public TransferEntry GetTransferEntry(uint transferTag)
+        {
+            TransferEntry result;
+            n_transfers.TryGetValue(transferTag, out result);
+            return result;
+        }
+
+        public void RemoveTransfer(uint transferTag)
+        {
+            n_transfers.Remove(transferTag);
+        }
     }
 }

@@ -54,3 +54,5 @@ Revision History:
 1.2.4 - Improved separation between the iSCSI and SCSI layers.
 
 1.2.5 - Improved compliance with the iSCSI and SCSI protocols.
+
+1.2.6 - Minor improvements.

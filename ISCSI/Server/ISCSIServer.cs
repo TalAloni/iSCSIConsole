@@ -177,7 +177,7 @@ namespace ISCSI.Server
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
-                        lock (m_activeConnections[connectionIndex].WriteLock)
+                        lock (m_activeConnections[connectionIndex].Target.IOLock)
                         {
                             // Wait for pending I/O to complete.
                         }
@@ -356,7 +356,7 @@ namespace ISCSI.Server
                             // Perform implicit logout
                             Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
                             SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
-                            lock (m_activeConnections[existingConnectionIndex].Target.WriteLock)
+                            lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
                             {
                                 // Wait for pending I/O to complete.
                             }
@@ -392,7 +392,7 @@ namespace ISCSI.Server
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
-                        lock (m_activeConnections[connectionIndex].Target.WriteLock)
+                        lock (m_activeConnections[connectionIndex].Target.IOLock)
                         {
                             // Wait for pending I/O to complete.
                         }

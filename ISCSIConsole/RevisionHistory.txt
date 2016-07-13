@@ -51,3 +51,7 @@ Revision History:
 1.2.3 - Updates to the ISCSI library.
 
 1.2.4 - Updates to the ISCSI library.
+
+1.2.5 - Updates to the ISCSI library.
+
+1.2.6 - Updates to the ISCSI library.

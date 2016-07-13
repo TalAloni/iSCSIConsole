@@ -27,7 +27,6 @@ namespace ISCSI.Server
         public ISCSITarget Target; // Across all connections within a session, an initiator sees one and the same target.
         public SessionParameters SessionParameters = new SessionParameters();
         public ConnectionParameters ConnectionParameters = new ConnectionParameters();
-        public object WriteLock = new object();
 
         public string ConnectionIdentifier
         {

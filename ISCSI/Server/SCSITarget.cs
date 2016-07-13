@@ -11,7 +11,7 @@ namespace ISCSI.Server
     public class SCSITarget
     {
         private List<Disk> m_disks;
-        public object WriteLock = new object();
+        public object IOLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
 
         public SCSITarget(List<Disk> disks)
         {
@@ -353,7 +353,10 @@ namespace ISCSI.Server
             int sectorCount = (int)command.TransferLength;
             try
             {
-                response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
+                lock (IOLock)
+                {
+                    response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
+                }
                 return SCSIStatusCodeName.Good;
             }
             catch (ArgumentOutOfRangeException)
@@ -469,26 +472,26 @@ namespace ISCSI.Server
                 return SCSIStatusCodeName.CheckCondition;
             }
 
-            lock (WriteLock)
+            try
             {
-                try
+                lock (IOLock)
                 {
                     disk.WriteSectors((long)command.LogicalBlockAddress64, data);
-                    response = new byte[0];
-                    return SCSIStatusCodeName.Good;
                 }
-                catch (ArgumentOutOfRangeException)
-                {
-                    ISCSIServer.Log("[Write] Write error: LBA out of range");
-                    response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
-                    return SCSIStatusCodeName.CheckCondition;
-                }
-                catch (IOException ex)
-                {
-                    ISCSIServer.Log("[Write] Write error: {0}", ex.ToString());
-                    response = FormatSenseData(SenseDataParameter.GetMediumErrorWriteFaultSenseData());
-                    return SCSIStatusCodeName.CheckCondition;
-                }
+                response = new byte[0];
+                return SCSIStatusCodeName.Good;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                ISCSIServer.Log("[Write] Write error: LBA out of range");
+                response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
+                return SCSIStatusCodeName.CheckCondition;
+            }
+            catch (IOException ex)
+            {
+                ISCSIServer.Log("[Write] Write error: {0}", ex.ToString());
+                response = FormatSenseData(SenseDataParameter.GetMediumErrorWriteFaultSenseData());
+                return SCSIStatusCodeName.CheckCondition;
             }
         }
 

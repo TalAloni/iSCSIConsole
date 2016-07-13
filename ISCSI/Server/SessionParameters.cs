@@ -82,33 +82,18 @@ namespace ISCSI.Server
         public bool CommandNumberingStarted;
         public uint ExpCmdSN;
 
-        // Target Transfer Tag:
-        // There are no protocol specific requirements with regard to the value of these tags,
-        // but it is assumed that together with the LUN, they will enable the target to associate data with an R2T
-        public static uint m_nextTransferTag; // TargetTransferTag
-
-        // R2Ts are sequenced per command and must start with 0 for each new command.
-        // We use a dictionary to store which R2TSN should be used next.
-        // We use the transfer-tag that belongs to the command (SCSI Data-Out requests
-        // will specify the TargetTransferTag, not the CmdSN)
-        // (p.s. assuming the initator always sends the maximum amount of immediate data,
-        //  it's possible to calculate the next R2TSN from the BufferOffset)
-
-        // Dictionary of next R2TSN to use: <transfer-tag, NextR2TSN>
-        public Dictionary<uint, uint> NextR2TSN = new Dictionary<uint, uint>();
+        /// <summary>
+        /// Target Transfer Tag:
+        /// There are no protocol specific requirements with regard to the value of these tags,
+        /// but it is assumed that together with the LUN, they will enable the target to associate data with an R2T.
+        /// </summary>
+        public static uint m_nextTransferTag;
 
         public uint GetNextTransferTag()
         {
             uint transferTag = m_nextTransferTag;
             m_nextTransferTag++;
             return transferTag;
-        }
-
-        public uint GetNextR2TSN(uint transferTag)
-        {
-            uint nextR2TSN = NextR2TSN[transferTag];
-            NextR2TSN[transferTag]++;
-            return nextR2TSN;
         }
     }
 }
