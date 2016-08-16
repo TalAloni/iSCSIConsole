@@ -1,3 +1,9 @@
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -90,7 +96,8 @@ namespace ISCSI.Server
             else if (command.OpCode == SCSIOpCodeName.ServiceActionIn &&
                      command.ServiceAction == ServiceAction.ReadCapacity16)
             {
-                return ReadCapacity16(lun, out response);
+                uint allocationLength = command.TransferLength;
+                return ReadCapacity16(lun, allocationLength, out response);
             }
             else if (command.OpCode == SCSIOpCodeName.ReportLUNs)
             {
@@ -321,7 +328,7 @@ namespace ISCSI.Server
             return SCSIStatusCodeName.Good;
         }
 
-        public SCSIStatusCodeName ReadCapacity16(LUNStructure lun, out byte[] response)
+        public SCSIStatusCodeName ReadCapacity16(LUNStructure lun, uint allocationLength, out byte[] response)
         {
             if (lun >= m_disks.Count)
             {
@@ -331,6 +338,11 @@ namespace ISCSI.Server
 
             ReadCapacity16Parameter parameter = new ReadCapacity16Parameter(m_disks[lun].Size, (uint)m_disks[lun].BytesPerSector);
             response = parameter.GetBytes();
+            // we must not return more bytes than ReadCapacity16.AllocationLength
+            if (response.Length > allocationLength)
+            {
+                response = ByteReader.ReadBytes(response, 0, (int)allocationLength);
+            }
             return SCSIStatusCodeName.Good;
         }
 

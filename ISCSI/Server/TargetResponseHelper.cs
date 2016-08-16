@@ -164,7 +164,7 @@ namespace ISCSI.Server
             if (response.Data.Length > expectedDataTransferLength)
             {
                 response.ResidualOverflow = true;
-                response.ResidualCount = (uint)(expectedDataTransferLength - response.Data.Length);
+                response.ResidualCount = (uint)(response.Data.Length - expectedDataTransferLength);
                 response.Data = ByteReader.ReadBytes(response.Data, 0, (int)expectedDataTransferLength);
             }
             else if (response.Data.Length < expectedDataTransferLength)
@@ -179,7 +179,7 @@ namespace ISCSI.Server
             if (response.Data.Length > expectedDataTransferLength)
             {
                 response.ResidualOverflow = true;
-                response.ResidualCount = (uint)(expectedDataTransferLength - response.Data.Length);
+                response.ResidualCount = (uint)(response.Data.Length - expectedDataTransferLength);
                 response.Data = ByteReader.ReadBytes(response.Data, 0, (int)expectedDataTransferLength);
             }
             else if (response.Data.Length < expectedDataTransferLength)

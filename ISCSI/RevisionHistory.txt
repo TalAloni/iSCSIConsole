@@ -62,3 +62,6 @@ Revision History:
 1.2.8 - Reject improper commands during the login phase.
 
 1.2.9 - Reject improper commands before login is complete.
+
+1.3.0 - Bugfix: Invalid ReadCapacity16 command response was returend.
+		Bugfix: Incorrect ResidualCount value was returned.
