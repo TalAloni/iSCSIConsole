@@ -32,10 +32,10 @@ namespace ISCSI
         {
             // If the number of logical blocks exceeds the maximum value that is able to be specified in the RETURNED LOGICAL BLOCK ADDRESS field,
             // the device server shall set the RETURNED LOGICAL BLOCK ADDRESS field to 0xFFFFFFFF
-            long diskSizeLBA = diskSize / blockSizeInBytes - 1; // zero-based LBA of the last logical block
-            if (diskSizeLBA <= UInt32.MaxValue)
+            long returnedLBA = diskSize / blockSizeInBytes - 1; // zero-based LBA of the last logical block
+            if (returnedLBA <= UInt32.MaxValue)
             {
-                ReturnedLBA = (uint)diskSizeLBA; 
+                ReturnedLBA = (uint)returnedLBA; 
             }
             else
             {

@@ -206,7 +206,7 @@ namespace ISCSI.Client
                 if (capacity.ReturnedLBA != 0xFFFFFFFF)
                 {
                     bytesPerSector = (int)capacity.BlockLengthInBytes;
-                    return capacity.ReturnedLBA * capacity.BlockLengthInBytes;
+                    return (capacity.ReturnedLBA + 1) * capacity.BlockLengthInBytes;
                 }
 
                 readCapacity = ClientHelper.GetReadCapacity16Command(m_session, m_connection, LUN);
@@ -216,7 +216,7 @@ namespace ISCSI.Client
                 {
                     ReadCapacity16Parameter capacity16 = new ReadCapacity16Parameter(data.Data);
                     bytesPerSector = (int)capacity16.BlockLengthInBytes;
-                    return capacity16.ReturnedLBA * capacity16.BlockLengthInBytes;
+                    return (capacity16.ReturnedLBA + 1) * capacity16.BlockLengthInBytes;
                 }
             }
 

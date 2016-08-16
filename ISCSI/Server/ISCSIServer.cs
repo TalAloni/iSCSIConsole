@@ -412,6 +412,8 @@ namespace ISCSI.Server
                 }
                 else // Logged in to target 
                 {
+                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engin) in the order specified by CmdSN
+                    // e.g. read requests should not be executed while previous write request data is being received (via R2T)
                     if (pdu is SCSIDataOutPDU)
                     {
                         SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;

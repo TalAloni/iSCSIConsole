@@ -56,3 +56,5 @@ Revision History:
 1.2.5 - Improved compliance with the iSCSI and SCSI protocols.
 
 1.2.6 - Minor improvements.
+
+1.2.7 - The iSCSI Client did not report the correct disk capacity.
