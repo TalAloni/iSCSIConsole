@@ -177,9 +177,12 @@ namespace ISCSI.Server
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
-                        lock (m_activeConnections[connectionIndex].Target.IOLock)
+                        if (m_activeConnections[connectionIndex].Target != null)
                         {
-                            // Wait for pending I/O to complete.
+                            lock (m_activeConnections[connectionIndex].Target.IOLock)
+                            {
+                                // Wait for pending I/O to complete.
+                            }
                         }
                         m_activeConnections.RemoveAt(connectionIndex);
                     }
@@ -341,9 +344,12 @@ namespace ISCSI.Server
                             // Perform implicit logout
                             Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
                             SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
-                            lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
+                            if (m_activeConnections[existingConnectionIndex].Target != null)
                             {
-                                // Wait for pending I/O to complete.
+                                lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
+                                {
+                                    // Wait for pending I/O to complete.
+                                }
                             }
                             m_activeConnections.RemoveAt(existingConnectionIndex);
                             Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
@@ -351,12 +357,11 @@ namespace ISCSI.Server
                     }
                 }
                 LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
-                if (state.Target != null)
+                if (state.SessionParameters.IsFullFeaturePhase)
                 {
                     state.SessionParameters.ISID = request.ISID;
                     state.ConnectionParameters.CID = request.CID;
-
-                    if (response.NextStage == 3)
+                    lock (m_activeConnectionsLock)
                     {
                         m_activeConnections.Add(state);
                     }
@@ -364,7 +369,7 @@ namespace ISCSI.Server
                 Log("[{0}][ReceiveCallback] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
                 TrySendPDU(state, response);
             }
-            else if (!state.SessionParameters.IsDiscovery && state.Target == null)
+            else if (!state.SessionParameters.IsFullFeaturePhase)
             {
                 // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
                 Log("[{0}][ProcessPDU] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
@@ -389,9 +394,12 @@ namespace ISCSI.Server
                         int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                         if (connectionIndex >= 0)
                         {
-                            lock (m_activeConnections[connectionIndex].Target.IOLock)
+                            if (m_activeConnections[connectionIndex].Target != null)
                             {
-                                // Wait for pending I/O to complete.
+                                lock (m_activeConnections[connectionIndex].Target.IOLock)
+                                {
+                                    // Wait for pending I/O to complete.
+                                }
                             }
                             m_activeConnections.RemoveAt(connectionIndex);
                         }

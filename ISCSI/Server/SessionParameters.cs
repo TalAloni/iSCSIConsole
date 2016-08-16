@@ -79,6 +79,7 @@ namespace ISCSI.Server
         public ulong ISID; // Initiator Session ID
         public ushort TSIH; // Target Session Identifying Handle
         public bool IsDiscovery; // Indicate whether this is a discovery session
+        public bool IsFullFeaturePhase; // Indicate whether login has been completed
         public bool CommandNumberingStarted;
         public uint ExpCmdSN;
 

@@ -113,10 +113,17 @@ namespace ISCSI.Server
             if (request.CurrentStage == 0)
             {
                 response.LoginParameters.Add("AuthMethod", "None");
-                
-                if (request.Transit && request.NextStage != 1 && request.NextStage != 3)
+
+                if (request.Transit)
                 {
-                    response.Status = LoginResponseStatusName.InitiatorError;
+                    if (request.NextStage == 3)
+                    {
+                        session.IsFullFeaturePhase = true;
+                    }
+                    else if (request.NextStage != 1)
+                    {
+                        response.Status = LoginResponseStatusName.InitiatorError;
+                    }
                 }
             }
             else if (request.CurrentStage == 1)
@@ -124,9 +131,16 @@ namespace ISCSI.Server
                 UpdateOperationalParameters(request.LoginParameters, session, connection);
                 response.LoginParameters = GetLoginOperationalParameters(session, connection);
 
-                if (request.Transit && request.NextStage != 3)
+                if (request.Transit)
                 {
-                    response.Status = LoginResponseStatusName.InitiatorError;
+                    if (request.NextStage == 3)
+                    {
+                        session.IsFullFeaturePhase = true;
+                    }
+                    else
+                    {
+                        response.Status = LoginResponseStatusName.InitiatorError;
+                    }
                 }
             }
             else

@@ -60,3 +60,5 @@ Revision History:
 1.2.7 - The iSCSI Client did not report the correct disk capacity.
 
 1.2.8 - Reject improper commands during the login phase.
+
+1.2.9 - Reject improper commands before login is complete.
