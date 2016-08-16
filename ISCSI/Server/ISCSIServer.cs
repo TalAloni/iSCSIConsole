@@ -325,22 +325,7 @@ namespace ISCSI.Server
                 }
             }
 
-            if (pdu is NOPOutPDU)
-            {
-                NOPOutPDU request = (NOPOutPDU)pdu;
-                if (request.InitiatorTaskTag != 0xFFFFFFFF)
-                {
-                    NOPInPDU response = ServerResponseHelper.GetNOPResponsePDU(request);
-                    TrySendPDU(state, response);
-                }
-            }
-            else if (pdu is TextRequestPDU)
-            {
-                TextRequestPDU request = (TextRequestPDU)pdu;
-                TextResponsePDU response = ServerResponseHelper.GetTextResponsePDU(request, m_targets);
-                TrySendPDU(state, response);
-            }
-            else if (pdu is LoginRequestPDU)
+            if (pdu is LoginRequestPDU)
             {
                 LoginRequestPDU request = (LoginRequestPDU)pdu;
                 Log("[{0}][ReceiveCallback] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
@@ -368,12 +353,6 @@ namespace ISCSI.Server
                 LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
                 if (state.Target != null)
                 {
-                    if (request.LoginParameters.ContainsKey("TargetMaxRecvDataSegmentLength"))
-                    {
-                        state.ConnectionParameters.InitiatorMaxRecvDataSegmentLength = Convert.ToInt32(request.LoginParameters.ValueOf("TargetMaxRecvDataSegmentLength"));
-                        Log("[{0}][ProcessPDU] Initiator's TargetMaxRecvDataSegmentLength: {1}", state.ConnectionIdentifier, state.ConnectionParameters.InitiatorMaxRecvDataSegmentLength);
-                    }
-
                     state.SessionParameters.ISID = request.ISID;
                     state.ConnectionParameters.CID = request.CID;
 
@@ -385,60 +364,89 @@ namespace ISCSI.Server
                 Log("[{0}][ReceiveCallback] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
                 TrySendPDU(state, response);
             }
-            else if (pdu is LogoutRequestPDU)
+            else if (!state.SessionParameters.IsDiscovery && state.Target == null)
             {
-                lock (m_activeConnectionsLock)
+                // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
+                Log("[{0}][ProcessPDU] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                // A target receiving any PDU except a Login request before the Login phase is started MUST
+                // immediately terminate the connection on which the PDU was received.
+                // Once the Login phase has started, if the target receives any PDU except a Login request,
+                // it MUST send a Login reject (with Status "invalid during login") and then disconnect.
+                clientSocket.Close();
+            }
+            else // Logged in
+            {
+                if (pdu is TextRequestPDU)
                 {
-                    int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
-                    if (connectionIndex >= 0)
+                    TextRequestPDU request = (TextRequestPDU)pdu;
+                    TextResponsePDU response = ServerResponseHelper.GetTextResponsePDU(request, m_targets);
+                    TrySendPDU(state, response);
+                }
+                else if (pdu is LogoutRequestPDU)
+                {
+                    lock (m_activeConnectionsLock)
                     {
-                        lock (m_activeConnections[connectionIndex].Target.IOLock)
+                        int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
+                        if (connectionIndex >= 0)
                         {
-                            // Wait for pending I/O to complete.
+                            lock (m_activeConnections[connectionIndex].Target.IOLock)
+                            {
+                                // Wait for pending I/O to complete.
+                            }
+                            m_activeConnections.RemoveAt(connectionIndex);
                         }
-                        m_activeConnections.RemoveAt(connectionIndex);
+                    }
+                    LogoutRequestPDU request = (LogoutRequestPDU)pdu;
+                    LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
+                    TrySendPDU(state, response);
+                    clientSocket.Close(); // We can close the connection now
+                }
+                else if (state.SessionParameters.IsDiscovery)
+                {
+                    // The target MUST ONLY accept text requests with the SendTargets key and a logout
+                    // request with the reason "close the session".  All other requests MUST be rejected.
+                    Log("[{0}][ProcessPDU] Improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    RejectPDU reject = new RejectPDU();
+                    reject.Reason = RejectReason.ProtocolError;
+                    reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
+
+                    TrySendPDU(state, reject);
+                }
+                else if (pdu is NOPOutPDU)
+                {
+                    NOPOutPDU request = (NOPOutPDU)pdu;
+                    if (request.InitiatorTaskTag != 0xFFFFFFFF)
+                    {
+                        NOPInPDU response = ServerResponseHelper.GetNOPResponsePDU(request);
+                        TrySendPDU(state, response);
                     }
                 }
-                LogoutRequestPDU request = (LogoutRequestPDU)pdu;
-                LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
-                TrySendPDU(state, response);
-                clientSocket.Close(); // We can close the connection now
-            }
-            else // Target commands
-            {
-                if (state.SessionParameters.IsDiscovery || state.Target == null)
-                {
-                    Log("[{0}][ProcessPDU] Unknown or improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
-                }
-                else // Logged in to target 
+                else if (pdu is SCSIDataOutPDU)
                 {
                     // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engin) in the order specified by CmdSN
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
-                    if (pdu is SCSIDataOutPDU)
+                    SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
+                    ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
+                    ISCSIPDU response = TargetResponseHelper.GetSCSIDataOutResponsePDU(request, state.Target, state.SessionParameters, state.ConnectionParameters);
+                    TrySendPDU(state, response);
+                }
+                else if (pdu is SCSICommandPDU)
+                {
+                    SCSICommandPDU command = (SCSICommandPDU)pdu;
+                    ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                    List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
+                    foreach (ISCSIPDU response in scsiResponseList)
                     {
-                        SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
-                        ISCSIPDU response = TargetResponseHelper.GetSCSIDataOutResponsePDU(request, state.Target, state.SessionParameters, state.ConnectionParameters);
                         TrySendPDU(state, response);
-                    }
-                    else if (pdu is SCSICommandPDU)
-                    {
-                        SCSICommandPDU command = (SCSICommandPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                        List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
-                        foreach (ISCSIPDU response in scsiResponseList)
+                        if (!clientSocket.Connected)
                         {
-                            TrySendPDU(state, response);
-                            if (!clientSocket.Connected)
-                            {
-                                return;
-                            }
+                            return;
                         }
                     }
-                    else
-                    {
-                        Log("[{0}][ProcessPDU] Unknown or improper command, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
-                    }
+                }
+                else
+                {
+                    Log("[{0}][ProcessPDU] Unsupported command, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                 }
             }
         }
