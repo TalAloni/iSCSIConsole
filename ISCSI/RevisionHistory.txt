@@ -3,19 +3,19 @@ Revision History:
 1.0.0 - Initial release.
 
 1.0.1 - Support for multiple connections to the iSCSI server (one connection per session).
-		Disabled unnecessary disk read operations when logging is turned off.
+        Disabled unnecessary disk read operations when logging is turned off.
 		
 1.0.2 - Write operation to disk is now performed only when the complete SCSI command data has been received.
-		Support for iSCSI command queue.
+        Support for iSCSI command queue.
 		
 1.0.6 - Fixed protocol related bugs.
-		Properly handle implicit logout.
-		Improved logging.
+        Properly handle implicit logout.
+        Improved logging.
 
 1.0.7 - Added support for the 'Request Sense' command.
 
 1.0.8 - Nagle's algorithm has been disabled.
-		Unsupported SCSI CDBs are now properly rejected.
+        Unsupported SCSI CDBs are now properly rejected.
 
 1.0.9 - Minor bugfix.
 
@@ -28,7 +28,7 @@ Revision History:
 1.1.3 - Bugfix: CRC error was reported on all I/O errors.
 
 1.1.4 - Increased receive buffer size to 128KB.
-		Added timestamp to log.
+        Added timestamp to log.
 
 1.1.5 - The log file is now written directly to disk, without passing through the file system cache.
 
@@ -38,18 +38,18 @@ Revision History:
 		Added support for the Control mode page (0x0A) PageCode for the ModeSense6 SCSI command.
 
 1.1.9 - Added support for the Read6, Write6 SCSI commands.
-		Added support for the Block Limits (0xB0), Block Device Characteristics (0xB1) VPD pages.
-		Unsupported SCSI commands are now properly reported to the initiator.
+        Added support for the Block Limits (0xB0), Block Device Characteristics (0xB1) VPD pages.
+        Unsupported SCSI commands are now properly reported to the initiator.
 
 1.2.0 - Minor improvements.
 
 1.2.1 - Minor improvements.
 
 1.2.2 - Protocol related bugfixes and improvements.
-		Added iSCSI Client implementation.
+        Added iSCSI Client implementation.
 
 1.2.3 - Bugfix: login requests starting from stage 1 are now properly handled.
-		Bugfix: Unsupported SCSI commands are now properly handled.
+        Bugfix: Unsupported SCSI commands are now properly handled.
 
 1.2.4 - Improved separation between the iSCSI and SCSI layers.
 
@@ -64,4 +64,7 @@ Revision History:
 1.2.9 - Reject improper commands before login is complete.
 
 1.3.0 - Bugfix: Invalid ReadCapacity16 command response was returend.
-		Bugfix: Incorrect ResidualCount value was returned.
+        Bugfix: Incorrect ResidualCount value was returned.
+
+1.3.1 - Bugfix: iSCSI Client did not report the correct capacity when >4GB.
+        Improved iSCSI Client performance.

@@ -6,6 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -38,10 +39,11 @@ namespace ISCSI.Client
         private int m_targetPort;
         private bool m_isConnected;
         private Socket m_clientSocket;
+        private IAsyncResult m_currentAsyncResult;
         
         private object m_incomingQueueLock = new object();
         private List<ISCSIPDU> m_incomingQueue = new List<ISCSIPDU>();
-        private IAsyncResult m_currentAsyncResult;
+        private EventWaitHandle m_incomingQueueEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
 
         public static object m_logSyncLock = new object();
         private static FileStream m_logFile = null;
@@ -206,7 +208,7 @@ namespace ISCSI.Client
                 if (capacity.ReturnedLBA != 0xFFFFFFFF)
                 {
                     bytesPerSector = (int)capacity.BlockLengthInBytes;
-                    return (capacity.ReturnedLBA + 1) * capacity.BlockLengthInBytes;
+                    return (ulong)(capacity.ReturnedLBA + 1) * capacity.BlockLengthInBytes;
                 }
 
                 readCapacity = ClientHelper.GetReadCapacity16Command(m_session, m_connection, LUN);
@@ -216,7 +218,7 @@ namespace ISCSI.Client
                 {
                     ReadCapacity16Parameter capacity16 = new ReadCapacity16Parameter(data.Data);
                     bytesPerSector = (int)capacity16.BlockLengthInBytes;
-                    return (capacity16.ReturnedLBA + 1) * capacity16.BlockLengthInBytes;
+                    return (ulong)(capacity16.ReturnedLBA + 1) * capacity16.BlockLengthInBytes;
                 }
             }
 
@@ -452,14 +454,16 @@ namespace ISCSI.Client
             lock (m_incomingQueueLock)
             {
                 m_incomingQueue.Add(pdu);
+                m_incomingQueueEventHandle.Set();
             }
         }
 
         public ISCSIPDU WaitForPDU(uint initiatorTaskTag)
         {
             const int TimeOut = 5000;
-            int timespan = 0;
-            while (timespan < TimeOut)
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            while (stopwatch.ElapsedMilliseconds < TimeOut)
             {
                 lock (m_incomingQueueLock)
                 {
@@ -473,8 +477,7 @@ namespace ISCSI.Client
                         }
                     }
                 }
-                Thread.Sleep(100);
-                timespan += 100;
+                m_incomingQueueEventHandle.WaitOne(100);
             }
             return null;
         }
