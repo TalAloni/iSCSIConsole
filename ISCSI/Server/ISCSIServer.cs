@@ -431,7 +431,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is SCSIDataOutPDU)
                 {
-                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engin) in the order specified by CmdSN
+                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
                     SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
                     ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);

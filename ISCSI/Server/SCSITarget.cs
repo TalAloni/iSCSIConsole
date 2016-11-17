@@ -50,7 +50,8 @@ namespace ISCSI.Server
             }
             else if (command.OpCode == SCSIOpCodeName.RequestSense)
             {
-                return RequestSense(lun, out response);
+                uint allocationLength = command.TransferLength;
+                return RequestSense(lun, allocationLength, out response);
             }
             else if (command.OpCode == SCSIOpCodeName.Inquiry)
             {
@@ -101,7 +102,8 @@ namespace ISCSI.Server
             }
             else if (command.OpCode == SCSIOpCodeName.ReportLUNs)
             {
-                return ReportLUNs(out response);
+                uint allocationLength = command.TransferLength;
+                return ReportLUNs(allocationLength, out response);
             }
             else
             {
@@ -312,6 +314,12 @@ namespace ISCSI.Server
             Array.Copy(header.GetBytes(), 0, response, 0, header.Length);
             Array.Copy(descriptorBytes, 0, response, header.Length, descriptorBytes.Length);
             Array.Copy(pageData, 0, response, header.Length + descriptorBytes.Length, pageData.Length);
+
+            // we must not return more bytes than ModeSense6Command.AllocationLength
+            if (response.Length > command.AllocationLength)
+            {
+                response = ByteReader.ReadBytes(response, 0, command.AllocationLength);
+            }
             return SCSIStatusCodeName.Good;
         }
 
@@ -346,10 +354,15 @@ namespace ISCSI.Server
             return SCSIStatusCodeName.Good;
         }
 
-        public SCSIStatusCodeName ReportLUNs(out byte[] response)
+        public SCSIStatusCodeName ReportLUNs(uint allocationLength, out byte[] response)
         {
             ReportLUNsParameter parameter = new ReportLUNsParameter(m_disks.Count);
             response = parameter.GetBytes();
+            // we must not return more bytes than ReportLUNs.AllocationLength
+            if (response.Length > allocationLength)
+            {
+                response = ByteReader.ReadBytes(response, 0, (int)allocationLength);
+            }
             return SCSIStatusCodeName.Good;
         }
 
@@ -396,7 +409,7 @@ namespace ISCSI.Server
         }
 
         // Some initiators (i.e. EFI iSCSI DXE) will send 'Request Sense' upon connection (likely just to verify the medium is ready)
-        public SCSIStatusCodeName RequestSense(LUNStructure lun, out byte[] response)
+        public SCSIStatusCodeName RequestSense(LUNStructure lun, uint allocationLength, out byte[] response)
         {
             if (lun >= m_disks.Count)
             {
@@ -405,6 +418,11 @@ namespace ISCSI.Server
             }
 
             response = FormatSenseData(SenseDataParameter.GetNoSenseSenseData());
+            // we must not return more bytes than RequestSense.AllocationLength
+            if (response.Length > allocationLength)
+            {
+                response = ByteReader.ReadBytes(response, 0, (int)allocationLength);
+            }
             return SCSIStatusCodeName.Good;
         }
 

@@ -4,10 +4,10 @@ Revision History:
 
 1.0.1 - Support for multiple connections to the iSCSI server (one connection per session).
         Disabled unnecessary disk read operations when logging is turned off.
-		
+
 1.0.2 - Write operation to disk is now performed only when the complete SCSI command data has been received.
         Support for iSCSI command queue.
-		
+
 1.0.6 - Fixed protocol related bugs.
         Properly handle implicit logout.
         Improved logging.
@@ -35,7 +35,7 @@ Revision History:
 1.1.7 - Bugfix: The NOP-Out response did not have the 'Initiator Task Tag' field set.
 
 1.1.8 - Added support for the Reserve6, Release6 SCSI commands.
-		Added support for the Control mode page (0x0A) PageCode for the ModeSense6 SCSI command.
+        Added support for the Control mode page (0x0A) PageCode for the ModeSense6 SCSI command.
 
 1.1.9 - Added support for the Read6, Write6 SCSI commands.
         Added support for the Block Limits (0xB0), Block Device Characteristics (0xB1) VPD pages.
@@ -68,3 +68,5 @@ Revision History:
 
 1.3.1 - Bugfix: iSCSI Client did not report the correct capacity when >4GB.
         Improved iSCSI Client performance.
+
+1.3.2 - Minor improvements.
