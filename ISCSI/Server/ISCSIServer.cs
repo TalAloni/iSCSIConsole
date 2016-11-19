@@ -328,56 +328,70 @@ namespace ISCSI.Server
                 }
             }
 
-            if (pdu is LoginRequestPDU)
+            if (!state.SessionParameters.IsFullFeaturePhase)
             {
-                LoginRequestPDU request = (LoginRequestPDU)pdu;
-                Log("[{0}][ReceiveCallback] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
-                if (request.TSIH != 0)
+                if (pdu is LoginRequestPDU)
                 {
-                    // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
-                    // connection implies a logout of the connection followed by a Login
-                    lock (m_activeConnections)
+                    LoginRequestPDU request = (LoginRequestPDU)pdu;
+                    Log("[{0}][ReceiveCallback] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
+                    if (request.TSIH != 0)
                     {
-                        int existingConnectionIndex = GetStateObjectIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
-                        if (existingConnectionIndex >= 0)
+                        // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
+                        // connection implies a logout of the connection followed by a Login
+                        lock (m_activeConnections)
                         {
-                            // Perform implicit logout
-                            Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
-                            SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
-                            if (m_activeConnections[existingConnectionIndex].Target != null)
+                            int existingConnectionIndex = GetStateObjectIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
+                            if (existingConnectionIndex >= 0)
                             {
-                                lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
+                                // Perform implicit logout
+                                Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
+                                SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
+                                if (m_activeConnections[existingConnectionIndex].Target != null)
                                 {
-                                    // Wait for pending I/O to complete.
+                                    lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
+                                    {
+                                        // Wait for pending I/O to complete.
+                                    }
                                 }
+                                m_activeConnections.RemoveAt(existingConnectionIndex);
+                                Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
                             }
-                            m_activeConnections.RemoveAt(existingConnectionIndex);
-                            Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }
-                }
-                LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
-                if (state.SessionParameters.IsFullFeaturePhase)
-                {
-                    state.SessionParameters.ISID = request.ISID;
-                    state.ConnectionParameters.CID = request.CID;
-                    lock (m_activeConnections)
+                    LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
+                    if (state.SessionParameters.IsFullFeaturePhase)
                     {
-                        m_activeConnections.Add(state);
+                        state.SessionParameters.ISID = request.ISID;
+                        state.ConnectionParameters.CID = request.CID;
+                        lock (m_activeConnections)
+                        {
+                            m_activeConnections.Add(state);
+                        }
+                    }
+                    Log("[{0}][ReceiveCallback] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
+                    TrySendPDU(state, response);
+                }
+                else
+                {
+                    // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
+                    Log("[{0}][ProcessPDU] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    if (state.SessionParameters.TSIH == 0)
+                    {
+                        // A target receiving any PDU except a Login request before the Login phase is started MUST
+                        // immediately terminate the connection on which the PDU was received.
+                        clientSocket.Close();
+                    }
+                    else
+                    {
+                        // Once the Login phase has started, if the target receives any PDU except a Login request,
+                        // it MUST send a Login reject (with Status "invalid during login") and then disconnect.
+                        LoginResponsePDU loginResponse = new LoginResponsePDU();
+                        loginResponse.TSIH = state.SessionParameters.TSIH;
+                        loginResponse.Status = LoginResponseStatusName.InvalidDuringLogon;
+                        TrySendPDU(state, loginResponse);
+                        clientSocket.Close();
                     }
                 }
-                Log("[{0}][ReceiveCallback] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
-                TrySendPDU(state, response);
-            }
-            else if (!state.SessionParameters.IsFullFeaturePhase)
-            {
-                // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
-                Log("[{0}][ProcessPDU] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
-                // A target receiving any PDU except a Login request before the Login phase is started MUST
-                // immediately terminate the connection on which the PDU was received.
-                // Once the Login phase has started, if the target receives any PDU except a Login request,
-                // it MUST send a Login reject (with Status "invalid during login") and then disconnect.
-                clientSocket.Close();
             }
             else // Logged in
             {
@@ -452,9 +466,26 @@ namespace ISCSI.Server
                         }
                     }
                 }
+                else if (pdu is LoginRequestPDU)
+                {
+                    Log("[{0}][ProcessPDU] Protocol Error (Login request during full feature phase)", state.ConnectionIdentifier);
+                    // RFC 3720: Login requests and responses MUST be used exclusively during Login.
+                    // On any connection, the login phase MUST immediately follow TCP connection establishment and
+                    // a subsequent Login Phase MUST NOT occur before tearing down a connection
+                    RejectPDU reject = new RejectPDU();
+                    reject.Reason = RejectReason.ProtocolError;
+                    reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
+
+                    TrySendPDU(state, reject);
+                }
                 else
                 {
                     Log("[{0}][ProcessPDU] Unsupported command, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    RejectPDU reject = new RejectPDU();
+                    reject.Reason = RejectReason.CommandNotSupported;
+                    reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
+
+                    TrySendPDU(state, reject);
                 }
             }
         }
