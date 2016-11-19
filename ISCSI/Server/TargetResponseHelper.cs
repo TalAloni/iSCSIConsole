@@ -16,10 +16,11 @@ namespace ISCSI.Server
 {
     public class TargetResponseHelper
     {
-        internal static List<ISCSIPDU> GetSCSIResponsePDU(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
+        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
+            commandsToExecute = new List<SCSICommandPDU>();
             
             string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
 
@@ -44,6 +45,65 @@ namespace ISCSI.Server
                 return responseList;
             }
 
+            commandsToExecute.Add(command);
+            return responseList;
+        }
+
+        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, ISCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        {
+            List<ISCSIPDU> responseList = new List<ISCSIPDU>();
+            commandsToExecute = new List<SCSICommandPDU>();
+
+            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
+            TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
+            if (transfer == null)
+            {
+                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Invalid TargetTransferTag {1}", connectionIdentifier, request.TargetTransferTag);
+                RejectPDU reject = new RejectPDU();
+                reject.InitiatorTaskTag = request.InitiatorTaskTag;
+                reject.Reason = RejectReason.InvalidPDUField;
+                reject.Data = ByteReader.ReadBytes(request.GetBytes(), 0, 48);
+                responseList.Add(reject);
+                return responseList;
+            }
+
+            ushort LUN = (ushort)request.LUN;
+            Disk disk = target.Disks[LUN];
+            uint offset = request.BufferOffset;
+            uint totalLength = (uint)transfer.Command.ExpectedDataTransferLength;
+
+            // Store segment (we only execute the command after receiving all of its data)
+            Array.Copy(request.Data, 0, transfer.Command.Data, offset, request.DataSegmentLength);
+            
+            ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connectionIdentifier, offset, totalLength));
+
+            if (offset + request.DataSegmentLength == totalLength)
+            {
+                // Last Data-out PDU
+                commandsToExecute.Add(transfer.Command);
+                return responseList;
+            }
+            else
+            {
+                // Send R2T
+                ReadyToTransferPDU response = new ReadyToTransferPDU();
+                response.InitiatorTaskTag = request.InitiatorTaskTag;
+                response.TargetTransferTag = request.TargetTransferTag;
+                response.R2TSN = transfer.NextR2NSN;
+                response.BufferOffset = offset + request.DataSegmentLength; // where we left off
+                response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
+
+                transfer.NextR2NSN++;
+
+                responseList.Add(response);
+                return responseList;
+            }
+        }
+
+        internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
+        {
+            List<ISCSIPDU> responseList = new List<ISCSIPDU>();
+            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
             ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, command.CmdSN);
             byte[] scsiResponse;
             SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);
@@ -80,7 +140,7 @@ namespace ISCSI.Server
                 {
                     int dataSegmentLength = Math.Min(connection.InitiatorMaxRecvDataSegmentLength, bytesLeftToSend);
                     int dataOffset = scsiResponse.Length - bytesLeftToSend;
-                    
+
                     SCSIDataInPDU response = new SCSIDataInPDU();
                     response.InitiatorTaskTag = command.InitiatorTaskTag;
                     if (bytesLeftToSend == dataSegmentLength)
@@ -103,59 +163,6 @@ namespace ISCSI.Server
             }
 
             return responseList;
-        }
-
-        internal static ISCSIPDU GetSCSIDataOutResponsePDU(SCSIDataOutPDU request, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
-        {
-            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
-            TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
-            if (transfer == null)
-            {
-                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Invalid TargetTransferTag {1}", connectionIdentifier, request.TargetTransferTag);
-                RejectPDU reject = new RejectPDU();
-                reject.InitiatorTaskTag = request.InitiatorTaskTag;
-                reject.Reason = RejectReason.InvalidPDUField;
-                reject.Data = ByteReader.ReadBytes(request.GetBytes(), 0, 48);
-                return reject;
-            }
-
-            ushort LUN = (ushort)request.LUN;
-            Disk disk = target.Disks[LUN];
-            uint offset = request.BufferOffset;
-            uint totalLength = (uint)transfer.Command.ExpectedDataTransferLength;
-
-            // Store segment (we only execute the command after receiving all of its data)
-            Array.Copy(request.Data, 0, transfer.Command.Data, offset, request.DataSegmentLength);
-            
-            ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connectionIdentifier, offset, totalLength));
-
-            if (offset + request.DataSegmentLength == totalLength)
-            {
-                // Last Data-out PDU
-                ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, transfer.Command.CmdSN);
-                byte[] scsiResponse;
-                SCSIStatusCodeName status = target.ExecuteCommand(transfer.Command.CommandDescriptorBlock, transfer.Command.LUN, transfer.Command.Data, out scsiResponse);
-                SCSIResponsePDU response = new SCSIResponsePDU();
-                response.InitiatorTaskTag = request.InitiatorTaskTag;
-                response.Status = status;
-                response.Data = scsiResponse;
-                connection.RemoveTransfer(request.TargetTransferTag);
-                return response;
-            }
-            else
-            {
-                // Send R2T
-                ReadyToTransferPDU response = new ReadyToTransferPDU();
-                response.InitiatorTaskTag = request.InitiatorTaskTag;
-                response.TargetTransferTag = request.TargetTransferTag;
-                response.R2TSN = transfer.NextR2NSN;
-                response.BufferOffset = offset + request.DataSegmentLength; // where we left off
-                response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
-
-                transfer.NextR2NSN++;
-
-                return response;
-            }
         }
 
         public static void EnforceExpectedDataTransferLength(SCSIResponsePDU response, uint expectedDataTransferLength)

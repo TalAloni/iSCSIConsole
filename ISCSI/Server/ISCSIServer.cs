@@ -456,21 +456,32 @@ namespace ISCSI.Server
                         TrySendPDU(state, response);
                     }
                 }
-                else if (pdu is SCSIDataOutPDU)
+                else if (pdu is SCSIDataOutPDU || pdu is SCSICommandPDU)
                 {
                     // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN.
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
-                    SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
-                    ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
-                    ISCSIPDU response = TargetResponseHelper.GetSCSIDataOutResponsePDU(request, state.Target, state.SessionParameters, state.ConnectionParameters);
-                    TrySendPDU(state, response);
-                }
-                else if (pdu is SCSICommandPDU)
-                {
-                    SCSICommandPDU command = (SCSICommandPDU)pdu;
-                    ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                    List<ISCSIPDU> scsiResponseList = TargetResponseHelper.GetSCSIResponsePDU(command, state.Target, state.SessionParameters, state.ConnectionParameters);
-                    foreach (ISCSIPDU response in scsiResponseList)
+                    List<SCSICommandPDU> commandsToExecute;
+                    List<ISCSIPDU> responseList;
+                    if (pdu is SCSIDataOutPDU)
+                    {
+                        SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
+                        ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
+                        responseList = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                    }
+                    else
+                    {
+                        SCSICommandPDU command = (SCSICommandPDU)pdu;
+                        ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                        responseList = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                    }
+
+                    foreach(SCSICommandPDU command in commandsToExecute)
+                    {
+                        List<ISCSIPDU> commandResponseList = TargetResponseHelper.GetSCSICommandResponse(command, state.Target, state.SessionParameters, state.ConnectionParameters);
+                        responseList.AddRange(commandResponseList);
+                    }
+
+                    foreach (ISCSIPDU response in responseList)
                     {
                         TrySendPDU(state, response);
                         if (!clientSocket.Connected)
