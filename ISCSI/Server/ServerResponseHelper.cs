@@ -86,8 +86,6 @@ namespace ISCSI.Server
                 else //sessionType == "Normal" or unspecified (default is Normal)
                 {
                     session.IsDiscovery = false;
-                    // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
-
                     if (request.LoginParameters.ContainsKey("TargetName"))
                     {
                         string targetName = request.LoginParameters.ValueOf("TargetName");
@@ -104,6 +102,7 @@ namespace ISCSI.Server
                     }
                     else
                     {
+                        // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
                         response.Status = LoginResponseStatusName.InitiatorError;
                         return response;
                     }
@@ -113,6 +112,11 @@ namespace ISCSI.Server
             if (request.CurrentStage == 0)
             {
                 response.LoginParameters.Add("AuthMethod", "None");
+                if (target != null)
+                {
+                    // RFC 3720: During the Login Phase the iSCSI target MUST return the TargetPortalGroupTag key with the first Login Response PDU with which it is allowed to do so
+                    response.LoginParameters.Add("TargetPortalGroupTag", "1");
+                }
 
                 if (request.Transit)
                 {
