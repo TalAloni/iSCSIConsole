@@ -27,9 +27,8 @@ namespace ISCSI.Server
             {
                 uint transferTag = session.GetNextTransferTag();
 
-                // Store segment (we only execute the command after receiving all of its data)
-                byte[] commandDataBuffer = new byte[command.ExpectedDataTransferLength];
-                Array.Copy(command.Data, 0, commandDataBuffer, 0, command.DataSegmentLength);
+                // Create buffer for next segments (we only execute the command after receiving all of its data)
+                Array.Resize<byte>(ref command.Data, (int)command.ExpectedDataTransferLength);
                 
                 // Send R2T
                 ReadyToTransferPDU response = new ReadyToTransferPDU();
@@ -39,12 +38,13 @@ namespace ISCSI.Server
                 response.BufferOffset = command.DataSegmentLength;
                 response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
 
-                connection.AddTransfer(transferTag, command.CommandDescriptorBlock, commandDataBuffer, 1);
+                connection.AddTransfer(transferTag, command, 1);
 
                 responseList.Add(response);
                 return responseList;
             }
 
+            ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, command.CmdSN);
             byte[] scsiResponse;
             SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);
             if (!command.Read || status != SCSIStatusCodeName.Good)
@@ -122,20 +122,19 @@ namespace ISCSI.Server
             ushort LUN = (ushort)request.LUN;
             Disk disk = target.Disks[LUN];
             uint offset = request.BufferOffset;
-            uint totalLength = (uint)transfer.CommandDataBuffer.Length;
+            uint totalLength = (uint)transfer.Command.ExpectedDataTransferLength;
 
             // Store segment (we only execute the command after receiving all of its data)
-            Array.Copy(request.Data, 0, transfer.CommandDataBuffer, offset, request.DataSegmentLength);
+            Array.Copy(request.Data, 0, transfer.Command.Data, offset, request.DataSegmentLength);
             
             ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connectionIdentifier, offset, totalLength));
 
             if (offset + request.DataSegmentLength == totalLength)
             {
                 // Last Data-out PDU
-                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Last Data-out PDU", connectionIdentifier);
-                
+                ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, transfer.Command.CmdSN);
                 byte[] scsiResponse;
-                SCSIStatusCodeName status = target.ExecuteCommand(transfer.CommandBytes, request.LUN, transfer.CommandDataBuffer, out scsiResponse);
+                SCSIStatusCodeName status = target.ExecuteCommand(transfer.Command.CommandDescriptorBlock, transfer.Command.LUN, transfer.Command.Data, out scsiResponse);
                 SCSIResponsePDU response = new SCSIResponsePDU();
                 response.InitiatorTaskTag = request.InitiatorTaskTag;
                 response.Status = status;

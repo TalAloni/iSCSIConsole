@@ -13,14 +13,12 @@ namespace ISCSI.Server
 {
     public class TransferEntry
     {
-        public byte[] CommandBytes;
-        public byte[] CommandDataBuffer;
+        public SCSICommandPDU Command;
         public uint NextR2NSN;
 
-        public TransferEntry(byte[] commandBytes, byte[] commandDataBuffer, uint nextR2NSN)
+        public TransferEntry(SCSICommandPDU command, uint nextR2NSN)
         {
-            CommandBytes = commandBytes;
-            CommandDataBuffer = commandDataBuffer;
+            Command = command;
             NextR2NSN = nextR2NSN;
         }
     }
@@ -46,9 +44,9 @@ namespace ISCSI.Server
         // Dictionary of current transfers: <transfer-tag, TransferEntry>
         private Dictionary<uint, TransferEntry> n_transfers = new Dictionary<uint, TransferEntry>();
 
-        public TransferEntry AddTransfer(uint transferTag, byte[] commandBytes, byte[] commandDataBuffer, uint nextR2NSN)
+        public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2NSN)
         {
-            TransferEntry entry = new TransferEntry(commandBytes, commandDataBuffer, nextR2NSN);
+            TransferEntry entry = new TransferEntry(command, nextR2NSN);
             n_transfers.Add(transferTag, entry);
             return entry;
         }
