@@ -75,3 +75,5 @@ Revision History:
         Bugfix: Login request during full feature phase is now properly rejected.
         Bugfix: Any PDU other than Login request is now properly rejected during the login phase once the login phase has started.
         Minor code cleanup and improvements.
+
+1.3.4 - Bugfix: SCSI commands will now be executed in the correct order.
