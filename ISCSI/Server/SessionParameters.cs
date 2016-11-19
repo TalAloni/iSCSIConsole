@@ -83,6 +83,9 @@ namespace ISCSI.Server
         public bool CommandNumberingStarted;
         public uint ExpCmdSN;
 
+        public List<uint> CommandsInTransfer = new List<uint>();
+        public List<SCSICommandPDU> DelayedCommands = new List<SCSICommandPDU>();
+
         /// <summary>
         /// Target Transfer Tag:
         /// There are no protocol specific requirements with regard to the value of these tags,
@@ -95,6 +98,76 @@ namespace ISCSI.Server
             uint transferTag = m_nextTransferTag;
             m_nextTransferTag++;
             return transferTag;
+        }
+
+        public bool IsPrecedingCommandPending(uint cmdSN)
+        {
+            foreach (uint entry in CommandsInTransfer)
+            {
+                if (IsFirstCmdSNPreceding(entry, cmdSN))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public List<SCSICommandPDU> GetDelayedCommandsReadyForExecution()
+        {
+            List<SCSICommandPDU> result = new List<SCSICommandPDU>();
+            if (CommandsInTransfer.Count == 0)
+            {
+                result.AddRange(DelayedCommands);
+                DelayedCommands.Clear();
+                return result;
+            }
+
+            // We find the earliest CmdSN of the commands in transfer
+            uint earliestCmdSN = CommandsInTransfer[0];
+            for(int index = 1; index < CommandsInTransfer.Count; index++)
+            {
+                if (IsFirstCmdSNPreceding(CommandsInTransfer[index], earliestCmdSN))
+                {
+                    earliestCmdSN = CommandsInTransfer[index];
+                }
+            }
+
+            // Any command that is preceding minCmdSN should be executed
+            for(int index = 0; index < DelayedCommands.Count; index++)
+            {
+                SCSICommandPDU delayedCommand = DelayedCommands[index];
+                if (IsFirstCmdSNPreceding(delayedCommand.CmdSN, earliestCmdSN))
+                {
+                    result.Add(delayedCommand);
+                    DelayedCommands.RemoveAt(index);
+                    index--;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns true if cmdSN1 should be executed before cmdSN2
+        /// </summary>
+        public static bool IsFirstCmdSNPreceding(uint cmdSN1, uint cmdSN2)
+        {
+            // The iSCSI protocol is designed to avoid having old, retried command instances appear in a valid command window after a command sequence number wrap around.
+            const uint commandWindow = 2 ^ 31 - 1;
+            if (cmdSN2 >= commandWindow)
+            {
+                if ((cmdSN1 > cmdSN2 - commandWindow) && (cmdSN1 < cmdSN2))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if ((cmdSN1 > cmdSN2 - commandWindow) || (cmdSN1 < cmdSN2))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

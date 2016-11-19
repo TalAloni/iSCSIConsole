@@ -458,7 +458,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is SCSIDataOutPDU || pdu is SCSICommandPDU)
                 {
-                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN.
+                    // RFC 3720: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN.
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
                     List<SCSICommandPDU> commandsToExecute;
                     List<ISCSIPDU> responseList;

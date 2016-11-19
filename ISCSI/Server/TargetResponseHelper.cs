@@ -40,12 +40,20 @@ namespace ISCSI.Server
                 response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
 
                 connection.AddTransfer(transferTag, command, 1);
+                session.CommandsInTransfer.Add(command.CmdSN);
 
                 responseList.Add(response);
                 return responseList;
             }
 
-            commandsToExecute.Add(command);
+            if (session.IsPrecedingCommandPending(command.CmdSN))
+            {
+                session.DelayedCommands.Add(command);
+            }
+            else
+            {
+                commandsToExecute.Add(command);
+            }
             return responseList;
         }
 
@@ -80,7 +88,23 @@ namespace ISCSI.Server
             if (offset + request.DataSegmentLength == totalLength)
             {
                 // Last Data-out PDU
-                commandsToExecute.Add(transfer.Command);
+                if (session.IsPrecedingCommandPending(transfer.Command.CmdSN))
+                {
+                    session.DelayedCommands.Add(transfer.Command);
+                }
+                else
+                {
+                    commandsToExecute.Add(transfer.Command);
+                    connection.RemoveTransfer(request.TargetTransferTag);
+                    session.CommandsInTransfer.Remove(transfer.Command.CmdSN);
+                    // Check if delayed commands are ready to be executed
+                    List<SCSICommandPDU> pendingCommands = session.GetDelayedCommandsReadyForExecution();
+                    foreach (SCSICommandPDU pendingCommand in pendingCommands)
+                    {
+                        ISCSIServer.Log("[{0}] Queuing Command: CmdSN: {1}", connectionIdentifier, pendingCommand.CmdSN);
+                        commandsToExecute.Add(pendingCommand);
+                    }
+                }
                 return responseList;
             }
             else
