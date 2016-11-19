@@ -88,7 +88,7 @@ namespace ISCSI.Server
         /// There are no protocol specific requirements with regard to the value of these tags,
         /// but it is assumed that together with the LUN, they will enable the target to associate data with an R2T.
         /// </summary>
-        public static uint m_nextTransferTag;
+        private static uint m_nextTransferTag;
 
         public uint GetNextTransferTag()
         {

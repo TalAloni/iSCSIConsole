@@ -40,7 +40,6 @@ namespace ISCSI.Server
 
         private Socket m_listenerSocket;
         private bool m_listening;
-        private static object m_activeConnectionsLock = new object();
         private static List<StateObject> m_activeConnections = new List<StateObject>();
 
         public static object m_logSyncLock = new object();
@@ -172,7 +171,7 @@ namespace ISCSI.Server
                 // The other side has closed the connection
                 clientSocket.Close();
                 Log("[ReceiveCallback] The initiator has closed the connection");
-                lock (m_activeConnectionsLock)
+                lock (m_activeConnections)
                 {
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
@@ -210,7 +209,7 @@ namespace ISCSI.Server
             }
         }
 
-        public void ProcessCurrentBuffer(byte[] currentBuffer, StateObject state)
+        private void ProcessCurrentBuffer(byte[] currentBuffer, StateObject state)
         {
             Socket clientSocket = state.ClientSocket;
 
@@ -294,7 +293,7 @@ namespace ISCSI.Server
             }
         }
 
-        public void ProcessPDU(ISCSIPDU pdu, StateObject state)
+        private void ProcessPDU(ISCSIPDU pdu, StateObject state)
         {
             Socket clientSocket = state.ClientSocket;
             
@@ -336,7 +335,7 @@ namespace ISCSI.Server
                 {
                     // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
                     // connection implies a logout of the connection followed by a Login
-                    lock (m_activeConnectionsLock)
+                    lock (m_activeConnections)
                     {
                         int existingConnectionIndex = GetStateObjectIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
                         if (existingConnectionIndex >= 0)
@@ -361,7 +360,7 @@ namespace ISCSI.Server
                 {
                     state.SessionParameters.ISID = request.ISID;
                     state.ConnectionParameters.CID = request.CID;
-                    lock (m_activeConnectionsLock)
+                    lock (m_activeConnections)
                     {
                         m_activeConnections.Add(state);
                     }
@@ -389,7 +388,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is LogoutRequestPDU)
                 {
-                    lock (m_activeConnectionsLock)
+                    lock (m_activeConnections)
                     {
                         int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                         if (connectionIndex >= 0)
@@ -431,7 +430,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is SCSIDataOutPDU)
                 {
-                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN
+                    // FIXME: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN.
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
                     SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
                     ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
@@ -473,7 +472,7 @@ namespace ISCSI.Server
             return -1;
         }
 
-        public static void TrySendPDU(StateObject state, ISCSIPDU response)
+        private static void TrySendPDU(StateObject state, ISCSIPDU response)
         {
             Socket clientSocket = state.ClientSocket;
             try
