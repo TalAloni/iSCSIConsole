@@ -175,18 +175,18 @@ namespace ISCSI.Server
                 // The other side has closed the connection
                 clientSocket.Close();
                 Log("[ReceiveCallback] The initiator has closed the connection");
+                // Wait for pending I/O to complete.
+                if (state.Target != null)
+                {
+                    lock (state.Target.IOLock)
+                    {
+                    }
+                }
                 lock (m_activeConnections)
                 {
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
-                        if (m_activeConnections[connectionIndex].Target != null)
-                        {
-                            lock (m_activeConnections[connectionIndex].Target.IOLock)
-                            {
-                                // Wait for pending I/O to complete.
-                            }
-                        }
                         m_activeConnections.RemoveAt(connectionIndex);
                     }
                 }
@@ -345,14 +345,15 @@ namespace ISCSI.Server
                             {
                                 // Perform implicit logout
                                 Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
-                                SocketUtils.ReleaseSocket(m_activeConnections[existingConnectionIndex].ClientSocket);
-                                if (m_activeConnections[existingConnectionIndex].Target != null)
+                                StateObject existingConnection = m_activeConnections[existingConnectionIndex];
+                                // Wait for pending I/O to complete.
+                                if (existingConnection.Target != null)
                                 {
-                                    lock (m_activeConnections[existingConnectionIndex].Target.IOLock)
+                                    lock (existingConnection.Target.IOLock)
                                     {
-                                        // Wait for pending I/O to complete.
                                     }
                                 }
+                                SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
                                 m_activeConnections.RemoveAt(existingConnectionIndex);
                                 Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
                             }
@@ -408,14 +409,26 @@ namespace ISCSI.Server
                         int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                         if (connectionIndex >= 0)
                         {
-                            if (m_activeConnections[connectionIndex].Target != null)
+                            StateObject existingConnection = m_activeConnections[connectionIndex];
+                            // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
+                            if (existingConnection != state)
                             {
-                                lock (m_activeConnections[connectionIndex].Target.IOLock)
+                                // Wait for pending I/O to complete.
+                                if (existingConnection.Target != null)
                                 {
-                                    // Wait for pending I/O to complete.
+                                    lock (existingConnection.Target.IOLock)
+                                    {
+                                    }
                                 }
                             }
                             m_activeConnections.RemoveAt(connectionIndex);
+                        }
+                    }
+                    // Wait for pending I/O to complete.
+                    if (state.Target != null)
+                    {
+                        lock (state.Target.IOLock)
+                        {
                         }
                     }
                     LogoutRequestPDU request = (LogoutRequestPDU)pdu;
