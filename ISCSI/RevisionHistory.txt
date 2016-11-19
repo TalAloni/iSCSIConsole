@@ -70,3 +70,8 @@ Revision History:
         Improved iSCSI Client performance.
 
 1.3.2 - Minor improvements.
+
+1.3.3 - Bugfix: The iSCSI server now return the TargetPortalGroupTag key with the first Login response.
+        Bugfix: Login request during full feature phase is now properly rejected.
+        Bugfix: Any PDU other than Login request is now properly rejected during the login phase once the login phase has started.
+        Minor code cleanup and improvements.
