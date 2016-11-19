@@ -149,6 +149,10 @@ namespace ISCSI.Server
 
             StateObject state = (StateObject)result.AsyncState;
             Socket clientSocket = state.ClientSocket;
+            if (!clientSocket.Connected)
+            {
+                return;
+            }
 
             int numberOfBytesReceived;
             try
@@ -192,20 +196,17 @@ namespace ISCSI.Server
             byte[] currentBuffer = ByteReader.ReadBytes(state.ReceiveBuffer, 0, numberOfBytesReceived);
             ProcessCurrentBuffer(currentBuffer, state);
 
-            if (clientSocket.Connected)
+            try
             {
-                try
-                {
-                    clientSocket.BeginReceive(state.ReceiveBuffer, 0, StateObject.ReceiveBufferSize, 0, ReceiveCallback, state);
-                }
-                catch (ObjectDisposedException)
-                {
-                    Log("[ReceiveCallback] BeginReceive ObjectDisposedException");
-                }
-                catch (SocketException ex)
-                {
-                    Log("[ReceiveCallback] BeginReceive SocketException: " + ex.Message);
-                }
+                clientSocket.BeginReceive(state.ReceiveBuffer, 0, StateObject.ReceiveBufferSize, 0, ReceiveCallback, state);
+            }
+            catch (ObjectDisposedException)
+            {
+                Log("[ReceiveCallback] BeginReceive ObjectDisposedException");
+            }
+            catch (SocketException ex)
+            {
+                Log("[ReceiveCallback] BeginReceive SocketException: " + ex.Message);
             }
         }
 
