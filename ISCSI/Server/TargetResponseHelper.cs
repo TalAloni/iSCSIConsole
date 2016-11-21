@@ -22,7 +22,7 @@ namespace ISCSI.Server
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
             
-            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
+            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
 
             if (command.Write && command.DataSegmentLength < command.ExpectedDataTransferLength)
             {
@@ -62,7 +62,7 @@ namespace ISCSI.Server
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
 
-            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
+            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
             if (transfer == null)
             {
@@ -125,7 +125,7 @@ namespace ISCSI.Server
 
         internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
-            string connectionIdentifier = StateObject.GetConnectionIdentifier(session, connection);
+            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, command.CmdSN);
             byte[] scsiResponse;
             SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);

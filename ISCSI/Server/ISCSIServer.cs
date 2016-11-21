@@ -40,7 +40,7 @@ namespace ISCSI.Server
 
         private Socket m_listenerSocket;
         private bool m_listening;
-        private static List<StateObject> m_activeConnections = new List<StateObject>();
+        private static List<ConnectionState> m_activeConnections = new List<ConnectionState>();
 
         public static object m_logSyncLock = new object();
         private static FileStream m_logFile;
@@ -108,14 +108,14 @@ namespace ISCSI.Server
 
             Log("[OnConnectRequest] New connection has been accepted");
 
-            StateObject state = new StateObject();
-            state.ReceiveBuffer = new byte[StateObject.ReceiveBufferSize];
+            ConnectionState state = new ConnectionState();
+            state.ReceiveBuffer = new byte[ConnectionState.ReceiveBufferSize];
             // Disable the Nagle Algorithm for this tcp socket:
             clientSocket.NoDelay = true;
             state.ClientSocket = clientSocket;
             try
             {
-                clientSocket.BeginReceive(state.ReceiveBuffer, 0, StateObject.ReceiveBufferSize, 0, ReceiveCallback, state);
+                clientSocket.BeginReceive(state.ReceiveBuffer, 0, ConnectionState.ReceiveBufferSize, 0, ReceiveCallback, state);
             }
             catch (ObjectDisposedException)
             {
@@ -147,7 +147,7 @@ namespace ISCSI.Server
                 return;
             }
 
-            StateObject state = (StateObject)result.AsyncState;
+            ConnectionState state = (ConnectionState)result.AsyncState;
             Socket clientSocket = state.ClientSocket;
             if (!clientSocket.Connected)
             {
@@ -179,7 +179,7 @@ namespace ISCSI.Server
                 state.RunningSCSICommands.WaitUntilZero();
                 lock (m_activeConnections)
                 {
-                    int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
+                    int connectionIndex = GetConnectionStateIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                     if (connectionIndex >= 0)
                     {
                         m_activeConnections.RemoveAt(connectionIndex);
@@ -193,7 +193,7 @@ namespace ISCSI.Server
 
             try
             {
-                clientSocket.BeginReceive(state.ReceiveBuffer, 0, StateObject.ReceiveBufferSize, 0, ReceiveCallback, state);
+                clientSocket.BeginReceive(state.ReceiveBuffer, 0, ConnectionState.ReceiveBufferSize, 0, ReceiveCallback, state);
             }
             catch (ObjectDisposedException)
             {
@@ -205,7 +205,7 @@ namespace ISCSI.Server
             }
         }
 
-        private void ProcessCurrentBuffer(byte[] currentBuffer, StateObject state)
+        private void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
         {
             Socket clientSocket = state.ClientSocket;
 
@@ -289,7 +289,7 @@ namespace ISCSI.Server
             }
         }
 
-        private void ProcessPDU(ISCSIPDU pdu, StateObject state)
+        private void ProcessPDU(ISCSIPDU pdu, ConnectionState state)
         {
             Socket clientSocket = state.ClientSocket;
             
@@ -335,12 +335,12 @@ namespace ISCSI.Server
                         // connection implies a logout of the connection followed by a Login
                         lock (m_activeConnections)
                         {
-                            int existingConnectionIndex = GetStateObjectIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
+                            int existingConnectionIndex = GetConnectionStateIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
                             if (existingConnectionIndex >= 0)
                             {
                                 // Perform implicit logout
                                 Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
-                                StateObject existingConnection = m_activeConnections[existingConnectionIndex];
+                                ConnectionState existingConnection = m_activeConnections[existingConnectionIndex];
                                 // Wait for pending I/O to complete.
                                 existingConnection.RunningSCSICommands.WaitUntilZero();
                                 SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
@@ -396,10 +396,10 @@ namespace ISCSI.Server
                 {
                     lock (m_activeConnections)
                     {
-                        int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
+                        int connectionIndex = GetConnectionStateIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
                         if (connectionIndex >= 0)
                         {
-                            StateObject existingConnection = m_activeConnections[connectionIndex];
+                            ConnectionState existingConnection = m_activeConnections[connectionIndex];
                             // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
                             if (existingConnection != state)
                             {
@@ -496,13 +496,13 @@ namespace ISCSI.Server
             }
         }
 
-        private static int GetStateObjectIndex(List<StateObject> stateObjects, ulong isid, ushort tsih, ushort cid)
+        private static int GetConnectionStateIndex(List<ConnectionState> Connections, ulong isid, ushort tsih, ushort cid)
         {
-            for (int index = 0; index < stateObjects.Count; index++)
+            for (int index = 0; index < Connections.Count; index++)
             {
-                if (stateObjects[index].SessionParameters.ISID == isid &&
-                    stateObjects[index].SessionParameters.TSIH == tsih &&
-                    stateObjects[index].ConnectionParameters.CID == cid)
+                if (Connections[index].SessionParameters.ISID == isid &&
+                    Connections[index].SessionParameters.TSIH == tsih &&
+                    Connections[index].ConnectionParameters.CID == cid)
                 {
                     return index;
                 }
@@ -510,7 +510,7 @@ namespace ISCSI.Server
             return -1;
         }
 
-        private static void TrySendPDU(StateObject state, ISCSIPDU response)
+        private static void TrySendPDU(ConnectionState state, ISCSIPDU response)
         {
             Socket clientSocket = state.ClientSocket;
             try

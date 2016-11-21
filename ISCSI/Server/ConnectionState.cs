@@ -15,7 +15,7 @@ namespace ISCSI.Server
     /// <summary>
     /// iSCSI Connection state object
     /// </summary>
-    public class StateObject
+    public class ConnectionState
     {
         public Socket ClientSocket = null;
         /// <summary>

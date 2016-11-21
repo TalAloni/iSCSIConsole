@@ -38,7 +38,7 @@
     <Compile Include="Client\ISCSIDisk.cs" />
     <Compile Include="Client\PDUHelper.cs" />
     <Compile Include="Client\SessionParameters.cs" />
-    <Compile Include="Client\StateObject.cs" />
+    <Compile Include="Client\ConnectionState.cs" />
     <Compile Include="Client\ISCSIClient.cs" />
     <Compile Include="PDU\Enums\ISCSIResponseName.cs" />
     <Compile Include="PDU\Enums\LogoutReasonCode.cs" />
@@ -108,7 +108,7 @@
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\SupportedVitaLProductDataPages.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\UnitSerialNumberVPDPage.cs" />
     <Compile Include="Server\ServerResponseHelper.cs" />
-    <Compile Include="Server\StateObject.cs" />
+    <Compile Include="Server\ConnectionState.cs" />
     <Compile Include="Server\TargetResponseHelper.cs" />
     <Compile Include="Utilities\SocketUtils.cs" />
   </ItemGroup>

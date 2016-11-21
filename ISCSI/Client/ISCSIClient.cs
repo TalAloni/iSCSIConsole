@@ -68,7 +68,7 @@ namespace ISCSI.Client
                 {
                     return false;
                 }
-                StateObject state = new StateObject();
+                ConnectionState state = new ConnectionState();
                 m_currentAsyncResult = m_clientSocket.BeginReceive(state.ReceiveBuffer, 0, state.ReceiveBuffer.Length, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
                 m_isConnected = true;
             }
@@ -306,7 +306,7 @@ namespace ISCSI.Client
                 return;
             }
 
-            StateObject state = (StateObject)ar.AsyncState;
+            ConnectionState state = (ConnectionState)ar.AsyncState;
 
             if (!m_clientSocket.Connected)
             {
@@ -355,7 +355,7 @@ namespace ISCSI.Client
             }
         }
 
-        public void ProcessCurrentBuffer(byte[] currentBuffer, StateObject state)
+        public void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
         {
             if (state.ConnectionBuffer.Length == 0)
             {
@@ -430,7 +430,7 @@ namespace ISCSI.Client
             }
         }
 
-        public void ProcessPDU(ISCSIPDU pdu, StateObject state)
+        public void ProcessPDU(ISCSIPDU pdu, ConnectionState state)
         {
             if (pdu is NOPInPDU)
             {
