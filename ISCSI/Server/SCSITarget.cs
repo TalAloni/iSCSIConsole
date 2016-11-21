@@ -17,7 +17,7 @@ namespace ISCSI.Server
     public class SCSITarget
     {
         private List<Disk> m_disks;
-        public object IOLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
+        private object m_ioLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
 
         public SCSITarget(List<Disk> disks)
         {
@@ -378,7 +378,7 @@ namespace ISCSI.Server
             int sectorCount = (int)command.TransferLength;
             try
             {
-                lock (IOLock)
+                lock (m_ioLock)
                 {
                     response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
                 }
@@ -504,7 +504,7 @@ namespace ISCSI.Server
 
             try
             {
-                lock (IOLock)
+                lock (m_ioLock)
                 {
                     disk.WriteSectors((long)command.LogicalBlockAddress64, data);
                 }

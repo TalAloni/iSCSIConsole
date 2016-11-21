@@ -176,12 +176,7 @@ namespace ISCSI.Server
                 clientSocket.Close();
                 Log("[ReceiveCallback] The initiator has closed the connection");
                 // Wait for pending I/O to complete.
-                if (state.Target != null)
-                {
-                    lock (state.Target.IOLock)
-                    {
-                    }
-                }
+                state.RunningSCSICommands.WaitUntilZero();
                 lock (m_activeConnections)
                 {
                     int connectionIndex = GetStateObjectIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
@@ -347,12 +342,7 @@ namespace ISCSI.Server
                                 Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
                                 StateObject existingConnection = m_activeConnections[existingConnectionIndex];
                                 // Wait for pending I/O to complete.
-                                if (existingConnection.Target != null)
-                                {
-                                    lock (existingConnection.Target.IOLock)
-                                    {
-                                    }
-                                }
+                                existingConnection.RunningSCSICommands.WaitUntilZero();
                                 SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
                                 m_activeConnections.RemoveAt(existingConnectionIndex);
                                 Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
@@ -414,23 +404,13 @@ namespace ISCSI.Server
                             if (existingConnection != state)
                             {
                                 // Wait for pending I/O to complete.
-                                if (existingConnection.Target != null)
-                                {
-                                    lock (existingConnection.Target.IOLock)
-                                    {
-                                    }
-                                }
+                                existingConnection.RunningSCSICommands.WaitUntilZero();
                             }
                             m_activeConnections.RemoveAt(connectionIndex);
                         }
                     }
                     // Wait for pending I/O to complete.
-                    if (state.Target != null)
-                    {
-                        lock (state.Target.IOLock)
-                        {
-                        }
-                    }
+                    state.RunningSCSICommands.WaitUntilZero();
                     LogoutRequestPDU request = (LogoutRequestPDU)pdu;
                     LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
                     TrySendPDU(state, response);
@@ -475,9 +455,11 @@ namespace ISCSI.Server
                         responseList = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
                     }
 
+                    state.RunningSCSICommands.Add(commandsToExecute.Count);
                     foreach(SCSICommandPDU command in commandsToExecute)
                     {
                         List<ISCSIPDU> commandResponseList = TargetResponseHelper.GetSCSICommandResponse(command, state.Target, state.SessionParameters, state.ConnectionParameters);
+                        state.RunningSCSICommands.Decrement();
                         responseList.AddRange(commandResponseList);
                     }
 

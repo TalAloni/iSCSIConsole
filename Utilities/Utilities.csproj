@@ -49,6 +49,7 @@
     <Compile Include="IFileSystem\IFileSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Strings\QuotedStringUtils.cs" />
+    <Compile Include="Threading\CountdownLatch.cs" />
     <Compile Include="Threading\Parallel.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

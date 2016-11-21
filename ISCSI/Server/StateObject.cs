@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
+using Utilities;
 
 namespace ISCSI.Server
 {
@@ -27,6 +28,8 @@ namespace ISCSI.Server
         public ISCSITarget Target; // Across all connections within a session, an initiator sees one and the same target.
         public SessionParameters SessionParameters = new SessionParameters();
         public ConnectionParameters ConnectionParameters = new ConnectionParameters();
+
+        public CountdownLatch RunningSCSICommands = new CountdownLatch();
 
         public string ConnectionIdentifier
         {
