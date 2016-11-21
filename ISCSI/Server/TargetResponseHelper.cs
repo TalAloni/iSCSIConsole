@@ -101,7 +101,6 @@ namespace ISCSI.Server
                     List<SCSICommandPDU> pendingCommands = session.GetDelayedCommandsReadyForExecution();
                     foreach (SCSICommandPDU pendingCommand in pendingCommands)
                     {
-                        ISCSIServer.Log("[{0}] Queuing Command: CmdSN: {1}", connectionIdentifier, pendingCommand.CmdSN);
                         commandsToExecute.Add(pendingCommand);
                     }
                 }
