@@ -535,7 +535,11 @@ namespace ISCSI.Server
             {
                 PDUHelper.SetStatSN(response, state.ConnectionParameters.StatSN);
                 PDUHelper.SetExpCmdSN(response, state.SessionParameters.ExpCmdSN, state.SessionParameters.ExpCmdSN + state.SessionParameters.CommandQueueSize);
-                if (response is SCSIResponsePDU || (response is SCSIDataInPDU && ((SCSIDataInPDU)response).StatusPresent))
+                if (response is SCSIResponsePDU ||
+                    response is LoginResponsePDU ||
+                    response is TextResponsePDU ||
+                    (response is SCSIDataInPDU && ((SCSIDataInPDU)response).StatusPresent) ||
+                    response is RejectPDU)
                 {
                     state.ConnectionParameters.StatSN++;
                 }
