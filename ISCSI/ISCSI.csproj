@@ -44,7 +44,7 @@
     <Compile Include="PDU\Enums\LogoutReasonCode.cs" />
     <Compile Include="PDU\Enums\LogoutResponse.cs" />
     <Compile Include="PDU\Enums\RejectReason.cs" />
-    <Compile Include="Exceptions\UnsupportedSCSICommandException.cs" />
+    <Compile Include="SCSI\Exceptions\UnsupportedSCSICommandException.cs" />
     <Compile Include="PDU\RejectPDU.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\LUNStructure.cs" />
