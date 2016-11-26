@@ -95,6 +95,7 @@ namespace ISCSI.Server
             Log(Severity.Information, "New connection has been accepted");
 
             ConnectionState state = new ConnectionState();
+            state.ConnectionParameters.InitiatorEndPoint = clientSocket.RemoteEndPoint as IPEndPoint;
             state.ReceiveBuffer = new byte[ConnectionState.ReceiveBufferSize];
             // Disable the Nagle Algorithm for this tcp socket:
             clientSocket.NoDelay = true;

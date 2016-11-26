@@ -73,11 +73,17 @@ namespace ISCSI.Server
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
             // stage and the operational parameter negotiation stage.  Both stages are optional
             // but at least one of them has to be present.
-
             bool firstLoginRequest = (!session.IsDiscovery && target == null);
-
             if (firstLoginRequest)
             {
+                connection.InitiatorName = request.LoginParameters.ValueOf("InitiatorName");
+                if (String.IsNullOrEmpty(connection.InitiatorName))
+                {
+                    // RFC 3720: InitiatorName: The initiator of the TCP connection MUST provide this key [..]
+                    // at the first Login of the Login Phase for every connection.
+                    response.Status = LoginResponseStatusName.InitiatorError;
+                    return response;
+                }
                 string sessionType = request.LoginParameters.ValueOf("SessionType");
                 if (sessionType == "Discovery")
                 {
@@ -93,6 +99,11 @@ namespace ISCSI.Server
                         if (targetIndex >= 0)
                         {
                             target = availableTargets[targetIndex];
+                            if (!target.AuthorizeInitiator(connection.InitiatorEndPoint, connection.InitiatorName))
+                            {
+                                response.Status = LoginResponseStatusName.AuthorizationFailure;
+                                return response;
+                            }
                         }
                         else
                         {

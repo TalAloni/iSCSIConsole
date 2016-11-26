@@ -6,16 +6,31 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using SCSI;
 using Utilities;
 
 namespace ISCSI.Server
 {
+    public class AuthorizationRequestArgs : EventArgs
+    {
+        public IPEndPoint InitiatorEndPoint;
+        public string InitiatorIQN;
+        public bool Accept = true;
+
+        public AuthorizationRequestArgs(IPEndPoint initiatorEndPoint, string initiatorIQN)
+        {
+            InitiatorEndPoint = initiatorEndPoint;
+            InitiatorIQN = initiatorIQN;
+        }
+    }
+
     public class ISCSITarget : SCSITarget
     {
         private string m_targetName; // ISCSI name
         private SCSITarget m_target;
+        public event EventHandler<AuthorizationRequestArgs> OnAuthorizationRequest;
 
         public ISCSITarget(string targetName, List<Disk> disks) : this(targetName, new VirtualSCSITarget(disks))
         {
@@ -45,6 +60,19 @@ namespace ISCSI.Server
             // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
             args.Page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetSCSINameStringIdentifier(m_targetName));
             NotifyDeviceIdentificationInquiry(this, args);
+        }
+
+        public bool AuthorizeInitiator(IPEndPoint initiatorEndPoint, string initiatorIQN)
+        {
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<AuthorizationRequestArgs> handler = OnAuthorizationRequest;
+            if (handler != null)
+            {
+                AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorEndPoint, initiatorIQN);
+                OnAuthorizationRequest(this, args);
+                return args.Accept;
+            }
+            return true;
         }
 
         public string TargetName
