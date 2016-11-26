@@ -75,8 +75,6 @@ namespace ISCSI.Server
 
             // Store segment (we only execute the command after receiving all of its data)
             Array.Copy(request.Data, 0, transfer.Command.Data, offset, request.DataSegmentLength);
-            
-            ISCSIServer.Log(String.Format("[{0}][GetSCSIDataOutResponsePDU] Buffer offset: {1}, Total length: {2}", connectionIdentifier, offset, totalLength));
 
             if (offset + request.DataSegmentLength == totalLength)
             {
@@ -119,7 +117,6 @@ namespace ISCSI.Server
         internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
             string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
-            ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, command.CmdSN);
             byte[] scsiResponse;
             SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);
             return PrepareSCSICommandResponse(command, status, scsiResponse, connection);

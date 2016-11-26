@@ -10,7 +10,6 @@ using System.IO;
 using System.Text;
 using System.Runtime.InteropServices;
 using DiskAccessLibrary;
-using ISCSI.Server; // FIXME
 using Utilities;
 
 namespace SCSI
@@ -19,6 +18,8 @@ namespace SCSI
     {
         private List<Disk> m_disks;
         private object m_ioLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
+
+        public event EventHandler<LogEntry> OnLogEntry;
 
         public VirtualSCSITarget(List<Disk> disks)
         {
@@ -34,7 +35,7 @@ namespace SCSI
             }
             catch(UnsupportedSCSICommandException)
             {
-                ISCSIServer.Log("[ExecuteCommand] Unsupported SCSI Command (0x{0})", commandBytes[0].ToString("X"));
+                Log(Severity.Error, "Unsupported SCSI Command (0x{0})", commandBytes[0].ToString("X"));
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -44,7 +45,7 @@ namespace SCSI
 
         public SCSIStatusCodeName ExecuteCommand(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
-            ISCSIServer.Log("[ExecuteCommand] {0}", command.OpCode);
+            Log(Severity.Verbose, "Executing command: {0}", command.OpCode);
             if (command.OpCode == SCSIOpCodeName.ReportLUNs)
             {
                 uint allocationLength = command.TransferLength;
@@ -52,7 +53,7 @@ namespace SCSI
             }
             else if (lun >= m_disks.Count)
             {
-                ISCSIServer.Log("LUN {0}: Invalid LUN", lun);
+                Log(Severity.Error, "LUN {0}: Invalid LUN", lun);
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -114,7 +115,7 @@ namespace SCSI
             }
             else
             {
-                ISCSIServer.Log("[ExecuteCommand] Unsupported SCSI Command (0x{0})", command.OpCode.ToString("X"));
+                Log(Severity.Error, "Unsupported SCSI Command (0x{0})", command.OpCode.ToString("X"));
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -139,14 +140,14 @@ namespace SCSI
                 }
                 else
                 {
-                    ISCSIServer.Log("[Inquiry] Invalid request");
+                    Log(Severity.Error, "Inquiry: Invalid request");
                     response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
             }
             else
             {
-                ISCSIServer.Log("[Inquiry] Page code: 0x{0}", command.PageCode.ToString("X"));
+                Log(Severity.Verbose, "Inquiry: Page code: 0x{0}", command.PageCode.ToString("X"));
                 switch (command.PageCode)
                 {
                     case VitalProductDataPageName.SupportedVPDPages:
@@ -197,7 +198,7 @@ namespace SCSI
                         }
                     default:
                         {
-                            ISCSIServer.Log("[Inquiry] Unsupported VPD Page request (0x{0})", command.PageCode.ToString("X"));
+                            Log(Severity.Error, "Inquiry: Unsupported VPD Page request (0x{0})", command.PageCode.ToString("X"));
                             response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             return SCSIStatusCodeName.CheckCondition;
                         }
@@ -214,7 +215,7 @@ namespace SCSI
 
         public SCSIStatusCodeName ModeSense6(ModeSense6CommandDescriptorBlock command, LUNStructure lun, out byte[] response)
         {
-            ISCSIServer.Log("[ModeSense6] Page code: 0x{0}, Sub page code: 0x{1}", command.PageCode.ToString("X"), command.SubpageCode.ToString("X"));
+            Log(Severity.Verbose, "ModeSense6: Page code: 0x{0}, Sub page code: 0x{1}", command.PageCode.ToString("X"), command.SubpageCode.ToString("X"));
             byte[] pageData;
 
             switch ((ModePageCodeName)command.PageCode)
@@ -248,7 +249,7 @@ namespace SCSI
                         }
                         else
                         {
-                            ISCSIServer.Log("[ModeSense6] Power condition subpage 0x{0} is not implemented", command.SubpageCode.ToString("x"));
+                            Log(Severity.Error, "ModeSense6: Power condition subpage 0x{0} is not implemented", command.SubpageCode.ToString("x"));
                             response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             return SCSIStatusCodeName.CheckCondition;
                         }
@@ -279,7 +280,7 @@ namespace SCSI
                     }
                 default:
                     {
-                        ISCSIServer.Log("[ModeSense6] ModeSense6 page 0x{0} is not implemented", command.PageCode.ToString("x"));
+                        Log(Severity.Error, "ModeSense6: ModeSense6 page 0x{0} is not implemented", command.PageCode.ToString("x"));
                         response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                         return SCSIStatusCodeName.CheckCondition;
                     }
@@ -346,6 +347,7 @@ namespace SCSI
         {
             Disk disk = m_disks[lun];
             int sectorCount = (int)command.TransferLength;
+            Log(Severity.Verbose, "LUN {0}: Reading {1} blocks starting from LBA {2}", lun, sectorCount, (long)command.LogicalBlockAddress64);
             try
             {
                 lock (m_ioLock)
@@ -356,7 +358,7 @@ namespace SCSI
             }
             catch (ArgumentOutOfRangeException)
             {
-                ISCSIServer.Log("[Read] Read error: LBA out of range");
+                Log(Severity.Error, "Read error: LBA out of range");
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -365,13 +367,13 @@ namespace SCSI
                 int error = Marshal.GetHRForException(ex);
                 if (error == (int)Win32Error.ERROR_CRC)
                 {
-                    ISCSIServer.Log("[Read] Read error: CRC error");
+                    Log(Severity.Error, "Read error: CRC error");
                     response = FormatSenseData(SenseDataParameter.GetWriteFaultSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
                 else
                 {
-                    ISCSIServer.Log("[Read] Read error: {0}", ex.ToString());
+                    Log(Severity.Error, "Read error: {0}", ex.ToString());
                     response = FormatSenseData(SenseDataParameter.GetMediumErrorUnrecoverableReadErrorSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }
@@ -425,11 +427,13 @@ namespace SCSI
             Disk disk = m_disks[lun];
             if (disk.IsReadOnly)
             {
+                Log(Severity.Verbose, "LUN {0}: Refused attempt to write to a read-only disk", lun);
                 SenseDataParameter senseData = SenseDataParameter.GetDataProtectSenseData();
                 response = senseData.GetBytes();
                 return SCSIStatusCodeName.CheckCondition;
             }
 
+            Log(Severity.Verbose, "LUN {0}: Writing {1} blocks starting from LBA {2}", lun, command.TransferLength, (long)command.LogicalBlockAddress64);
             try
             {
                 lock (m_ioLock)
@@ -441,16 +445,31 @@ namespace SCSI
             }
             catch (ArgumentOutOfRangeException)
             {
-                ISCSIServer.Log("[Write] Write error: LBA out of range");
+                Log(Severity.Error, "Write error: LBA out of range");
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
             catch (IOException ex)
             {
-                ISCSIServer.Log("[Write] Write error: {0}", ex.ToString());
+                Log(Severity.Error, "Write error: {0}", ex.ToString());
                 response = FormatSenseData(SenseDataParameter.GetMediumErrorWriteFaultSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
+        }
+
+        public void Log(Severity severity, string message)
+        {
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<LogEntry> handler = OnLogEntry;
+            if (handler != null)
+            {
+                handler(this, new LogEntry(DateTime.Now, severity, "Virtual SCSI Target", message));
+            }
+        }
+
+        public void Log(Severity severity, string message, params object[] args)
+        {
+            Log(severity, String.Format(message, args));
         }
 
         public List<Disk> Disks

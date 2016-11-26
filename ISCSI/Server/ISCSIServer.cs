@@ -42,8 +42,7 @@ namespace ISCSI.Server
         private bool m_listening;
         private static List<ConnectionState> m_activeConnections = new List<ConnectionState>();
 
-        public static object m_logSyncLock = new object();
-        private static FileStream m_logFile;
+        public event EventHandler<LogEntry> OnLogEntry;
         
         public ISCSIServer(List<ISCSITarget> targets) : this(targets, DefaultPort)
         { }
@@ -58,26 +57,13 @@ namespace ISCSI.Server
         {
             m_port = port;
             m_targets = targets;
-
-            if (logFilePath != String.Empty)
-            {
-                try
-                {
-                    // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
-                    // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
-                    m_logFile = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read, 0x1000, FileOptions.WriteThrough);
-                }
-                catch
-                {
-                    Console.WriteLine("Cannot open log file");
-                }
-            }
         }
 
         public void Start()
         {
             if (!m_listening)
             {
+                Log(Severity.Information, "Starting Server");
                 m_listening = true;
 
                 m_listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -106,7 +92,7 @@ namespace ISCSI.Server
                 return;
             }
 
-            Log("[OnConnectRequest] New connection has been accepted");
+            Log(Severity.Information, "New connection has been accepted");
 
             ConnectionState state = new ConnectionState();
             state.ReceiveBuffer = new byte[ConnectionState.ReceiveBufferSize];
@@ -119,25 +105,20 @@ namespace ISCSI.Server
             }
             catch (ObjectDisposedException)
             {
-                Log("[OnConnectRequest] BeginReceive ObjectDisposedException");
+                Log(Severity.Debug, "[OnConnectRequest] BeginReceive ObjectDisposedException");
             }
             catch (SocketException ex)
             {
-                Log("[OnConnectRequest] BeginReceive SocketException: " + ex.Message);
+                Log(Severity.Debug, "[OnConnectRequest] BeginReceive SocketException: {0}", ex.Message);
             }
             m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
         }
 
         public void Stop()
         {
+            Log(Severity.Information, "Stopping Server");
             m_listening = false;
             SocketUtils.ReleaseSocket(m_listenerSocket);
-
-            if (m_logFile != null)
-            {
-                m_logFile.Close();
-                m_logFile = null;
-            }
         }
 
         private void ReceiveCallback(IAsyncResult result)
@@ -161,12 +142,12 @@ namespace ISCSI.Server
             }
             catch (ObjectDisposedException)
             {
-                Log("[ReceiveCallback] EndReceive ObjectDisposedException");
+                Log(Severity.Debug, "[ReceiveCallback] EndReceive ObjectDisposedException");
                 return;
             }
             catch (SocketException ex)
             {
-                Log("[ReceiveCallback] EndReceive SocketException: " + ex.Message);
+                Log(Severity.Debug, "[ReceiveCallback] EndReceive SocketException: {0}", ex.Message);
                 return;
             }
 
@@ -174,7 +155,7 @@ namespace ISCSI.Server
             {
                 // The other side has closed the connection
                 clientSocket.Close();
-                Log("[ReceiveCallback] The initiator has closed the connection");
+                Log(Severity.Verbose, "The initiator has closed the connection");
                 // Wait for pending I/O to complete.
                 state.RunningSCSICommands.WaitUntilZero();
                 lock (m_activeConnections)
@@ -197,11 +178,11 @@ namespace ISCSI.Server
             }
             catch (ObjectDisposedException)
             {
-                Log("[ReceiveCallback] BeginReceive ObjectDisposedException");
+                Log(Severity.Debug, "[ReceiveCallback] BeginReceive ObjectDisposedException");
             }
             catch (SocketException ex)
             {
-                Log("[ReceiveCallback] BeginReceive SocketException: " + ex.Message);
+                Log(Severity.Debug, "[ReceiveCallback] BeginReceive SocketException: {0}", ex.Message);
             }
         }
 
@@ -227,7 +208,7 @@ namespace ISCSI.Server
                 int pduLength = ISCSIPDU.GetPDULength(state.ConnectionBuffer, bufferOffset);
                 if (pduLength > bytesLeftInBuffer)
                 {
-                    Log("[{0}][ProcessCurrentBuffer] Bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
+                    Log(Severity.Debug, "[{0}][ProcessCurrentBuffer] Bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
                     break;
                 }
                 else
@@ -241,7 +222,7 @@ namespace ISCSI.Server
                     }
                     catch (Exception ex)
                     {
-                        Log("[{0}][ProcessCurrentBuffer] Failed to read PDU (Exception: {1})", state.ConnectionIdentifier, ex.Message);
+                        Log(Severity.Error, "[{0}] Failed to read PDU (Exception: {1})", state.ConnectionIdentifier, ex.Message);
                         RejectPDU reject = new RejectPDU();
                         reject.Reason = RejectReason.InvalidPDUField;
                         reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
@@ -253,7 +234,7 @@ namespace ISCSI.Server
                     {
                         if (pdu.GetType() == typeof(ISCSIPDU))
                         {
-                            Log("[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.ConnectionIdentifier, pdu.OpCode.ToString("X"));
+                            Log(Severity.Error, "[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.ConnectionIdentifier, pdu.OpCode.ToString("X"));
                             // Unsupported PDU
                             RejectPDU reject = new RejectPDU();
                             reject.InitiatorTaskTag = pdu.InitiatorTaskTag;
@@ -272,7 +253,7 @@ namespace ISCSI.Server
                         // Do not continue to process the buffer if the other side closed the connection
                         if (bytesLeftInBuffer > 0)
                         {
-                            Log("[{0}][ProcessCurrentBuffer] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
+                            Log(Severity.Debug, "[{0}] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
                         }
                         return;
                     }
@@ -294,7 +275,8 @@ namespace ISCSI.Server
             Socket clientSocket = state.ClientSocket;
             
             uint? cmdSN = PDUHelper.GetCmdSN(pdu);
-            Log("[{0}][ProcessPDU] Received PDU from initiator, Operation: {1}, Size: {2}, CmdSN: {3}", state.ConnectionIdentifier, (ISCSIOpCodeName)pdu.OpCode, pdu.Length, cmdSN);
+            Log(Severity.Trace, "Entering ProcessPDU");
+            Log(Severity.Verbose, "[{0}] Received PDU from initiator, Operation: {1}, Size: {2}, CmdSN: {3}", state.ConnectionIdentifier, (ISCSIOpCodeName)pdu.OpCode, pdu.Length, cmdSN);
             // RFC 3720: On any connection, the iSCSI initiator MUST send the commands in increasing order of CmdSN,
             // except for commands that are retransmitted due to digest error recovery and connection recovery.
             if (cmdSN.HasValue)
@@ -303,8 +285,9 @@ namespace ISCSI.Server
                 {
                     if (cmdSN != state.SessionParameters.ExpCmdSN)
                     {
-                        Log("[{0}][ProcessPDU] CmdSN outside of expected range", state.ConnectionIdentifier);
+                        Log(Severity.Error, "[{0}] CmdSN outside of expected range", state.ConnectionIdentifier);
                         // We ignore this PDU
+                        Log(Severity.Trace, "Leaving ProcessPDU");
                         return;
                     }
                 }
@@ -328,7 +311,7 @@ namespace ISCSI.Server
                 if (pdu is LoginRequestPDU)
                 {
                     LoginRequestPDU request = (LoginRequestPDU)pdu;
-                    Log("[{0}][ReceiveCallback] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
+                    Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
                     if (request.TSIH != 0)
                     {
                         // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
@@ -339,13 +322,13 @@ namespace ISCSI.Server
                             if (existingConnectionIndex >= 0)
                             {
                                 // Perform implicit logout
-                                Log("[{0}][ProcessPDU] Initiating implicit logout", state.ConnectionIdentifier);
+                                Log(Severity.Verbose, "[{0}] Initiating implicit logout", state.ConnectionIdentifier);
                                 ConnectionState existingConnection = m_activeConnections[existingConnectionIndex];
                                 // Wait for pending I/O to complete.
                                 existingConnection.RunningSCSICommands.WaitUntilZero();
                                 SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
                                 m_activeConnections.RemoveAt(existingConnectionIndex);
-                                Log("[{0}][ProcessPDU] Implicit logout completed", state.ConnectionIdentifier);
+                                Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                             }
                         }
                     }
@@ -359,13 +342,13 @@ namespace ISCSI.Server
                             m_activeConnections.Add(state);
                         }
                     }
-                    Log("[{0}][ReceiveCallback] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
+                    Log(Severity.Verbose, "[{0}] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
                     TrySendPDU(state, response);
                 }
                 else
                 {
                     // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
-                    Log("[{0}][ProcessPDU] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    Log(Severity.Error, "[{0}] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                     if (state.SessionParameters.TSIH == 0)
                     {
                         // A target receiving any PDU except a Login request before the Login phase is started MUST
@@ -394,6 +377,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is LogoutRequestPDU)
                 {
+                    Log(Severity.Verbose, "[{0}] Logour Request", state.ConnectionIdentifier);
                     lock (m_activeConnections)
                     {
                         int connectionIndex = GetConnectionStateIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
@@ -420,7 +404,7 @@ namespace ISCSI.Server
                 {
                     // The target MUST ONLY accept text requests with the SendTargets key and a logout
                     // request with the reason "close the session".  All other requests MUST be rejected.
-                    Log("[{0}][ProcessPDU] Improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    Log(Severity.Error, "[{0}] Improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                     RejectPDU reject = new RejectPDU();
                     reject.Reason = RejectReason.ProtocolError;
                     reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
@@ -445,14 +429,14 @@ namespace ISCSI.Server
                     if (pdu is SCSIDataOutPDU)
                     {
                         SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
+                        Log(Severity.Debug, "[{0}] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
                         try
                         {
                             readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
                         }
                         catch (InvalidTargetTransferTagException ex)
                         {
-                            ISCSIServer.Log("[{0}] Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
+                            Log(Severity.Error, "[{0}] Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
                             RejectPDU reject = new RejectPDU();
                             reject.InitiatorTaskTag = request.InitiatorTaskTag;
                             reject.Reason = RejectReason.InvalidPDUField;
@@ -463,7 +447,7 @@ namespace ISCSI.Server
                     else
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
-                        ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                        Log(Severity.Debug, "[{0}] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
                         readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
                     }
                     foreach (ReadyToTransferPDU readyToTransferPDU in readyToTransferPDUs)
@@ -477,6 +461,7 @@ namespace ISCSI.Server
                     List<ISCSIPDU> responseList = new List<ISCSIPDU>();
                     foreach(SCSICommandPDU command in commandsToExecute)
                     {
+                        Log(Severity.Debug, "[{0}] Executing command: CmdSN: {1}", state.ConnectionIdentifier, command.CmdSN);
                         List<ISCSIPDU> commandResponseList = TargetResponseHelper.GetSCSICommandResponse(command, state.Target, state.SessionParameters, state.ConnectionParameters);
                         state.RunningSCSICommands.Decrement();
                         responseList.AddRange(commandResponseList);
@@ -493,7 +478,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is LoginRequestPDU)
                 {
-                    Log("[{0}][ProcessPDU] Protocol Error (Login request during full feature phase)", state.ConnectionIdentifier);
+                    Log(Severity.Error, "[{0}] Protocol Error (Login request during full feature phase)", state.ConnectionIdentifier);
                     // RFC 3720: Login requests and responses MUST be used exclusively during Login.
                     // On any connection, the login phase MUST immediately follow TCP connection establishment and
                     // a subsequent Login Phase MUST NOT occur before tearing down a connection
@@ -505,7 +490,7 @@ namespace ISCSI.Server
                 }
                 else
                 {
-                    Log("[{0}][ProcessPDU] Unsupported command, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    Log(Severity.Error, "[{0}] Unsupported command, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                     RejectPDU reject = new RejectPDU();
                     reject.Reason = RejectReason.CommandNotSupported;
                     reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
@@ -513,6 +498,7 @@ namespace ISCSI.Server
                     TrySendPDU(state, reject);
                 }
             }
+            Log(Severity.Trace, "Leaving ProcessPDU");
         }
 
         private static int GetConnectionStateIndex(List<ConnectionState> Connections, ulong isid, ushort tsih, ushort cid)
@@ -529,7 +515,7 @@ namespace ISCSI.Server
             return -1;
         }
 
-        private static void TrySendPDU(ConnectionState state, ISCSIPDU response)
+        private void TrySendPDU(ConnectionState state, ISCSIPDU response)
         {
             Socket clientSocket = state.ClientSocket;
             try
@@ -545,15 +531,30 @@ namespace ISCSI.Server
                     state.ConnectionParameters.StatSN++;
                 }
                 clientSocket.Send(response.GetBytes());
-                Log("[{0}][TrySendPDU] Sent response to initator, Operation: {1}, Size: {2}", state.ConnectionIdentifier, response.OpCode, response.Length);
+                Log(Severity.Debug, "[{0}] Sent response to initator, Operation: {1}, Size: {2}", state.ConnectionIdentifier, response.OpCode, response.Length);
             }
             catch (SocketException ex)
             {
-                Log("[{0}][TrySendPDU] Failed to send response to initator (Operation: {1}, Size: {2}), SocketException: {3}", state.ConnectionIdentifier, response.OpCode, response.Length, ex.Message);
+                Log(Severity.Debug, "[{0}] Failed to send response to initator (Operation: {1}, Size: {2}), SocketException: {3}", state.ConnectionIdentifier, response.OpCode, response.Length, ex.Message);
             }
             catch (ObjectDisposedException)
             {
             }
+        }
+
+        public void Log(Severity severity, string message)
+        {
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<LogEntry> handler = OnLogEntry;
+            if (handler != null)
+            {
+                handler(this, new LogEntry(DateTime.Now, severity, "iSCSI Server", message));
+            }
+        }
+
+        public void Log(Severity severity, string message, params object[] args)
+        {
+            Log(severity, String.Format(message, args));
         }
 
         public ushort GetNextTSIH()
@@ -569,25 +570,6 @@ namespace ISCSI.Server
                 m_nextTSIH++;
             }
             return nextTSIH;
-        }
-
-        public static void Log(string message)
-        {
-            if (m_logFile != null)
-            {
-                lock (m_logSyncLock)
-                {
-                    StreamWriter writer = new StreamWriter(m_logFile);
-                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss ");
-                    writer.WriteLine(timestamp + message);
-                    writer.Flush();
-                }
-            }
-        }
-
-        public static void Log(string message, params object[] args)
-        {
-            Log(String.Format(message, args));
         }
     }
 }

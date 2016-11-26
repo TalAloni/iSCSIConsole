@@ -115,6 +115,7 @@
     <Compile Include="Server\ServerResponseHelper.cs" />
     <Compile Include="Server\ConnectionState.cs" />
     <Compile Include="Server\TargetResponseHelper.cs" />
+    <Compile Include="Utilities\LogEntry.cs" />
     <Compile Include="Utilities\SocketUtils.cs" />
   </ItemGroup>
   <ItemGroup>

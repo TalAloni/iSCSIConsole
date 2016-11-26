@@ -40,6 +40,7 @@
     <Compile Include="Program.DetailCommand.cs" />
     <Compile Include="Program.HelpCommand.cs" />
     <Compile Include="Program.ListCommand.cs" />
+    <Compile Include="Program.Log.cs" />
     <Compile Include="Program.SelectCommand.cs" />
     <Compile Include="Program.SetCommand.cs" />
     <Compile Include="Program.StartCommand.cs" />

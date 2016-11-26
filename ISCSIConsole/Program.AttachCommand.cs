@@ -255,7 +255,9 @@ namespace ISCSIConsole
         public static ISCSITarget AddTarget(string targetName)
         {
             List<Disk> disks = new List<Disk>();
-            ISCSITarget target = new ISCSITarget(targetName, disks);
+            VirtualSCSITarget scsiTarget = new VirtualSCSITarget(disks);
+            scsiTarget.OnLogEntry += new EventHandler<LogEntry>(OnLogEntry);
+            ISCSITarget target = new ISCSITarget(targetName, scsiTarget);
             m_targets.Add(target);
             return target;
         }

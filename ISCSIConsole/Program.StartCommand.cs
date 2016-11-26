@@ -46,14 +46,18 @@ namespace ISCSIConsole
                         logFile = parameters.ValueOf("log");
                     }
                     m_server = new ISCSIServer(m_targets, port, logFile);
-                    try
+                    m_server.OnLogEntry += new EventHandler<LogEntry>(OnLogEntry);
+                    if (logFile != String.Empty)
                     {
-                        ISCSIServer.Log("Starting Server");
-                    }
-                    catch (IOException)
-                    {
-                        Console.WriteLine("Could not append to log file");
-                        return;
+                        try
+                        {
+                            OpenLogFile(logFile);
+                        }
+                        catch (IOException)
+                        {
+                            Console.WriteLine("Could not append to log file");
+                            return;
+                        }
                     }
 
                     try
@@ -82,6 +86,7 @@ namespace ISCSIConsole
                 m_server.Stop();
                 m_server = null;
                 Console.WriteLine("iSCSI target is stopping");
+                CloseLogFile();
             }
             else
             {
