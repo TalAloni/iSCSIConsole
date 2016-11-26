@@ -75,8 +75,6 @@ namespace ISCSI.Server
                 return responseList;
             }
 
-            ushort LUN = (ushort)request.LUN;
-            Disk disk = target.Disks[LUN];
             uint offset = request.BufferOffset;
             uint totalLength = (uint)transfer.Command.ExpectedDataTransferLength;
 
