@@ -59,6 +59,7 @@
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockLimitsVPDPage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\BlockDeviceCharacteristicsVPDPage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\VPDPages\Enums\IdentifierTypeName.cs" />
+    <Compile Include="Server\ConnectionManager.cs" />
     <Compile Include="Server\ConnectionParameters.cs" />
     <Compile Include="PDU\Enums\ISCSIOpCodeName.cs" />
     <Compile Include="PDU\Enums\LoginResponseStatusClassName.cs" />

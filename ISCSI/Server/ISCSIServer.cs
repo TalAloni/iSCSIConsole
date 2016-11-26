@@ -40,7 +40,7 @@ namespace ISCSI.Server
 
         private Socket m_listenerSocket;
         private bool m_listening;
-        private static List<ConnectionState> m_activeConnections = new List<ConnectionState>();
+        public ConnectionManager m_connectionManager = new ConnectionManager();
 
         public event EventHandler<LogEntry> OnLogEntry;
         
@@ -73,7 +73,7 @@ namespace ISCSI.Server
             }
         }
 
-        // This method Accepts new connections
+        // This method accepts new connections
         private void ConnectRequestCallback(IAsyncResult ar)
         {
             Socket listenerSocket = (Socket)ar.AsyncState;
@@ -158,14 +158,7 @@ namespace ISCSI.Server
                 Log(Severity.Verbose, "The initiator has closed the connection");
                 // Wait for pending I/O to complete.
                 state.RunningSCSICommands.WaitUntilZero();
-                lock (m_activeConnections)
-                {
-                    int connectionIndex = GetConnectionStateIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
-                    if (connectionIndex >= 0)
-                    {
-                        m_activeConnections.RemoveAt(connectionIndex);
-                    }
-                }
+                m_connectionManager.RemoveConnection(state);
                 return;
             }
 
@@ -316,20 +309,16 @@ namespace ISCSI.Server
                     {
                         // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
                         // connection implies a logout of the connection followed by a Login
-                        lock (m_activeConnections)
+                        ConnectionState existingConnection = m_connectionManager.FindConnection(request.ISID, request.TSIH, request.CID);
+                        if (existingConnection != null)
                         {
-                            int existingConnectionIndex = GetConnectionStateIndex(m_activeConnections, request.ISID, request.TSIH, request.CID);
-                            if (existingConnectionIndex >= 0)
-                            {
-                                // Perform implicit logout
-                                Log(Severity.Verbose, "[{0}] Initiating implicit logout", state.ConnectionIdentifier);
-                                ConnectionState existingConnection = m_activeConnections[existingConnectionIndex];
-                                // Wait for pending I/O to complete.
-                                existingConnection.RunningSCSICommands.WaitUntilZero();
-                                SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
-                                m_activeConnections.RemoveAt(existingConnectionIndex);
-                                Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
-                            }
+                            // Perform implicit logout
+                            Log(Severity.Verbose, "[{0}] Initiating implicit logout", state.ConnectionIdentifier);
+                            // Wait for pending I/O to complete.
+                            existingConnection.RunningSCSICommands.WaitUntilZero();
+                            SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
+                            m_connectionManager.RemoveConnection(existingConnection);
+                            Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }
                     LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
@@ -337,10 +326,7 @@ namespace ISCSI.Server
                     {
                         state.SessionParameters.ISID = request.ISID;
                         state.ConnectionParameters.CID = request.CID;
-                        lock (m_activeConnections)
-                        {
-                            m_activeConnections.Add(state);
-                        }
+                        m_connectionManager.AddConnection(state);
                     }
                     Log(Severity.Verbose, "[{0}] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
                     TrySendPDU(state, response);
@@ -378,27 +364,47 @@ namespace ISCSI.Server
                 else if (pdu is LogoutRequestPDU)
                 {
                     Log(Severity.Verbose, "[{0}] Logour Request", state.ConnectionIdentifier);
-                    lock (m_activeConnections)
-                    {
-                        int connectionIndex = GetConnectionStateIndex(m_activeConnections, state.SessionParameters.ISID, state.SessionParameters.TSIH, state.ConnectionParameters.CID);
-                        if (connectionIndex >= 0)
-                        {
-                            ConnectionState existingConnection = m_activeConnections[connectionIndex];
-                            // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
-                            if (existingConnection != state)
-                            {
-                                // Wait for pending I/O to complete.
-                                existingConnection.RunningSCSICommands.WaitUntilZero();
-                            }
-                            m_activeConnections.RemoveAt(connectionIndex);
-                        }
-                    }
-                    // Wait for pending I/O to complete.
-                    state.RunningSCSICommands.WaitUntilZero();
                     LogoutRequestPDU request = (LogoutRequestPDU)pdu;
-                    LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
-                    TrySendPDU(state, response);
-                    clientSocket.Close(); // We can close the connection now
+                    if (state.SessionParameters.IsDiscovery && request.ReasonCode != LogoutReasonCode.CloseTheSession)
+                    {
+                        // RFC 3720: Discovery-session: The target MUST ONLY accept [..] logout request with the reason "close the session"
+                        RejectPDU reject = new RejectPDU();
+                        reject.Reason = RejectReason.ProtocolError;
+                        reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
+                        TrySendPDU(state, reject);
+                    }
+                    else
+                    {
+                        List<ConnectionState> connectionsToClose = new List<ConnectionState>();
+                        if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
+                        {
+                            connectionsToClose = m_connectionManager.GetSessionConnections(state.SessionParameters.ISID, state.SessionParameters.TSIH);
+                        }
+                        else
+                        {
+                            // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
+                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.SessionParameters.ISID, state.SessionParameters.TSIH, request.CID);
+                            if (existingConnection != null && existingConnection != state)
+                            {
+                                connectionsToClose.Add(existingConnection);
+                            }
+                            connectionsToClose.Add(state);
+                        }
+
+                        foreach (ConnectionState connection in connectionsToClose)
+                        {
+                            // Wait for pending I/O to complete.
+                            connection.RunningSCSICommands.WaitUntilZero();
+                            if (connection != state)
+                            {
+                                SocketUtils.ReleaseSocket(connection.ClientSocket);
+                            }
+                            m_connectionManager.RemoveConnection(connection);
+                        }
+                        LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
+                        TrySendPDU(state, response);
+                        clientSocket.Close(); // We can close the connection now
+                    }
                 }
                 else if (state.SessionParameters.IsDiscovery)
                 {
@@ -499,20 +505,6 @@ namespace ISCSI.Server
                 }
             }
             Log(Severity.Trace, "Leaving ProcessPDU");
-        }
-
-        private static int GetConnectionStateIndex(List<ConnectionState> Connections, ulong isid, ushort tsih, ushort cid)
-        {
-            for (int index = 0; index < Connections.Count; index++)
-            {
-                if (Connections[index].SessionParameters.ISID == isid &&
-                    Connections[index].SessionParameters.TSIH == tsih &&
-                    Connections[index].ConnectionParameters.CID == cid)
-                {
-                    return index;
-                }
-            }
-            return -1;
         }
 
         private void TrySendPDU(ConnectionState state, ISCSIPDU response)
