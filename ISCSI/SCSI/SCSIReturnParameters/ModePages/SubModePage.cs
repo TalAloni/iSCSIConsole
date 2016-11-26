@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using Utilities;
 
-namespace ISCSI
+namespace SCSI
 {
     public class SubModePage : ModePage // SUB_PAGE mode page format
     {

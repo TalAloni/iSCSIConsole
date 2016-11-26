@@ -10,6 +10,7 @@ using System.IO;
 using System.Text;
 using System.Runtime.InteropServices;
 using DiskAccessLibrary;
+using SCSI;
 using Utilities;
 
 namespace ISCSI.Server

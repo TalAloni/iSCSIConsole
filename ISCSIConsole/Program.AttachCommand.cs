@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using DiskAccessLibrary;
 using DiskAccessLibrary.LogicalDiskManager;
+using SCSI;
 using ISCSI.Server;
 using Utilities;
 

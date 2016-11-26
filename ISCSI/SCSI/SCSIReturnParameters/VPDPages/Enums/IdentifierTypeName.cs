@@ -1,5 +1,5 @@
 
-namespace ISCSI
+namespace SCSI
 {
     public enum IdentifierTypeName : byte
     {

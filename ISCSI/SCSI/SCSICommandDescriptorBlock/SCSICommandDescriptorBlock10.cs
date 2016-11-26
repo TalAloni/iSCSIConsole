@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.Text;
 using Utilities;
 
-namespace ISCSI
+namespace SCSI
 {
-    // 10-byte command
+    /// <summary>
+    /// 10-byte SCSI CDB
+    /// </summary>
     public class SCSICommandDescriptorBlock10 : SCSICommandDescriptorBlock
     {
         public SCSICommandDescriptorBlock10(SCSIOpCodeName opCode) : base()

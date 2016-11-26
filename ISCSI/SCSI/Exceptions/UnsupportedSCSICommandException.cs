@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ISCSI
+namespace SCSI
 {
     public class UnsupportedSCSICommandException : NotImplementedException
     {
