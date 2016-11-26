@@ -17,10 +17,10 @@ namespace ISCSI.Server
 {
     public class TargetResponseHelper
     {
-        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
-            List<ISCSIPDU> responseList = new List<ISCSIPDU>();
+            List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
             
             string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
@@ -58,22 +58,16 @@ namespace ISCSI.Server
             return responseList;
         }
 
-        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
-            List<ISCSIPDU> responseList = new List<ISCSIPDU>();
+            List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
 
             string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
             if (transfer == null)
             {
-                ISCSIServer.Log("[{0}][GetSCSIDataOutResponsePDU] Invalid TargetTransferTag {1}", connectionIdentifier, request.TargetTransferTag);
-                RejectPDU reject = new RejectPDU();
-                reject.InitiatorTaskTag = request.InitiatorTaskTag;
-                reject.Reason = RejectReason.InvalidPDUField;
-                reject.Data = ByteReader.ReadBytes(request.GetBytes(), 0, 48);
-                responseList.Add(reject);
-                return responseList;
+                throw new InvalidTargetTransferTagException(request.TargetTransferTag);
             }
 
             uint offset = request.BufferOffset;

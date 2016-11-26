@@ -440,22 +440,41 @@ namespace ISCSI.Server
                 {
                     // RFC 3720: the iSCSI target layer MUST deliver the commands for execution (to the SCSI execution engine) in the order specified by CmdSN.
                     // e.g. read requests should not be executed while previous write request data is being received (via R2T)
-                    List<SCSICommandPDU> commandsToExecute;
-                    List<ISCSIPDU> responseList;
+                    List<SCSICommandPDU> commandsToExecute = null;
+                    List<ReadyToTransferPDU> readyToTransferPDUs = new List<ReadyToTransferPDU>();
                     if (pdu is SCSIDataOutPDU)
                     {
                         SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
                         ISCSIServer.Log("[{0}][ProcessPDU] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
-                        responseList = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                        try
+                        {
+                            readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                        }
+                        catch (InvalidTargetTransferTagException ex)
+                        {
+                            ISCSIServer.Log("[{0}] Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
+                            RejectPDU reject = new RejectPDU();
+                            reject.InitiatorTaskTag = request.InitiatorTaskTag;
+                            reject.Reason = RejectReason.InvalidPDUField;
+                            reject.Data = ByteReader.ReadBytes(request.GetBytes(), 0, 48);
+                            TrySendPDU(state, reject);
+                        }
                     }
                     else
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
                         ISCSIServer.Log("[{0}][ProcessPDU] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                        responseList = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                        readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
                     }
-
-                    state.RunningSCSICommands.Add(commandsToExecute.Count);
+                    foreach (ReadyToTransferPDU readyToTransferPDU in readyToTransferPDUs)
+                    {
+                        TrySendPDU(state, readyToTransferPDU);
+                    }
+                    if (commandsToExecute != null)
+                    {
+                        state.RunningSCSICommands.Add(commandsToExecute.Count);
+                    }
+                    List<ISCSIPDU> responseList = new List<ISCSIPDU>();
                     foreach(SCSICommandPDU command in commandsToExecute)
                     {
                         List<ISCSIPDU> commandResponseList = TargetResponseHelper.GetSCSICommandResponse(command, state.Target, state.SessionParameters, state.ConnectionParameters);

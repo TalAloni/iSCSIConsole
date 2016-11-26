@@ -67,6 +67,7 @@
     <Compile Include="SCSI\Enums\SCSIStatusCodeName.cs" />
     <Compile Include="SCSI\Enums\ServiceAction.cs" />
     <Compile Include="SCSI\Enums\VitalProductDataPageName.cs" />
+    <Compile Include="Server\Exceptions\InvalidTargetTransferTagException.cs" />
     <Compile Include="Server\ISCSIServer.cs" />
     <Compile Include="Server\PDUHelper.cs" />
     <Compile Include="SCSITarget\VirtualSCSITarget.cs" />
