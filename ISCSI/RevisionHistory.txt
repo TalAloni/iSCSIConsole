@@ -81,3 +81,9 @@ Revision History:
 1.3.5 - Bugfix: iSCSI server did not increment StatSN for LoginResponsePDU / TextResponsePDU / RejectPDU.
         The iSCSI server will now terminate a connection only after all running SCSI commands sent using that connection have been completed.
         Minor Code cleanup.
+
+1.3.6 - API Improvements: You can now subscribe to receive iSCSIServer and/or VirtualSCSITarget log entries.
+        API Improvements: You can now provide your own implementation of SCSITarget to the iSCSI server.
+        API Improvements: You can now set identification information for each LUN.
+        API Improvements: Added authorization API to ISCSITarget.
+        Improved connection management logic.
