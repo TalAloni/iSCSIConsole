@@ -136,7 +136,7 @@ namespace ISCSI.Server
                     inquiryData.Version = 5; // Microsoft iSCSI Target report version 5
                     if (this is ISCSITarget)
                     {
-                        inquiryData.VersionDescriptors.Add(0x0960); // iSCSI
+                        inquiryData.VersionDescriptors.Add(VersionDescriptorName.iSCSI); // iSCSI
                     }
                     response = inquiryData.GetBytes();
                 }

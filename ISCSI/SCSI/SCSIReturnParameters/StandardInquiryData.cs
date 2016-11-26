@@ -56,7 +56,7 @@ namespace SCSI
         public byte Clocking;
         public bool QAS;
         public bool IUS;
-        public List<ushort> VersionDescriptors = new List<ushort>(); // 8 descriptors (16 bytes)
+        public List<VersionDescriptorName> VersionDescriptors = new List<VersionDescriptorName>(); // 8 descriptors (16 bytes)
 
         public StandardInquiryData()
         {
@@ -110,7 +110,7 @@ namespace SCSI
 
             for (int index = 0; index < 8; index++)
             {
-                ushort versionDescriptor = BigEndianConverter.ToUInt16(buffer, offset + 58 + index * 2);
+                VersionDescriptorName versionDescriptor = (VersionDescriptorName)BigEndianConverter.ToUInt16(buffer, offset + 58 + index * 2);
                 VersionDescriptors.Add(versionDescriptor);
             }
         }
@@ -215,7 +215,7 @@ namespace SCSI
                 ushort versionDescriptor = 0;
                 if (index < VersionDescriptors.Count)
                 {
-                    versionDescriptor = VersionDescriptors[index];
+                    versionDescriptor = (ushort)VersionDescriptors[index];
                 }
                 BigEndianWriter.WriteUInt16(buffer, 58 + index * 2, versionDescriptor);
             }
