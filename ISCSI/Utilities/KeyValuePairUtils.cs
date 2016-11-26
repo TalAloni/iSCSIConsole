@@ -7,9 +7,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Utilities;
 
-namespace ISCSI
+namespace Utilities
 {
     public class KeyValuePairUtils
     {

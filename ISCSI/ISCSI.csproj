@@ -68,7 +68,7 @@
     <Compile Include="Server\SCSITarget.cs" />
     <Compile Include="Server\SessionParameters.cs" />
     <Compile Include="Server\ISCSITarget.cs" />
-    <Compile Include="KeyValuePairUtils.cs" />
+    <Compile Include="Utilities\KeyValuePairUtils.cs" />
     <Compile Include="PDU\ISCSIPDU.cs" />
     <Compile Include="PDU\LoginRequestPDU.cs" />
     <Compile Include="PDU\LoginResponsePDU.cs" />
