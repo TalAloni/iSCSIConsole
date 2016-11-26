@@ -114,14 +114,6 @@ namespace ISCSI.Server
             }
         }
 
-        internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection)
-        {
-            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
-            byte[] scsiResponse;
-            SCSIStatusCodeName status = target.ExecuteCommand(command.CommandDescriptorBlock, command.LUN, command.Data, out scsiResponse);
-            return PrepareSCSICommandResponse(command, status, scsiResponse, connection);
-        }
-
         internal static List<ISCSIPDU> PrepareSCSICommandResponse(SCSICommandPDU command, SCSIStatusCodeName status, byte[] scsiResponse, ConnectionParameters connection)
         {
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();

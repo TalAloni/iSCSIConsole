@@ -33,6 +33,14 @@ namespace ISCSI.Server
         public CountdownLatch RunningSCSICommands = new CountdownLatch();
         public BlockingQueue<ISCSIPDU> SendQueue = new BlockingQueue<ISCSIPDU>();
 
+        public void OnCommandCompleted(SCSIStatusCodeName status, byte[] responseBytes, object task)
+        {
+            RunningSCSICommands.Decrement();
+            SCSICommandPDU command = (SCSICommandPDU)task;
+            List<ISCSIPDU> responseList = TargetResponseHelper.PrepareSCSICommandResponse(command, status, responseBytes, ConnectionParameters);
+            SendQueue.Enqueue(responseList);
+        }
+
         public string ConnectionIdentifier
         {
             get

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Runtime.InteropServices;
 using DiskAccessLibrary;
 using Utilities;
@@ -17,15 +18,20 @@ namespace SCSI
     public class VirtualSCSITarget : SCSITarget
     {
         private List<Disk> m_disks;
-        private object m_ioLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
 
         public event EventHandler<LogEntry> OnLogEntry;
 
         public VirtualSCSITarget(List<Disk> disks)
         {
             m_disks = disks;
+            Thread workerThread = new Thread(ProcessCommandQueue);
+            workerThread.IsBackground = true;
+            workerThread.Start();
         }
 
+        /// <summary>
+        /// This implementation is not thread-safe.
+        /// </summary>
         public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
         {
             SCSICommandDescriptorBlock command;
@@ -43,6 +49,9 @@ namespace SCSI
             return ExecuteCommand(command, lun, data, out response);
         }
 
+        /// <summary>
+        /// This implementation is not thread-safe.
+        /// </summary>
         public SCSIStatusCodeName ExecuteCommand(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
             Log(Severity.Verbose, "Executing command: {0}", command.OpCode);
@@ -350,10 +359,7 @@ namespace SCSI
             Log(Severity.Verbose, "LUN {0}: Reading {1} blocks starting from LBA {2}", lun, sectorCount, (long)command.LogicalBlockAddress64);
             try
             {
-                lock (m_ioLock)
-                {
-                    response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
-                }
+                response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
                 return SCSIStatusCodeName.Good;
             }
             catch (ArgumentOutOfRangeException)
@@ -436,10 +442,7 @@ namespace SCSI
             Log(Severity.Verbose, "LUN {0}: Writing {1} blocks starting from LBA {2}", lun, command.TransferLength, (long)command.LogicalBlockAddress64);
             try
             {
-                lock (m_ioLock)
-                {
-                    disk.WriteSectors((long)command.LogicalBlockAddress64, data);
-                }
+                disk.WriteSectors((long)command.LogicalBlockAddress64, data);
                 response = new byte[0];
                 return SCSIStatusCodeName.Good;
             }

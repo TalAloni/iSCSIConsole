@@ -473,15 +473,11 @@ namespace ISCSI.Server
                     {
                         state.RunningSCSICommands.Add(commandsToExecute.Count);
                     }
-                    List<ISCSIPDU> responseList = new List<ISCSIPDU>();
-                    foreach(SCSICommandPDU command in commandsToExecute)
+                    foreach (SCSICommandPDU commandPDU in commandsToExecute)
                     {
-                        Log(Severity.Debug, "[{0}] Executing command: CmdSN: {1}", state.ConnectionIdentifier, command.CmdSN);
-                        List<ISCSIPDU> commandResponseList = TargetResponseHelper.GetSCSICommandResponse(command, state.Target, state.SessionParameters, state.ConnectionParameters);
-                        state.RunningSCSICommands.Decrement();
-                        responseList.AddRange(commandResponseList);
+                        Log(Severity.Debug, "[{0}] Queuing command: CmdSN: {1}", state.ConnectionIdentifier, commandPDU.CmdSN);
+                        state.Target.QueueCommand(commandPDU.CommandDescriptorBlock, commandPDU.LUN, commandPDU.Data, commandPDU, state.OnCommandCompleted);
                     }
-                    state.SendQueue.Enqueue(responseList);
                 }
                 else if (pdu is LoginRequestPDU)
                 {
