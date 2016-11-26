@@ -243,7 +243,7 @@ namespace ISCSIConsole
                     target = AddTarget(targetName);
                 }
 
-                target.Disks.Add(disk);
+                ((VirtualSCSITarget)target.SCSITarget).Disks.Add(disk);
                 Console.WriteLine("Disk added to target: {0}", target.TargetName);
             }
             else

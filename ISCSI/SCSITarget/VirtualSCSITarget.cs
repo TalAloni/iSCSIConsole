@@ -10,22 +10,22 @@ using System.IO;
 using System.Text;
 using System.Runtime.InteropServices;
 using DiskAccessLibrary;
-using SCSI;
+using ISCSI.Server; // FIXME
 using Utilities;
 
-namespace ISCSI.Server
+namespace SCSI
 {
-    public class SCSITarget
+    public class VirtualSCSITarget : SCSITarget
     {
         private List<Disk> m_disks;
         private object m_ioLock = new object(); // "In multithreaded applications, a stream must be accessed in a thread-safe way"
 
-        public SCSITarget(List<Disk> disks)
+        public VirtualSCSITarget(List<Disk> disks)
         {
             m_disks = disks;
         }
 
-        public SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
         {
             SCSICommandDescriptorBlock command;
             try
@@ -35,7 +35,7 @@ namespace ISCSI.Server
             catch(UnsupportedSCSICommandException)
             {
                 ISCSIServer.Log("[ExecuteCommand] Unsupported SCSI Command (0x{0})", commandBytes[0].ToString("X"));
-                response = SCSITarget.FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
+                response = FormatSenseData(SenseDataParameter.GetIllegalRequestUnsupportedCommandCodeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
 
@@ -45,7 +45,18 @@ namespace ISCSI.Server
         public SCSIStatusCodeName ExecuteCommand(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
             ISCSIServer.Log("[ExecuteCommand] {0}", command.OpCode);
-            if (command.OpCode == SCSIOpCodeName.TestUnitReady)
+            if (command.OpCode == SCSIOpCodeName.ReportLUNs)
+            {
+                uint allocationLength = command.TransferLength;
+                return ReportLUNs(allocationLength, out response);
+            }
+            else if (lun >= m_disks.Count)
+            {
+                ISCSIServer.Log("LUN {0}: Invalid LUN", lun);
+                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
+                return SCSIStatusCodeName.CheckCondition;
+            }
+            else if (command.OpCode == SCSIOpCodeName.TestUnitReady)
             {
                 return TestUnitReady(lun, out response);
             }
@@ -101,11 +112,6 @@ namespace ISCSI.Server
                 uint allocationLength = command.TransferLength;
                 return ReadCapacity16(lun, allocationLength, out response);
             }
-            else if (command.OpCode == SCSIOpCodeName.ReportLUNs)
-            {
-                uint allocationLength = command.TransferLength;
-                return ReportLUNs(allocationLength, out response);
-            }
             else
             {
                 ISCSIServer.Log("[ExecuteCommand] Unsupported SCSI Command (0x{0})", command.OpCode.ToString("X"));
@@ -116,12 +122,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName Inquiry(InquiryCommand command, LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             if (!command.EVPD)
             {
                 if ((int)command.PageCode == 0)
@@ -129,15 +129,12 @@ namespace ISCSI.Server
                     StandardInquiryData inquiryData = new StandardInquiryData();
                     inquiryData.PeripheralDeviceType = 0; // Direct access block device
                     inquiryData.VendorIdentification = "TalAloni";
-                    inquiryData.ProductIdentification = "iSCSI Disk " + ((ushort)lun).ToString();
+                    inquiryData.ProductIdentification = "SCSI Disk " + ((ushort)lun).ToString();
                     inquiryData.ProductRevisionLevel = "1.00";
                     inquiryData.DriveSerialNumber = 0;
                     inquiryData.CmdQue = true;
-                    inquiryData.Version = 5; // Microsoft iSCSI Target report version 5
-                    if (this is ISCSITarget)
-                    {
-                        inquiryData.VersionDescriptors.Add(VersionDescriptorName.iSCSI); // iSCSI
-                    }
+                    inquiryData.Version = 5; // SPC-3
+                    NotifyStandardInquiry(this, new StandardInquiryEventArgs(lun, inquiryData));
                     response = inquiryData.GetBytes();
                 }
                 else
@@ -176,11 +173,7 @@ namespace ISCSI.Server
                             DeviceIdentificationVPDPage page = new DeviceIdentificationVPDPage();
                             // NAA identifier is needed to prevent 0xF4 BSOD during Windows setup
                             page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetNAAExtendedIdentifier(5, lun));
-                            if (this is ISCSITarget)
-                            {
-                                // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
-                                page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetSCSINameStringIdentifier(((ISCSITarget)this).TargetName));
-                            }
+                            NotifyDeviceIdentificationInquiry(this, new DeviceIdentificationInquiryEventArgs(lun, page));
                             response = page.GetBytes();
                             break;
                         }
@@ -204,8 +197,8 @@ namespace ISCSI.Server
                         }
                     default:
                         {
-                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             ISCSIServer.Log("[Inquiry] Unsupported VPD Page request (0x{0})", command.PageCode.ToString("X"));
+                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             return SCSIStatusCodeName.CheckCondition;
                         }
                 }
@@ -221,12 +214,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName ModeSense6(ModeSense6CommandDescriptorBlock command, LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             ISCSIServer.Log("[ModeSense6] Page code: 0x{0}, Sub page code: 0x{1}", command.PageCode.ToString("X"), command.SubpageCode.ToString("X"));
             byte[] pageData;
 
@@ -261,8 +248,8 @@ namespace ISCSI.Server
                         }
                         else
                         {
-                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             ISCSIServer.Log("[ModeSense6] Power condition subpage 0x{0} is not implemented", command.SubpageCode.ToString("x"));
+                            response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                             return SCSIStatusCodeName.CheckCondition;
                         }
                     }
@@ -285,15 +272,15 @@ namespace ISCSI.Server
                     }
                 case ModePageCodeName.VendorSpecificPage:
                     {
-                        // Microsoft iSCSI Target running under Windows 2000 will request this page, we immitate Microsoft iSCSI Target by sending back an empty page
+                        // Windows 2000 will request this page, we immitate Microsoft iSCSI Target by sending back an empty page
                         VendorSpecificPage page = new VendorSpecificPage();
                         pageData = page.GetBytes();
                         break;
                     }
                 default:
                     {
-                        response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                         ISCSIServer.Log("[ModeSense6] ModeSense6 page 0x{0} is not implemented", command.PageCode.ToString("x"));
+                        response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                         return SCSIStatusCodeName.CheckCondition;
                     }
             }
@@ -326,12 +313,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName ReadCapacity10(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             ReadCapacity10Parameter parameter = new ReadCapacity10Parameter(m_disks[lun].Size, (uint)m_disks[lun].BytesPerSector);
             response = parameter.GetBytes();
             return SCSIStatusCodeName.Good;
@@ -339,12 +320,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName ReadCapacity16(LUNStructure lun, uint allocationLength, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             ReadCapacity16Parameter parameter = new ReadCapacity16Parameter(m_disks[lun].Size, (uint)m_disks[lun].BytesPerSector);
             response = parameter.GetBytes();
             // we must not return more bytes than ReadCapacity16.AllocationLength
@@ -369,12 +344,6 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName Read(SCSICommandDescriptorBlock command, LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             Disk disk = m_disks[lun];
             int sectorCount = (int)command.TransferLength;
             try
@@ -412,12 +381,6 @@ namespace ISCSI.Server
         // Some initiators (i.e. EFI iSCSI DXE) will send 'Request Sense' upon connection (likely just to verify the medium is ready)
         public SCSIStatusCodeName RequestSense(LUNStructure lun, uint allocationLength, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = FormatSenseData(SenseDataParameter.GetNoSenseSenseData());
             // we must not return more bytes than RequestSense.AllocationLength
             if (response.Length > allocationLength)
@@ -429,72 +392,36 @@ namespace ISCSI.Server
 
         public SCSIStatusCodeName Reserve6(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = new byte[0];
             return SCSIStatusCodeName.Good;
         }
 
         public SCSIStatusCodeName SynchronizeCache10(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = new byte[0];
             return SCSIStatusCodeName.Good;
         }
 
         public SCSIStatusCodeName Release6(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = new byte[0];
             return SCSIStatusCodeName.Good;
         }
 
         public SCSIStatusCodeName TestUnitReady(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = new byte[0];
             return SCSIStatusCodeName.Good;
         }
 
         public SCSIStatusCodeName Verify(LUNStructure lun, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             response = new byte[0];
             return SCSIStatusCodeName.Good;
         }
 
         public SCSIStatusCodeName Write(SCSICommandDescriptorBlock command, LUNStructure lun, byte[] data, out byte[] response)
         {
-            if (lun >= m_disks.Count)
-            {
-                response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
-                return SCSIStatusCodeName.CheckCondition;
-            }
-
             Disk disk = m_disks[lun];
             if (disk.IsReadOnly)
             {

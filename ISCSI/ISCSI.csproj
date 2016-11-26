@@ -44,9 +44,12 @@
     <Compile Include="PDU\Enums\LogoutReasonCode.cs" />
     <Compile Include="PDU\Enums\LogoutResponse.cs" />
     <Compile Include="PDU\Enums\RejectReason.cs" />
+    <Compile Include="SCSITarget\InquiryEventArgs\DeviceIdentificationInquiryEventArgs.cs" />
+    <Compile Include="SCSITarget\InquiryEventArgs\StandardInquiryEventArgs.cs" />
     <Compile Include="SCSI\Enums\VersionDescriptorName.cs" />
     <Compile Include="SCSI\Exceptions\UnsupportedSCSICommandException.cs" />
     <Compile Include="PDU\RejectPDU.cs" />
+    <Compile Include="SCSITarget\SCSITarget.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\LUNStructure.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ControlModePage.cs" />
@@ -66,7 +69,7 @@
     <Compile Include="SCSI\Enums\VitalProductDataPageName.cs" />
     <Compile Include="Server\ISCSIServer.cs" />
     <Compile Include="Server\PDUHelper.cs" />
-    <Compile Include="Server\SCSITarget.cs" />
+    <Compile Include="SCSITarget\VirtualSCSITarget.cs" />
     <Compile Include="Server\SessionParameters.cs" />
     <Compile Include="Server\ISCSITarget.cs" />
     <Compile Include="Utilities\KeyValuePairUtils.cs" />

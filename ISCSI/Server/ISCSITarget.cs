@@ -15,10 +15,36 @@ namespace ISCSI.Server
     public class ISCSITarget : SCSITarget
     {
         private string m_targetName; // ISCSI name
+        private SCSITarget m_target;
 
-        public ISCSITarget(string targetName, List<Disk> disks) : base(disks)
+        public ISCSITarget(string targetName, List<Disk> disks) : this(targetName, new VirtualSCSITarget(disks))
+        {
+        }
+
+        public ISCSITarget(string targetName, SCSITarget scsiTarget)
         {
             m_targetName = targetName;
+            m_target = scsiTarget;
+            m_target.OnStandardInquiry += new EventHandler<StandardInquiryEventArgs>(Target_OnStandardInquiry);
+            m_target.OnDeviceIdentificationInquiry += new EventHandler<DeviceIdentificationInquiryEventArgs>(Target_OnDeviceIdentificationInquiry);
+        }
+
+        public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        {
+            return m_target.ExecuteCommand(commandBytes, lun, data, out response);
+        }
+
+        public void Target_OnStandardInquiry(object sender, StandardInquiryEventArgs args)
+        {
+            args.Data.VersionDescriptors.Add(VersionDescriptorName.iSCSI);
+            NotifyStandardInquiry(this, args);
+        }
+
+        public void Target_OnDeviceIdentificationInquiry(object sender, DeviceIdentificationInquiryEventArgs args)
+        {
+            // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
+            args.Page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetSCSINameStringIdentifier(m_targetName));
+            NotifyDeviceIdentificationInquiry(this, args);
         }
 
         public string TargetName
@@ -26,6 +52,14 @@ namespace ISCSI.Server
             get
             {
                 return m_targetName;
+            }
+        }
+
+        public SCSITarget SCSITarget
+        {
+            get
+            {
+                return m_target;
             }
         }
     }

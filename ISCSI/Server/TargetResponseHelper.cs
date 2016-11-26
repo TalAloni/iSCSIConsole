@@ -17,7 +17,7 @@ namespace ISCSI.Server
 {
     public class TargetResponseHelper
     {
-        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
@@ -58,7 +58,7 @@ namespace ISCSI.Server
             return responseList;
         }
 
-        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, ISCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ISCSIPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             List<ISCSIPDU> responseList = new List<ISCSIPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
@@ -122,7 +122,7 @@ namespace ISCSI.Server
             }
         }
 
-        internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, ISCSITarget target, SessionParameters session, ConnectionParameters connection)
+        internal static List<ISCSIPDU> GetSCSICommandResponse(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection)
         {
             string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             ISCSIServer.Log("[{0}] Executing Command: CmdSN: {1}", connectionIdentifier, command.CmdSN);
