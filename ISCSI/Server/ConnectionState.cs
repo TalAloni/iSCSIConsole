@@ -31,6 +31,7 @@ namespace ISCSI.Server
         public ConnectionParameters ConnectionParameters = new ConnectionParameters();
 
         public CountdownLatch RunningSCSICommands = new CountdownLatch();
+        public BlockingQueue<ISCSIPDU> SendQueue = new BlockingQueue<ISCSIPDU>();
 
         public string ConnectionIdentifier
         {
