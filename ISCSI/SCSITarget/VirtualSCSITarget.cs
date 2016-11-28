@@ -368,21 +368,17 @@ namespace SCSI
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestLBAOutOfRangeSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
+            catch (CyclicRedundancyCheckException)
+            {
+                Log(Severity.Error, "Read error: CRC error");
+                response = FormatSenseData(SenseDataParameter.GetWriteFaultSenseData());
+                return SCSIStatusCodeName.CheckCondition;
+            }
             catch (IOException ex)
             {
-                int error = Marshal.GetHRForException(ex);
-                if (error == (int)Win32Error.ERROR_CRC)
-                {
-                    Log(Severity.Error, "Read error: CRC error");
-                    response = FormatSenseData(SenseDataParameter.GetWriteFaultSenseData());
-                    return SCSIStatusCodeName.CheckCondition;
-                }
-                else
-                {
-                    Log(Severity.Error, "Read error: {0}", ex.ToString());
-                    response = FormatSenseData(SenseDataParameter.GetMediumErrorUnrecoverableReadErrorSenseData());
-                    return SCSIStatusCodeName.CheckCondition;
-                }
+                Log(Severity.Error, "Read error: {0}", ex.ToString());
+                response = FormatSenseData(SenseDataParameter.GetMediumErrorUnrecoverableReadErrorSenseData());
+                return SCSIStatusCodeName.CheckCondition;
             }
         }
 

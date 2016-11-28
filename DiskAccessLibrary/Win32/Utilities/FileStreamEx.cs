@@ -76,7 +76,8 @@ namespace DiskAccessLibrary
             }
             else if (errorCode == (int)Win32Error.ERROR_CRC)
             {
-                throw new IOException("Data errorCode (cyclic redundancy check).", (int)Win32Error.ERROR_CRC);
+                string message = defaultMessage + " Data Error (Cyclic Redundancy Check).";
+                throw new CyclicRedundancyCheckException(message);
             }
             else if (errorCode == (int)Win32Error.ERROR_NO_SYSTEM_RESOURCES)
             {

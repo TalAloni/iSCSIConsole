@@ -241,15 +241,17 @@ namespace DiskAccessLibrary
         /// <exception cref="System.UnauthorizedAccessException"></exception>
         public static VirtualHardDisk Create(string path, long length)
         {
-            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
             FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             try
             {
                 stream.SetLength(length + 512); // VHD footer is 512 bytes
+#if Win32
+                bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
                 if (hasManageVolumePrivilege)
                 {
                     FileStreamUtils.SetValidLength(stream, length + 512);
                 }
+#endif
             }
             catch (IOException)
             {
