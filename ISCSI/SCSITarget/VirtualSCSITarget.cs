@@ -356,7 +356,7 @@ namespace SCSI
         {
             Disk disk = m_disks[lun];
             int sectorCount = (int)command.TransferLength;
-            Log(Severity.Verbose, "LUN {0}: Reading {1} blocks starting from LBA {2}", lun, sectorCount, (long)command.LogicalBlockAddress64);
+            Log(Severity.Verbose, "LUN {0}: Reading {1} blocks starting from LBA {2}", (ushort)lun, sectorCount, (long)command.LogicalBlockAddress64);
             try
             {
                 response = disk.ReadSectors((long)command.LogicalBlockAddress64, sectorCount);
@@ -435,7 +435,7 @@ namespace SCSI
                 return SCSIStatusCodeName.CheckCondition;
             }
 
-            Log(Severity.Verbose, "LUN {0}: Writing {1} blocks starting from LBA {2}", lun, command.TransferLength, (long)command.LogicalBlockAddress64);
+            Log(Severity.Verbose, "LUN {0}: Writing {1} blocks starting from LBA {2}", (ushort)lun, command.TransferLength, (long)command.LogicalBlockAddress64);
             try
             {
                 disk.WriteSectors((long)command.LogicalBlockAddress64, data);
