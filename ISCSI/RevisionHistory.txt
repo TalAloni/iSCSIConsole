@@ -87,3 +87,8 @@ Revision History:
         API Improvements: You can now set identification information for each LUN.
         API Improvements: Added authorization API to ISCSITarget.
         Improved connection management logic.
+
+1.3.7 - Bugfix: Read/Write log entries now properly include the LUN.
+        Bugfix: SCSI Data-In PDUs were sent without ExpCmdSN / MaxCmdSN being set.
+        Each connection now use a dedicaded thread for send operations.
+        SCSITarget now implements a queue for async command execution and use a dedicated thread.
