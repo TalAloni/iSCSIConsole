@@ -95,7 +95,7 @@ namespace ISCSI.Server
                 ((TextResponsePDU)pdu).ExpCmdSN = expCmdSN;
                 ((TextResponsePDU)pdu).MaxCmdSN = maxCmdSN;
             }
-            else if (pdu is SCSIDataInPDU && ((SCSIDataInPDU)pdu).StatusPresent) // RFC 3720: StatSN [..] only have meaningful content if the S bit is set to 1
+            else if (pdu is SCSIDataInPDU)
             {
                 ((SCSIDataInPDU)pdu).ExpCmdSN = expCmdSN;
                 ((SCSIDataInPDU)pdu).MaxCmdSN = maxCmdSN;
