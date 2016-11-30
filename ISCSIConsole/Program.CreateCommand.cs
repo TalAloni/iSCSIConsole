@@ -75,9 +75,9 @@ namespace ISCSIConsole
                     m_selectedDisk = VirtualHardDisk.Create(path, sizeInBytes);
                     Console.WriteLine("The virtual disk file was created successfully.");
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
-                    Console.WriteLine("Error: Could not write the virtual disk file.");
+                    Console.WriteLine("Error: Could not write the virtual disk file. {0}", ex.Message);
                     return;
                 }
                 catch (UnauthorizedAccessException)

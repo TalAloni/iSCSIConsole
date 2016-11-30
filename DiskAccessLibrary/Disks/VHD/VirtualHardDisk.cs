@@ -241,17 +241,15 @@ namespace DiskAccessLibrary
         /// <exception cref="System.UnauthorizedAccessException"></exception>
         public static VirtualHardDisk Create(string path, long length)
         {
+#if Win32
+            // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
+            // We can work around the issue by obtaining the privilege before obtaining the handle.
+            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
+#endif
             FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             try
             {
                 stream.SetLength(length + 512); // VHD footer is 512 bytes
-#if Win32
-                bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
-                if (hasManageVolumePrivilege)
-                {
-                    FileStreamUtils.SetValidLength(stream, length + 512);
-                }
-#endif
             }
             catch (IOException)
             {
@@ -266,6 +264,19 @@ namespace DiskAccessLibrary
                 }
                 throw;
             }
+
+#if Win32
+            if (hasManageVolumePrivilege)
+            {
+                try
+                {
+                    FileStreamUtils.SetValidLength(stream, length + 512);
+                }
+                catch (IOException)
+                {
+                }
+            }
+#endif
 
             VHDFooter footer = new VHDFooter();
             footer.OriginalSize = (ulong)length;
