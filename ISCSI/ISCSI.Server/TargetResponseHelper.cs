@@ -103,11 +103,11 @@ namespace ISCSI.Server
                 ReadyToTransferPDU response = new ReadyToTransferPDU();
                 response.InitiatorTaskTag = request.InitiatorTaskTag;
                 response.TargetTransferTag = request.TargetTransferTag;
-                response.R2TSN = transfer.NextR2NSN;
+                response.R2TSN = transfer.NextR2TSN;
                 response.BufferOffset = offset + request.DataSegmentLength; // where we left off
                 response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
 
-                transfer.NextR2NSN++;
+                transfer.NextR2TSN++;
 
                 responseList.Add(response);
                 return responseList;
