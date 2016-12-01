@@ -175,7 +175,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     long stripeOffsetInData = (stripeOffsetInColumn * (newArray.Count - 1) + stripeVerticalIndex) * bytesPerStripe;
                     Array.Copy(data, stripeOffsetInData, columnData[columnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
 
-                    parityData = Raid5Volume.XOR(parityData, columnData[columnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
+                    parityData = ByteUtils.XOR(parityData, 0, columnData[columnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
                 }
                 Array.Copy(parityData, 0, columnData[parityColumnIndex], stripeOffsetInColumn * bytesPerStripe, bytesPerStripe);
             });

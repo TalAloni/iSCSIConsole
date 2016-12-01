@@ -98,7 +98,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                         if (index != readPosition.DiskIndex)
                         {
                             byte[] currentBytes = m_columns[index].ReadSectors(readPosition.SectorIndex, readPosition.SectorCount);
-                            stripeBytes = XOR(stripeBytes, currentBytes);
+                            stripeBytes = ByteUtils.XOR(stripeBytes, currentBytes);
                         }
                     }
                 }
@@ -156,7 +156,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                         {
                             if (index != missingColumnIndex && index != parityColumnIndex)
                             {
-                                missingBytes = XOR(missingBytes, segment[index]);
+                                missingBytes = ByteUtils.XOR(missingBytes, segment[index]);
                             }
                         }
                         segment[missingColumnIndex] = missingBytes;
@@ -178,7 +178,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     {
                         if (index != parityColumnIndex)
                         {
-                            parityBytes = XOR(parityBytes, segment[index]);
+                            parityBytes = ByteUtils.XOR(parityBytes, segment[index]);
                         }
                     }
                     m_columns[parityColumnIndex].WriteSectors(writePosition.SectorIndex, parityBytes);
@@ -289,30 +289,6 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     }
                 }
                 return true;
-            }
-        }
-
-        public static byte[] XOR(byte[] array1, byte[] array2)
-        {
-            return XOR(array1, array2, 0, array2.Length);
-        }
-
-        /// <param name="offset">In array 2</param>
-        /// <param name="length">Of bytes in Array 2 to XOR</param>
-        public static byte[] XOR(byte[] array1, byte[] array2, int offset, int length)
-        {
-            if (array1.Length == length)
-            {
-                byte[] result = new byte[length];
-                for (int index = 0; index < length; index++)
-                {
-                    result[index] = (byte)(array1[index] ^ array2[index + offset]);
-                }
-                return result;
-            }
-            else
-            {
-                throw new ArgumentException("Arrays must be of equal length");
             }
         }
     }
