@@ -12,22 +12,20 @@ namespace ISCSI.Client
 {
     public class SessionParameters
     {
-        public const int DefaultMaxBurstLength = 262144;
-        public const int DefaultFirstBurstLength = 65536;
-
         public ulong ISID; // Initiator Session ID
         public ushort TSIH; // Target Session Identifying Handle
 
-        public bool InitialR2T;
-        public bool ImmediateData;
-        public int MaxBurstLength = DefaultMaxBurstLength;
-        public int FirstBurstLength = DefaultFirstBurstLength;
-        public int DefaultTime2Wait;
-        public int DefaultTime2Retain;
-        public int MaxOutstandingR2T;
-        public bool DataPDUInOrder;
-        public bool DataSequenceInOrder;
-        public int ErrorRecoveryLevel;
+        public int MaxConnections = DefaultParameters.Session.MaxConnections;
+        public bool InitialR2T = DefaultParameters.Session.InitialR2T;
+        public bool ImmediateData = DefaultParameters.Session.ImmediateData;
+        public int MaxBurstLength = DefaultParameters.Session.MaxBurstLength;
+        public int FirstBurstLength = DefaultParameters.Session.FirstBurstLength;
+        public int DefaultTime2Wait = DefaultParameters.Session.DefaultTime2Wait;
+        public int DefaultTime2Retain = DefaultParameters.Session.DefaultTime2Retain;
+        public int MaxOutstandingR2T = DefaultParameters.Session.MaxOutstandingR2T;
+        public bool DataPDUInOrder = DefaultParameters.Session.DataPDUInOrder;
+        public bool DataSequenceInOrder = DefaultParameters.Session.DataSequenceInOrder;
+        public int ErrorRecoveryLevel = DefaultParameters.Session.ErrorRecoveryLevel;
 
         private ushort m_nextCID = 1;
         private uint m_nextTaskTag = 1;

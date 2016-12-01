@@ -12,61 +12,18 @@ namespace ISCSI.Server
 {
     public class SessionParameters
     {
-        public const int DefaultMaxConnections = 1;
-        public const bool DefaultInitialR2T = true;
-        public const bool DefaultImmediateData = true;
-        public const int DefaultMaxBurstLength = 262144;
-        public const int DefaultFirstBurstLength = 65536;
-        public const int DefaultDefaultTime2Wait = 2;
-        public const int DefaultDefaultTime2Retain = 20;
-        public const int DefaultMaxOutstandingR2T = 1;
-        public const bool DefaultDataPDUInOrder = true;
-        public const bool DefaultDataSequenceInOrder = true;
-        public const int DefaultErrorRecoveryLevel = 0;
-
         public static uint DefaultCommandQueueSize = 64;
-
-        /// <summary>
-        /// The maximum number of connections per session.
-        /// </summary>
-        public int MaxConnections = DefaultMaxConnections;
-
-        /// <summary>
-        /// Allow the initiator to start sending data to a target as if it has received an initial R2T
-        /// </summary>
-        public bool InitialR2T = DefaultInitialR2T;
-
-        public bool ImmediateData = DefaultImmediateData;
-
-        /// <summary>
-        /// The total of all the DataSegmentLength of all PDUs in a sequence MUST not exceed MaxBurstLength.
-        /// Maximum SCSI data payload in bytes in a Data-In or a solicited Data-Out iSCSI sequence (i.e. that belongs to a single command).
-        /// Irrelevant to the target in general, the initiator instructs us using ExpectedDataTransferLength.
-        /// </summary>
-        public int MaxBurstLength = DefaultMaxBurstLength;
-
-        /// <summary>
-        /// The total of all the DataSegmentLength of all PDUs in a sequence MUST not exceed FirstBurstLength for unsolicited data.
-        /// Maximum amount in bytes of unsolicited [SCSI] data an iSCSI initiator may send to the target during the execution of a single SCSI command.
-        /// Irrelevant to the target in general, irrelevant when (InitialR2T = Yes and) ImmediateData = No.
-        /// </summary>
-        public int FirstBurstLength = DefaultFirstBurstLength;
-        
-        /// <summary>
-        /// minimum time, in seconds, to wait before attempting an explicit/implicit logout after connection termination / reset.
-        /// </summary>
-        public int DefaultTime2Wait = DefaultDefaultTime2Wait;
-
-        /// <summary>
-        /// maximum time, in seconds after an initial wait (Time2Wait), before which an active task reassignment
-        /// is still possible after an unexpected connection termination or a connection reset.
-        /// </summary>
-        public int DefaultTime2Retain = DefaultDefaultTime2Retain;
-
-        public int MaxOutstandingR2T = DefaultMaxOutstandingR2T;
-        public bool DataPDUInOrder = DefaultDataPDUInOrder;
-        public bool DataSequenceInOrder = DefaultDataSequenceInOrder;
-        public int ErrorRecoveryLevel = DefaultErrorRecoveryLevel;
+        public int MaxConnections = DefaultParameters.Session.MaxConnections;
+        public bool InitialR2T = DefaultParameters.Session.InitialR2T;
+        public bool ImmediateData = DefaultParameters.Session.ImmediateData;
+        public int MaxBurstLength = DefaultParameters.Session.MaxBurstLength;
+        public int FirstBurstLength = DefaultParameters.Session.FirstBurstLength;
+        public int DefaultTime2Wait = DefaultParameters.Session.DefaultTime2Wait;
+        public int DefaultTime2Retain = DefaultParameters.Session.DefaultTime2Retain;
+        public int MaxOutstandingR2T = DefaultParameters.Session.MaxOutstandingR2T;
+        public bool DataPDUInOrder = DefaultParameters.Session.DataPDUInOrder;
+        public bool DataSequenceInOrder = DefaultParameters.Session.DataSequenceInOrder;
+        public int ErrorRecoveryLevel = DefaultParameters.Session.ErrorRecoveryLevel;
 
         /// <summary>
         /// - CommandQueueSize = 0 means the initiator can send one command at a time (because MaxCmdSN = ExpCmdSN + CommandQueueSize),
