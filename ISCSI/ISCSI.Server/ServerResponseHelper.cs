@@ -181,17 +181,6 @@ namespace ISCSI.Server
 
         public static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, SessionParameters sessionParameters, ConnectionParameters connectionParameters)
         {
-            sessionParameters.InitialR2T = ISCSIServer.OfferedInitialR2T;
-            sessionParameters.ImmediateData = ISCSIServer.OfferedImmediateData;
-            sessionParameters.MaxBurstLength = ISCSIServer.OfferedMaxBurstLength;
-            sessionParameters.FirstBurstLength = ISCSIServer.OfferedFirstBurstLength;
-            sessionParameters.MaxConnections = ISCSIServer.OfferedMaxConnections;
-            sessionParameters.DataPDUInOrder = ISCSIServer.OfferedDataPDUInOrder;
-            sessionParameters.DataSequenceInOrder = ISCSIServer.OfferedDataSequenceInOrder;
-            sessionParameters.DefaultTime2Wait = ISCSIServer.OfferedDefaultTime2Wait;
-            sessionParameters.DefaultTime2Retain = ISCSIServer.OfferedDefaultTime2Retain;
-            sessionParameters.MaxOutstandingR2T = ISCSIServer.OfferedMaxOutstandingR2T;
-
             string value = loginParameters.ValueOf("MaxRecvDataSegmentLength");
             if (value != null)
             {
