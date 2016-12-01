@@ -99,17 +99,25 @@ namespace ISCSI.Server
             }
             else
             {
-                // Send R2T
-                ReadyToTransferPDU response = new ReadyToTransferPDU();
-                response.InitiatorTaskTag = request.InitiatorTaskTag;
-                response.TargetTransferTag = request.TargetTransferTag;
-                response.R2TSN = transfer.NextR2TSN;
-                response.BufferOffset = offset + request.DataSegmentLength; // where we left off
-                response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
-
-                transfer.NextR2TSN++;
-
-                responseList.Add(response);
+                // RFC 3720: An R2T MAY be answered with one or more SCSI Data-Out PDUs with a matching Target Transfer Tag.
+                // If an R2T is answered with a single Data-Out PDU, the Buffer Offset in the Data PDU MUST be the same as the one specified
+                // by the R2T, and the data length of the Data PDU MUST be the same as the Desired Data Transfer Length specified in the R2T.
+                // If the R2T is answered with a sequence of Data PDUs, the Buffer Offset and Length MUST be within
+                // the range of those specified by R2T, and the last PDU MUST have the F bit set to 1.
+                // An R2T is considered outstanding until the last data PDU is transferred.
+                if (request.Final)
+                {
+                    // Send R2T
+                    ReadyToTransferPDU response = new ReadyToTransferPDU();
+                    response.InitiatorTaskTag = request.InitiatorTaskTag;
+                    response.TargetTransferTag = request.TargetTransferTag;
+                    response.R2TSN = transfer.NextR2TSN;
+                    response.BufferOffset = offset + request.DataSegmentLength; // where we left off
+                    response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
+                    responseList.Add(response);
+                    
+                    transfer.NextR2TSN++;
+                }
                 return responseList;
             }
         }
