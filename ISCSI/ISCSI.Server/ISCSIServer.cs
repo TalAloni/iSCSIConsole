@@ -17,22 +17,9 @@ namespace ISCSI.Server
 {
     public delegate ushort GetNextTSIH();
 
-    public class ISCSIServer // Server may serve more than one target
+    public partial class ISCSIServer // Server may serve more than one target
     {
         public const int DefaultPort = 3260;
-
-        // Offered Session Parameters:
-        public static bool OfferedInitialR2T = true;
-        public static bool OfferedImmediateData = true;
-        public static int OfferedMaxBurstLength = DefaultParameters.Session.MaxBurstLength;
-        public static int OfferedFirstBurstLength = DefaultParameters.Session.FirstBurstLength;
-        public static int OfferedDefaultTime2Wait = 0;
-        public static int OfferedDefaultTime2Retain = 20;
-        public static int OfferedMaxOutstandingR2T = 1;
-        public static bool OfferedDataPDUInOrder = true;
-        public static bool OfferedDataSequenceInOrder = true;
-        public static int OfferedErrorRecoveryLevel = 0;
-        public static int OfferedMaxConnections = 1;
 
         private List<ISCSITarget> m_targets;
         private int m_port;

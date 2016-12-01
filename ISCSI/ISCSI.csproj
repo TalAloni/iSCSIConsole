@@ -38,6 +38,7 @@
     <Compile Include="ISCSI.Client\ConnectionState.cs" />
     <Compile Include="ISCSI.Client\DefaultParameters.cs" />
     <Compile Include="ISCSI.Client\ISCSIClient.cs" />
+    <Compile Include="ISCSI.Client\ISCSIClient.Parameters.cs" />
     <Compile Include="ISCSI.Client\ISCSIDisk.cs" />
     <Compile Include="ISCSI.Client\PDUHelper.cs" />
     <Compile Include="ISCSI.Client\SessionParameters.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="ISCSI.Server\DefaultParameters.cs" />
     <Compile Include="ISCSI.Server\Exceptions\InvalidTargetTransferTagException.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.cs" />
+    <Compile Include="ISCSI.Server\ISCSIServer.Parameters.cs" />
     <Compile Include="ISCSI.Server\ISCSITarget.cs" />
     <Compile Include="ISCSI.Server\PDUHelper.cs" />
     <Compile Include="ISCSI.Server\ServerResponseHelper.cs" />

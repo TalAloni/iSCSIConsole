@@ -17,21 +17,8 @@ using Utilities;
 
 namespace ISCSI.Client
 {
-    public class ISCSIClient
+    public partial class ISCSIClient
     {
-        // Offered Session Parameters:
-        public static bool OfferedInitialR2T = true;
-        public static bool OfferedImmediateData = true;
-        public static int OfferedMaxBurstLength = DefaultParameters.Session.MaxBurstLength;
-        public static int OfferedFirstBurstLength = DefaultParameters.Session.FirstBurstLength;
-        public static int OfferedDefaultTime2Wait = 0;
-        public static int OfferedDefaultTime2Retain = 20;
-        public static int OfferedMaxOutstandingR2T = 1;
-        public static bool OfferedDataPDUInOrder = true;
-        public static bool OfferedDataSequenceInOrder = true;
-        public static int OfferedErrorRecoveryLevel = 0;
-        public static int OfferedMaxConnections = 1;
-
         private SessionParameters m_session = new SessionParameters();
         private ConnectionParameters m_connection = new ConnectionParameters();
 

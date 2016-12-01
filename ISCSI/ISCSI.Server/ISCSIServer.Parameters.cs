@@ -1,0 +1,40 @@
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
+using System;
+
+namespace ISCSI.Server
+{
+    public partial class ISCSIServer
+    {
+        public class DesiredParameters
+        {
+            // Session parameters that will be offered to the initiator:
+            public static bool InitialR2T = true; // implementation limit
+            public static bool ImmediateData = true;
+            public static int MaxBurstLength = DefaultParameters.Session.MaxBurstLength;
+            public static int FirstBurstLength = DefaultParameters.Session.FirstBurstLength;
+            public static int DefaultTime2Wait = 0;
+            public static int DefaultTime2Retain = 20;
+            public static int MaxOutstandingR2T = 1; // implementation limit
+            public static bool DataPDUInOrder = true; // implementation limit
+            public static bool DataSequenceInOrder = true; // implementation limit
+            public static int ErrorRecoveryLevel = 0; // implementation limit
+            public static int MaxConnections = 1; // implementation limit
+        }
+
+        public class DeclaredParameters
+        {
+            // Connection parameters:
+
+            /// <summary>
+            /// per direction parameter that the target or initator declares.
+            /// maximum data segment length that the target (or initator) can receive in a single iSCSI PDU.
+            /// </summary>
+            public static int MaxRecvDataSegmentLength = 262144;
+        }
+    }
+}

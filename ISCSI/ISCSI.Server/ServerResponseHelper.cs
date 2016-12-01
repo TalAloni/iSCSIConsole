@@ -187,64 +187,64 @@ namespace ISCSI.Server
                 connectionParameters.InitiatorMaxRecvDataSegmentLength = Convert.ToInt32(value);
             }
 
+            value = loginParameters.ValueOf("MaxConnections");
+            if (value != null)
+            {
+                sessionParameters.MaxConnections = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxConnections);
+            }
+
             value = loginParameters.ValueOf("InitialR2T");
             if (value != null)
             {
-                sessionParameters.InitialR2T = (value == "Yes") || ISCSIServer.OfferedInitialR2T;
+                sessionParameters.InitialR2T = (value == "Yes") || ISCSIServer.DesiredParameters.InitialR2T;
             }
 
             value = loginParameters.ValueOf("ImmediateData");
             if (value != null)
             {
-                sessionParameters.ImmediateData = (value == "Yes") && ISCSIServer.OfferedImmediateData;
+                sessionParameters.ImmediateData = (value == "Yes") && ISCSIServer.DesiredParameters.ImmediateData;
             }
 
             value = loginParameters.ValueOf("MaxBurstLength");
             if (value != null)
             {
-                sessionParameters.MaxBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.OfferedMaxBurstLength);
+                sessionParameters.MaxBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxBurstLength);
             }
 
             value = loginParameters.ValueOf("FirstBurstLength");
             if (value != null)
             {
-                sessionParameters.FirstBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.OfferedFirstBurstLength);
-            }
-
-            value = loginParameters.ValueOf("MaxConnections");
-            if (value != null)
-            {
-                sessionParameters.MaxConnections = Math.Min(Convert.ToInt32(value), ISCSIServer.OfferedMaxConnections);
+                sessionParameters.FirstBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.FirstBurstLength);
             }
 
             value = loginParameters.ValueOf("DataPDUInOrder");
             if (value != null)
             {
-                sessionParameters.DataPDUInOrder = (value == "Yes") || ISCSIServer.OfferedDataPDUInOrder;
+                sessionParameters.DataPDUInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataPDUInOrder;
             }
 
             value = loginParameters.ValueOf("DataSequenceInOrder");
             if (value != null)
             {
-                sessionParameters.DataSequenceInOrder = (value == "Yes") || ISCSIServer.OfferedDataSequenceInOrder;
+                sessionParameters.DataSequenceInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataSequenceInOrder;
             }
 
             value = loginParameters.ValueOf("DefaultTime2Wait");
             if (value != null)
             {
-                sessionParameters.DefaultTime2Wait = Math.Max(Convert.ToInt32(value), ISCSIServer.OfferedDefaultTime2Wait);
+                sessionParameters.DefaultTime2Wait = Math.Max(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Wait);
             }
 
             value = loginParameters.ValueOf("DefaultTime2Retain");
             if (value != null)
             {
-                sessionParameters.DefaultTime2Retain = Math.Min(Convert.ToInt32(value), ISCSIServer.OfferedDefaultTime2Retain);
+                sessionParameters.DefaultTime2Retain = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Retain);
             }
 
             value = loginParameters.ValueOf("MaxOutstandingR2T");
             if (value != null)
             {
-                sessionParameters.MaxOutstandingR2T = Math.Min(Convert.ToInt32(value), ISCSIServer.OfferedMaxOutstandingR2T);
+                sessionParameters.MaxOutstandingR2T = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxOutstandingR2T);
             }
         }
 
@@ -256,15 +256,15 @@ namespace ISCSI.Server
             loginParameters.Add("MaxRecvDataSegmentLength", connectionParameters.TargetMaxRecvDataSegmentLength.ToString());
             if (!sessionParameters.IsDiscovery)
             {
-                loginParameters.Add("ErrorRecoveryLevel", ISCSIServer.OfferedErrorRecoveryLevel.ToString());
+                loginParameters.Add("MaxConnections", sessionParameters.MaxConnections.ToString());
                 loginParameters.Add("InitialR2T", sessionParameters.InitialR2T ? "Yes" : "No");    // Microsoft iSCSI Target support InitialR2T = No
                 loginParameters.Add("ImmediateData", sessionParameters.ImmediateData ? "Yes" : "No");
                 loginParameters.Add("MaxBurstLength", sessionParameters.MaxBurstLength.ToString());
                 loginParameters.Add("FirstBurstLength", sessionParameters.FirstBurstLength.ToString());
-                loginParameters.Add("MaxConnections", sessionParameters.MaxConnections.ToString());
+                loginParameters.Add("MaxOutstandingR2T", sessionParameters.MaxOutstandingR2T.ToString());
                 loginParameters.Add("DataPDUInOrder", sessionParameters.DataPDUInOrder ? "Yes" : "No");
                 loginParameters.Add("DataSequenceInOrder", sessionParameters.DataSequenceInOrder ? "Yes" : "No");
-                loginParameters.Add("MaxOutstandingR2T", sessionParameters.MaxOutstandingR2T.ToString());
+                loginParameters.Add("ErrorRecoveryLevel", sessionParameters.ErrorRecoveryLevel.ToString());
             }
             loginParameters.Add("DefaultTime2Wait", sessionParameters.DefaultTime2Wait.ToString());
             loginParameters.Add("DefaultTime2Retain", sessionParameters.DefaultTime2Retain.ToString());

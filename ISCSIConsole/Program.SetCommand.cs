@@ -52,8 +52,8 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ConnectionParameters.DeclaredMaxRecvDataSegmentLength = requestedMaxRecvDataSegmentLength;
-                    Console.WriteLine("MaxRecvDataSegmentLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
+                    ISCSIServer.DeclaredParameters.MaxRecvDataSegmentLength = requestedMaxRecvDataSegmentLength;
+                    Console.WriteLine("MaxRecvDataSegmentLength has been set to " + ISCSIServer.DesiredParameters.MaxBurstLength);
                 }
 
                 if (parameters.ContainsKey("MaxBurstLength".ToLower()))
@@ -65,13 +65,13 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSIServer.OfferedMaxBurstLength = requestedMaxBurstLength;
-                    Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
-                    if (ISCSIServer.OfferedMaxBurstLength < ISCSIServer.OfferedFirstBurstLength)
+                    ISCSIServer.DesiredParameters.MaxBurstLength = requestedMaxBurstLength;
+                    Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.DesiredParameters.MaxBurstLength);
+                    if (ISCSIServer.DesiredParameters.MaxBurstLength < ISCSIServer.DesiredParameters.FirstBurstLength)
                     {
                         // FirstBurstLength MUST NOT exceed MaxBurstLength
-                        ISCSIServer.OfferedFirstBurstLength = ISCSIServer.OfferedMaxBurstLength;
-                        Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.OfferedFirstBurstLength);
+                        ISCSIServer.DesiredParameters.FirstBurstLength = ISCSIServer.DesiredParameters.MaxBurstLength;
+                        Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.DesiredParameters.FirstBurstLength);
                     }
                 }
 
@@ -84,13 +84,13 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    ISCSIServer.OfferedFirstBurstLength = requestedFirstBurstLength;
-                    Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.OfferedFirstBurstLength);
-                    if (ISCSIServer.OfferedMaxBurstLength < ISCSIServer.OfferedFirstBurstLength)
+                    ISCSIServer.DesiredParameters.FirstBurstLength = requestedFirstBurstLength;
+                    Console.WriteLine("Offered FirstBurstLength has been set to " + ISCSIServer.DesiredParameters.FirstBurstLength);
+                    if (ISCSIServer.DesiredParameters.MaxBurstLength < ISCSIServer.DesiredParameters.FirstBurstLength)
                     {
                         // FirstBurstLength MUST NOT exceed MaxBurstLength
-                        ISCSIServer.OfferedMaxBurstLength = ISCSIServer.OfferedFirstBurstLength;
-                        Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.OfferedMaxBurstLength);
+                        ISCSIServer.DesiredParameters.MaxBurstLength = ISCSIServer.DesiredParameters.FirstBurstLength;
+                        Console.WriteLine("Offered MaxBurstLength has been set to " + ISCSIServer.DesiredParameters.MaxBurstLength);
                     }
                 }
             }
