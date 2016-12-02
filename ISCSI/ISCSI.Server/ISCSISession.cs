@@ -42,13 +42,17 @@ namespace ISCSI.Server
         /// There are no protocol specific requirements with regard to the value of these tags,
         /// but it is assumed that together with the LUN, they will enable the target to associate data with an R2T.
         /// </summary>
-        private static uint m_nextTransferTag;
+        private uint m_nextTransferTag = 0;
+        private object m_transferTagLock = new object();
 
         public uint GetNextTransferTag()
         {
-            uint transferTag = m_nextTransferTag;
-            m_nextTransferTag++;
-            return transferTag;
+            lock (m_transferTagLock)
+            {
+                uint transferTag = m_nextTransferTag;
+                m_nextTransferTag++;
+                return transferTag;
+            }
         }
 
         public bool IsPrecedingCommandPending(uint cmdSN)
