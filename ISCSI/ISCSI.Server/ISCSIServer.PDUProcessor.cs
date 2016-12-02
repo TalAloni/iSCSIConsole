@@ -77,7 +77,6 @@ namespace ISCSI.Server
                     LoginResponsePDU response = GetLoginResponsePDU(request, state.Session, state.ConnectionParameters);
                     if (state.Session.IsFullFeaturePhase)
                     {
-                        state.Session.ISID = request.ISID;
                         state.ConnectionParameters.CID = request.CID;
                         m_connectionManager.AddConnection(state);
                     }

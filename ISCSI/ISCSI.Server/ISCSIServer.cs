@@ -24,10 +24,10 @@ namespace ISCSI.Server
 
         private IPEndPoint m_listenerEP;
         private List<ISCSITarget> m_targets;
-        private ushort m_nextTSIH = 1; // Next Target Session Identifying Handle
 
         private Socket m_listenerSocket;
         private bool m_listening;
+        private SessionManager m_sessionManager = new SessionManager();
         private ConnectionManager m_connectionManager = new ConnectionManager();
 
         public event EventHandler<LogEntry> OnLogEntry;
@@ -345,21 +345,6 @@ namespace ISCSI.Server
         public void Log(Severity severity, string message, params object[] args)
         {
             Log(severity, String.Format(message, args));
-        }
-
-        public ushort GetNextTSIH()
-        {
-            // The iSCSI Target selects a non-zero value for the TSIH at
-            // session creation (when an initiator presents a 0 value at Login).
-            // After being selected, the same TSIH value MUST be used whenever the
-            // initiator or target refers to the session and a TSIH is required
-            ushort nextTSIH = m_nextTSIH;
-            m_nextTSIH++;
-            if (m_nextTSIH == 0)
-            {
-                m_nextTSIH++;
-            }
-            return nextTSIH;
         }
     }
 }

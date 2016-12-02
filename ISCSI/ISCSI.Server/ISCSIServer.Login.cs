@@ -31,18 +31,10 @@ namespace ISCSI.Server
             response.VersionMax = request.VersionMax;
             response.VersionActive = request.VersionMin;
             response.ISID = request.ISID;
-
-            response.Status = LoginResponseStatusName.Success;
-
+            // TSIH: With the exception of the Login Final-Response in a new session, this field should
+            // be set to the TSIH provided by the initiator in the Login Request.
+            response.TSIH = request.TSIH;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
-
-            if (request.TSIH == 0)
-            {
-                // For a new session, the request TSIH is zero,
-                // As part of the response, the target generates a TSIH.
-                session.TSIH = GetNextTSIH();
-            }
-            response.TSIH = session.TSIH;
 
             if (request.Transit && request.Continue)
             {
@@ -54,6 +46,17 @@ namespace ISCSI.Server
                 response.Status = LoginResponseStatusName.Success;
                 return response;
             }
+
+            if (request.TSIH == 0)
+            {
+                // For a new session, the request TSIH is zero,
+                // As part of the response, the target generates a TSIH.
+                session.TSIH = m_sessionManager.GetNextTSIH();
+                session.ISID = request.ISID;
+            }
+            response.TSIH = session.TSIH;
+
+            response.Status = LoginResponseStatusName.Success;
 
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
             // stage and the operational parameter negotiation stage.  Both stages are optional
