@@ -15,14 +15,14 @@ namespace ISCSI.Server
 {
     public class AuthorizationRequestArgs : EventArgs
     {
+        public string InitiatorName;
         public IPEndPoint InitiatorEndPoint;
-        public string InitiatorIQN;
         public bool Accept = true;
 
-        public AuthorizationRequestArgs(IPEndPoint initiatorEndPoint, string initiatorIQN)
+        public AuthorizationRequestArgs(string initiatorName, IPEndPoint initiatorEndPoint)
         {
+            InitiatorName = initiatorName;
             InitiatorEndPoint = initiatorEndPoint;
-            InitiatorIQN = initiatorIQN;
         }
     }
 
@@ -62,13 +62,13 @@ namespace ISCSI.Server
             NotifyDeviceIdentificationInquiry(this, args);
         }
 
-        public bool AuthorizeInitiator(IPEndPoint initiatorEndPoint, string initiatorIQN)
+        public bool AuthorizeInitiator(string initiatorName, IPEndPoint initiatorEndPoint)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<AuthorizationRequestArgs> handler = OnAuthorizationRequest;
             if (handler != null)
             {
-                AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorEndPoint, initiatorIQN);
+                AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorName, initiatorEndPoint);
                 OnAuthorizationRequest(this, args);
                 return args.Accept;
             }

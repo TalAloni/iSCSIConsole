@@ -99,7 +99,7 @@ namespace ISCSI.Server
                         if (targetIndex >= 0)
                         {
                             target = availableTargets[targetIndex];
-                            if (!target.AuthorizeInitiator(connection.InitiatorEndPoint, connection.InitiatorName))
+                            if (!target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
                             {
                                 response.Status = LoginResponseStatusName.AuthorizationFailure;
                                 return response;
