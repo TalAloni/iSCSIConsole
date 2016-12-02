@@ -87,6 +87,7 @@ namespace ISCSI.Client
             LoginResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
             if (response != null && response.Status == LoginResponseStatusName.Success)
             {
+                m_session.TSIH = response.TSIH;
                 // Status numbering starts with the Login response to the first Login request of the connection
                 m_connection.StatusNumberingStarted = true;
                 m_connection.ExpStatSN = response.StatSN + 1;
