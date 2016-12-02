@@ -78,19 +78,16 @@ namespace ISCSI.Server
 
         private int GetConnectionStateIndex(ulong isid, ushort tsih, ushort cid)
         {
-            lock (m_activeConnections)
+            for (int index = 0; index < m_activeConnections.Count; index++)
             {
-                for (int index = 0; index < m_activeConnections.Count; index++)
+                if (m_activeConnections[index].SessionParameters.ISID == isid &&
+                    m_activeConnections[index].SessionParameters.TSIH == tsih &&
+                    m_activeConnections[index].ConnectionParameters.CID == cid)
                 {
-                    if (m_activeConnections[index].SessionParameters.ISID == isid &&
-                        m_activeConnections[index].SessionParameters.TSIH == tsih &&
-                        m_activeConnections[index].ConnectionParameters.CID == cid)
-                    {
-                        return index;
-                    }
+                    return index;
                 }
-                return -1;
             }
+            return -1;
         }
     }
 }

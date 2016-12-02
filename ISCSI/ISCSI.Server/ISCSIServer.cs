@@ -30,7 +30,7 @@ namespace ISCSI.Server
 
         private Socket m_listenerSocket;
         private bool m_listening;
-        public ConnectionManager m_connectionManager = new ConnectionManager();
+        private ConnectionManager m_connectionManager = new ConnectionManager();
 
         public event EventHandler<LogEntry> OnLogEntry;
         
