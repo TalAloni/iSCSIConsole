@@ -15,7 +15,7 @@ using Utilities;
 
 namespace ISCSI.Server
 {
-    public class TargetResponseHelper
+    internal class TargetResponseHelper
     {
         internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, ISCSISession session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {

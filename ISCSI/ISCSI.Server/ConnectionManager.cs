@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Server
 {
-    public class ConnectionManager
+    internal class ConnectionManager
     {
         private List<ConnectionState> m_activeConnections = new List<ConnectionState>();
 

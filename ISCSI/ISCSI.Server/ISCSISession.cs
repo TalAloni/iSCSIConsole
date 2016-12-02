@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Server
 {
-    public class ISCSISession
+    internal class ISCSISession
     {
         public int MaxConnections = DefaultParameters.Session.MaxConnections;
         public bool InitialR2T = DefaultParameters.Session.InitialR2T;

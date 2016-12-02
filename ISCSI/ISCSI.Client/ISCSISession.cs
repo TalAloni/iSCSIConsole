@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Client
 {
-    public class ISCSISession
+    internal class ISCSISession
     {
         public ulong ISID; // Initiator Session ID
         public ushort TSIH; // Target Session Identifying Handle

@@ -343,7 +343,7 @@ namespace ISCSI.Client
             }
         }
 
-        public void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
+        private void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
         {
             if (state.ConnectionBuffer.Length == 0)
             {
@@ -418,7 +418,7 @@ namespace ISCSI.Client
             }
         }
 
-        public void ProcessPDU(ISCSIPDU pdu, ConnectionState state)
+        private void ProcessPDU(ISCSIPDU pdu, ConnectionState state)
         {
             if (pdu is NOPInPDU)
             {

@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Client
 {
-    public class ConnectionState
+    internal class ConnectionState
     {
         // Session parameters:
         public ulong ISID; // Initiator Session ID

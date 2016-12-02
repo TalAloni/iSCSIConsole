@@ -12,7 +12,7 @@ using Utilities;
 
 namespace ISCSI.Server
 {
-    public class ServerResponseHelper
+    internal class ServerResponseHelper
     {
         // CmdSN is session wide
         // StatSN is per connection
