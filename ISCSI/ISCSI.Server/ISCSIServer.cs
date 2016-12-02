@@ -17,12 +17,15 @@ namespace ISCSI.Server
 {
     public delegate ushort GetNextTSIH();
 
-    public partial class ISCSIServer // Server may serve more than one target
+    /// <summary>
+    /// an iSCSI server that can serve multiple iSCSI targets
+    /// </summary>
+    public partial class ISCSIServer
     {
         public const int DefaultPort = 3260;
 
+        private IPEndPoint m_listenerEP;
         private List<ISCSITarget> m_targets;
-        private int m_port;
         private ushort m_nextTSIH = 1; // Next Target Session Identifying Handle
 
         private Socket m_listenerSocket;
@@ -38,9 +41,17 @@ namespace ISCSI.Server
         /// Server needs to be started with Start()
         /// </summary>
         /// <param name="port">The port on which the iSCSI server will listen</param>
-        public ISCSIServer(List<ISCSITarget> targets, int port)
+        public ISCSIServer(List<ISCSITarget> targets, int port) : this(targets, new IPEndPoint(IPAddress.Any, port))
         {
-            m_port = port;
+        }
+
+        /// <summary>
+        /// Server needs to be started with Start()
+        /// </summary>
+        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
+        public ISCSIServer(List<ISCSITarget> targets, IPEndPoint listenerEP)
+        {
+            m_listenerEP = listenerEP;
             m_targets = targets;
         }
 
@@ -51,8 +62,8 @@ namespace ISCSI.Server
                 Log(Severity.Information, "Starting Server");
                 m_listening = true;
 
-                m_listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                m_listenerSocket.Bind(new IPEndPoint(IPAddress.Any, m_port));
+                m_listenerSocket = new Socket(m_listenerEP.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                m_listenerSocket.Bind(m_listenerEP);
                 m_listenerSocket.Listen(1000);
                 m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
             }
