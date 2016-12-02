@@ -12,7 +12,6 @@ namespace ISCSI.Server
 {
     public class SessionParameters
     {
-        public static uint DefaultCommandQueueSize = 64;
         public int MaxConnections = DefaultParameters.Session.MaxConnections;
         public bool InitialR2T = DefaultParameters.Session.InitialR2T;
         public bool ImmediateData = DefaultParameters.Session.ImmediateData;
@@ -25,13 +24,7 @@ namespace ISCSI.Server
         public bool DataSequenceInOrder = DefaultParameters.Session.DataSequenceInOrder;
         public int ErrorRecoveryLevel = DefaultParameters.Session.ErrorRecoveryLevel;
 
-        /// <summary>
-        /// - CommandQueueSize = 0 means the initiator can send one command at a time (because MaxCmdSN = ExpCmdSN + CommandQueueSize),
-        ///   (in this case there won't be any queue following the currently processed command).
-        /// - Over a low-latency connection, most of the gain comes from increasing the queue size from 0 to 1
-        /// - CmdSN is session wide, so CommandQueueSize is a session parameter.
-        /// </summary>
-        public uint CommandQueueSize = DefaultCommandQueueSize;
+        public uint CommandQueueSize = ISCSIServer.DefaultCommandQueueSize;
 
         public ulong ISID; // Initiator Session ID
         public ushort TSIH; // Target Session Identifying Handle

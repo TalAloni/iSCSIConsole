@@ -40,7 +40,7 @@ namespace ISCSIConsole
                         return;
                     }
 
-                    SessionParameters.DefaultCommandQueueSize = (uint)requestedCommandQueueSize;
+                    ISCSIServer.DefaultCommandQueueSize = (uint)requestedCommandQueueSize;
                 }
 
                 if (parameters.ContainsKey("MaxRecvDataSegmentLength".ToLower()))
