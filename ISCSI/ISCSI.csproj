@@ -40,8 +40,8 @@
     <Compile Include="ISCSI.Client\ISCSIClient.cs" />
     <Compile Include="ISCSI.Client\ISCSIClient.Parameters.cs" />
     <Compile Include="ISCSI.Client\ISCSIDisk.cs" />
+    <Compile Include="ISCSI.Client\ISCSISession.cs" />
     <Compile Include="ISCSI.Client\PDUHelper.cs" />
-    <Compile Include="ISCSI.Client\SessionParameters.cs" />
     <Compile Include="ISCSI.PDU\Enums\ISCSIOpCodeName.cs" />
     <Compile Include="ISCSI.PDU\Enums\ISCSIResponseName.cs" />
     <Compile Include="ISCSI.PDU\Enums\LoginResponseStatusClassName.cs" />
@@ -70,10 +70,10 @@
     <Compile Include="ISCSI.Server\Exceptions\InvalidTargetTransferTagException.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.Parameters.cs" />
+    <Compile Include="ISCSI.Server\ISCSISession.cs" />
     <Compile Include="ISCSI.Server\ISCSITarget.cs" />
     <Compile Include="ISCSI.Server\PDUHelper.cs" />
     <Compile Include="ISCSI.Server\ServerResponseHelper.cs" />
-    <Compile Include="ISCSI.Server\SessionParameters.cs" />
     <Compile Include="ISCSI.Server\TargetResponseHelper.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\Enums\ModePageCodeName.cs" />

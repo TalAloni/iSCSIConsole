@@ -19,7 +19,7 @@ namespace ISCSI.Client
 {
     public partial class ISCSIClient
     {
-        private SessionParameters m_session = new SessionParameters();
+        private ISCSISession m_session = new ISCSISession();
         private ConnectionParameters m_connection = new ConnectionParameters();
 
         private string m_initiatorName;

@@ -279,9 +279,9 @@ namespace ISCSI.Server
             // except for commands that are retransmitted due to digest error recovery and connection recovery.
             if (cmdSN.HasValue)
             {
-                if (state.SessionParameters.CommandNumberingStarted)
+                if (state.Session.CommandNumberingStarted)
                 {
-                    if (cmdSN != state.SessionParameters.ExpCmdSN)
+                    if (cmdSN != state.Session.ExpCmdSN)
                     {
                         Log(Severity.Error, "[{0}] CmdSN outside of expected range", state.ConnectionIdentifier);
                         // We ignore this PDU
@@ -291,20 +291,20 @@ namespace ISCSI.Server
                 }
                 else
                 {
-                    state.SessionParameters.ExpCmdSN = cmdSN.Value;
-                    state.SessionParameters.CommandNumberingStarted = true;
+                    state.Session.ExpCmdSN = cmdSN.Value;
+                    state.Session.CommandNumberingStarted = true;
                 }
 
                 if (pdu is LogoutRequestPDU || pdu is TextRequestPDU || pdu is SCSICommandPDU || pdu is RejectPDU)
                 {
                     if (!pdu.ImmediateDelivery)
                     {
-                        state.SessionParameters.ExpCmdSN++;
+                        state.Session.ExpCmdSN++;
                     }
                 }
             }
 
-            if (!state.SessionParameters.IsFullFeaturePhase)
+            if (!state.Session.IsFullFeaturePhase)
             {
                 if (pdu is LoginRequestPDU)
                 {
@@ -327,10 +327,10 @@ namespace ISCSI.Server
                             Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }
-                    LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.SessionParameters, state.ConnectionParameters, ref state.Target, GetNextTSIH);
-                    if (state.SessionParameters.IsFullFeaturePhase)
+                    LoginResponsePDU response = ServerResponseHelper.GetLoginResponsePDU(request, m_targets, state.Session, state.ConnectionParameters, GetNextTSIH);
+                    if (state.Session.IsFullFeaturePhase)
                     {
-                        state.SessionParameters.ISID = request.ISID;
+                        state.Session.ISID = request.ISID;
                         state.ConnectionParameters.CID = request.CID;
                         m_connectionManager.AddConnection(state);
                     }
@@ -341,7 +341,7 @@ namespace ISCSI.Server
                 {
                     // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
                     Log(Severity.Error, "[{0}] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
-                    if (state.SessionParameters.TSIH == 0)
+                    if (state.Session.TSIH == 0)
                     {
                         // A target receiving any PDU except a Login request before the Login phase is started MUST
                         // immediately terminate the connection on which the PDU was received.
@@ -352,7 +352,7 @@ namespace ISCSI.Server
                         // Once the Login phase has started, if the target receives any PDU except a Login request,
                         // it MUST send a Login reject (with Status "invalid during login") and then disconnect.
                         LoginResponsePDU loginResponse = new LoginResponsePDU();
-                        loginResponse.TSIH = state.SessionParameters.TSIH;
+                        loginResponse.TSIH = state.Session.TSIH;
                         loginResponse.Status = LoginResponseStatusName.InvalidDuringLogon;
                         state.SendQueue.Enqueue(loginResponse);
                     }
@@ -370,7 +370,7 @@ namespace ISCSI.Server
                 {
                     Log(Severity.Verbose, "[{0}] Logour Request", state.ConnectionIdentifier);
                     LogoutRequestPDU request = (LogoutRequestPDU)pdu;
-                    if (state.SessionParameters.IsDiscovery && request.ReasonCode != LogoutReasonCode.CloseTheSession)
+                    if (state.Session.IsDiscovery && request.ReasonCode != LogoutReasonCode.CloseTheSession)
                     {
                         // RFC 3720: Discovery-session: The target MUST ONLY accept [..] logout request with the reason "close the session"
                         RejectPDU reject = new RejectPDU();
@@ -383,12 +383,12 @@ namespace ISCSI.Server
                         List<ConnectionState> connectionsToClose = new List<ConnectionState>();
                         if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
                         {
-                            connectionsToClose = m_connectionManager.GetSessionConnections(state.SessionParameters.ISID, state.SessionParameters.TSIH);
+                            connectionsToClose = m_connectionManager.GetSessionConnections(state.Session.ISID, state.Session.TSIH);
                         }
                         else
                         {
                             // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
-                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.SessionParameters.ISID, state.SessionParameters.TSIH, request.CID);
+                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.Session.ISID, state.Session.TSIH, request.CID);
                             if (existingConnection != null && existingConnection != state)
                             {
                                 connectionsToClose.Add(existingConnection);
@@ -411,7 +411,7 @@ namespace ISCSI.Server
                         // connection will be closed after a LogoutResponsePDU has been sent.
                     }
                 }
-                else if (state.SessionParameters.IsDiscovery)
+                else if (state.Session.IsDiscovery)
                 {
                     // The target MUST ONLY accept text requests with the SendTargets key and a logout
                     // request with the reason "close the session".  All other requests MUST be rejected.
@@ -443,7 +443,7 @@ namespace ISCSI.Server
                         Log(Severity.Debug, "[{0}] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
                         try
                         {
-                            readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                            readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Target, state.Session, state.ConnectionParameters, out commandsToExecute);
                         }
                         catch (InvalidTargetTransferTagException ex)
                         {
@@ -459,7 +459,7 @@ namespace ISCSI.Server
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
                         Log(Severity.Debug, "[{0}] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                        readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.SessionParameters, state.ConnectionParameters, out commandsToExecute);
+                        readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Target, state.Session, state.ConnectionParameters, out commandsToExecute);
                     }
                     foreach (ReadyToTransferPDU readyToTransferPDU in readyToTransferPDUs)
                     {
@@ -513,7 +513,7 @@ namespace ISCSI.Server
                 }
                 Socket clientSocket = state.ClientSocket;
                 PDUHelper.SetStatSN(response, state.ConnectionParameters.StatSN);
-                PDUHelper.SetExpCmdSN(response, state.SessionParameters.ExpCmdSN, state.SessionParameters.ExpCmdSN + state.SessionParameters.CommandQueueSize);
+                PDUHelper.SetExpCmdSN(response, state.Session.ExpCmdSN, state.Session.ExpCmdSN + state.Session.CommandQueueSize);
                 if (response is SCSIResponsePDU ||
                     response is LoginResponsePDU ||
                     response is TextResponsePDU ||

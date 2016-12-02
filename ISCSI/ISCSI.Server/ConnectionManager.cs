@@ -24,7 +24,7 @@ namespace ISCSI.Server
 
         public bool RemoveConnection(ConnectionState connection)
         {
-            return RemoveConnection(connection.SessionParameters.ISID, connection.SessionParameters.TSIH, connection.ConnectionParameters.CID);
+            return RemoveConnection(connection.Session.ISID, connection.Session.TSIH, connection.ConnectionParameters.CID);
         }
 
         public bool RemoveConnection(ulong isid, ushort tsih, ushort cid)
@@ -43,7 +43,7 @@ namespace ISCSI.Server
 
         public ConnectionState FindConnection(ConnectionState connection)
         {
-            return FindConnection(connection.SessionParameters.ISID, connection.SessionParameters.TSIH, connection.ConnectionParameters.CID);
+            return FindConnection(connection.Session.ISID, connection.Session.TSIH, connection.ConnectionParameters.CID);
         }
 
         public ConnectionState FindConnection(ulong isid, ushort tsih, ushort cid)
@@ -66,8 +66,8 @@ namespace ISCSI.Server
             {
                 for (int index = 0; index < m_activeConnections.Count; index++)
                 {
-                    if (m_activeConnections[index].SessionParameters.ISID == isid &&
-                        m_activeConnections[index].SessionParameters.TSIH == tsih)
+                    if (m_activeConnections[index].Session.ISID == isid &&
+                        m_activeConnections[index].Session.TSIH == tsih)
                     {
                         result.Add(m_activeConnections[index]);
                     }
@@ -80,8 +80,8 @@ namespace ISCSI.Server
         {
             for (int index = 0; index < m_activeConnections.Count; index++)
             {
-                if (m_activeConnections[index].SessionParameters.ISID == isid &&
-                    m_activeConnections[index].SessionParameters.TSIH == tsih &&
+                if (m_activeConnections[index].Session.ISID == isid &&
+                    m_activeConnections[index].Session.TSIH == tsih &&
                     m_activeConnections[index].ConnectionParameters.CID == cid)
                 {
                     return index;

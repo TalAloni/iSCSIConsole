@@ -17,7 +17,7 @@ namespace ISCSI.Server
 {
     public class TargetResponseHelper
     {
-        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, SCSITarget target, ISCSISession session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
             List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
@@ -58,7 +58,7 @@ namespace ISCSI.Server
             return responseList;
         }
 
-        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, SCSITarget target, SessionParameters session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, SCSITarget target, ISCSISession session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
             commandsToExecute = new List<SCSICommandPDU>();

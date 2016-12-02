@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Server
 {
-    public class SessionParameters
+    public class ISCSISession
     {
         public int MaxConnections = DefaultParameters.Session.MaxConnections;
         public bool InitialR2T = DefaultParameters.Session.InitialR2T;
@@ -33,6 +33,7 @@ namespace ISCSI.Server
         public bool CommandNumberingStarted;
         public uint ExpCmdSN;
 
+        public ISCSITarget Target; // Across all connections within a session, an initiator sees one and the same target.
         public List<uint> CommandsInTransfer = new List<uint>();
         public List<SCSICommandPDU> DelayedCommands = new List<SCSICommandPDU>();
 

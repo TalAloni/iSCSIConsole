@@ -26,8 +26,7 @@ namespace ISCSI.Server
         public byte[] ReceiveBuffer = new byte[ReceiveBufferSize]; // immediate receive buffer
         public byte[] ConnectionBuffer = new byte[0]; // we append the receive buffer here until we have a complete PDU
 
-        public ISCSITarget Target; // Across all connections within a session, an initiator sees one and the same target.
-        public SessionParameters SessionParameters = new SessionParameters();
+        public ISCSISession Session = new ISCSISession();
         public ConnectionParameters ConnectionParameters = new ConnectionParameters();
 
         public CountdownLatch RunningSCSICommands = new CountdownLatch();
@@ -45,11 +44,19 @@ namespace ISCSI.Server
         {
             get
             {
-                return GetConnectionIdentifier(SessionParameters, ConnectionParameters);
+                return GetConnectionIdentifier(Session, ConnectionParameters);
             }
         }
 
-        public static string GetConnectionIdentifier(SessionParameters session, ConnectionParameters connection)
+        public ISCSITarget Target
+        {
+            get
+            {
+                return Session.Target;
+            }
+        }
+
+        public static string GetConnectionIdentifier(ISCSISession session, ConnectionParameters connection)
         {
             return String.Format("ISID={0},TSIH={1},CID={2}", session.ISID.ToString("x"), session.TSIH.ToString("x"), connection.CID.ToString("x"));
         }

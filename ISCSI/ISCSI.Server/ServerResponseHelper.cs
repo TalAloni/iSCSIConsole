@@ -29,7 +29,7 @@ namespace ISCSI.Server
             return response;
         }
 
-        internal static LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, List<ISCSITarget> availableTargets, SessionParameters session, ConnectionParameters connection, ref ISCSITarget target, GetNextTSIH GetNextTSIH)
+        internal static LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, List<ISCSITarget> availableTargets, ISCSISession session, ConnectionParameters connection, GetNextTSIH GetNextTSIH)
         {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = request.Transit;
@@ -73,7 +73,7 @@ namespace ISCSI.Server
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
             // stage and the operational parameter negotiation stage.  Both stages are optional
             // but at least one of them has to be present.
-            bool firstLoginRequest = (!session.IsDiscovery && target == null);
+            bool firstLoginRequest = (!session.IsDiscovery && session.Target == null);
             if (firstLoginRequest)
             {
                 connection.InitiatorName = request.LoginParameters.ValueOf("InitiatorName");
@@ -98,8 +98,8 @@ namespace ISCSI.Server
                         int targetIndex = GetTargetIndex(availableTargets, targetName);
                         if (targetIndex >= 0)
                         {
-                            target = availableTargets[targetIndex];
-                            if (!target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
+                            session.Target = availableTargets[targetIndex];
+                            if (!session.Target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
                             {
                                 response.Status = LoginResponseStatusName.AuthorizationFailure;
                                 return response;
@@ -123,7 +123,7 @@ namespace ISCSI.Server
             if (request.CurrentStage == 0)
             {
                 response.LoginParameters.Add("AuthMethod", "None");
-                if (target != null)
+                if (session.Target != null)
                 {
                     // RFC 3720: During the Login Phase the iSCSI target MUST return the TargetPortalGroupTag key with the first Login Response PDU with which it is allowed to do so
                     response.LoginParameters.Add("TargetPortalGroupTag", "1");
@@ -179,7 +179,7 @@ namespace ISCSI.Server
             return -1;
         }
 
-        public static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, SessionParameters sessionParameters, ConnectionParameters connectionParameters)
+        public static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ISCSISession session, ConnectionParameters connectionParameters)
         {
             string value = loginParameters.ValueOf("MaxRecvDataSegmentLength");
             if (value != null)
@@ -190,84 +190,84 @@ namespace ISCSI.Server
             value = loginParameters.ValueOf("MaxConnections");
             if (value != null)
             {
-                sessionParameters.MaxConnections = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxConnections);
+                session.MaxConnections = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxConnections);
             }
 
             value = loginParameters.ValueOf("InitialR2T");
             if (value != null)
             {
-                sessionParameters.InitialR2T = (value == "Yes") || ISCSIServer.DesiredParameters.InitialR2T;
+                session.InitialR2T = (value == "Yes") || ISCSIServer.DesiredParameters.InitialR2T;
             }
 
             value = loginParameters.ValueOf("ImmediateData");
             if (value != null)
             {
-                sessionParameters.ImmediateData = (value == "Yes") && ISCSIServer.DesiredParameters.ImmediateData;
+                session.ImmediateData = (value == "Yes") && ISCSIServer.DesiredParameters.ImmediateData;
             }
 
             value = loginParameters.ValueOf("MaxBurstLength");
             if (value != null)
             {
-                sessionParameters.MaxBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxBurstLength);
+                session.MaxBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxBurstLength);
             }
 
             value = loginParameters.ValueOf("FirstBurstLength");
             if (value != null)
             {
-                sessionParameters.FirstBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.FirstBurstLength);
+                session.FirstBurstLength = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.FirstBurstLength);
             }
 
             value = loginParameters.ValueOf("DataPDUInOrder");
             if (value != null)
             {
-                sessionParameters.DataPDUInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataPDUInOrder;
+                session.DataPDUInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataPDUInOrder;
             }
 
             value = loginParameters.ValueOf("DataSequenceInOrder");
             if (value != null)
             {
-                sessionParameters.DataSequenceInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataSequenceInOrder;
+                session.DataSequenceInOrder = (value == "Yes") || ISCSIServer.DesiredParameters.DataSequenceInOrder;
             }
 
             value = loginParameters.ValueOf("DefaultTime2Wait");
             if (value != null)
             {
-                sessionParameters.DefaultTime2Wait = Math.Max(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Wait);
+                session.DefaultTime2Wait = Math.Max(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Wait);
             }
 
             value = loginParameters.ValueOf("DefaultTime2Retain");
             if (value != null)
             {
-                sessionParameters.DefaultTime2Retain = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Retain);
+                session.DefaultTime2Retain = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.DefaultTime2Retain);
             }
 
             value = loginParameters.ValueOf("MaxOutstandingR2T");
             if (value != null)
             {
-                sessionParameters.MaxOutstandingR2T = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxOutstandingR2T);
+                session.MaxOutstandingR2T = Math.Min(Convert.ToInt32(value), ISCSIServer.DesiredParameters.MaxOutstandingR2T);
             }
         }
 
-        public static KeyValuePairList<string, string> GetLoginOperationalParameters(SessionParameters sessionParameters, ConnectionParameters connectionParameters)
+        public static KeyValuePairList<string, string> GetLoginOperationalParameters(ISCSISession session, ConnectionParameters connectionParameters)
         {
             KeyValuePairList<string, string> loginParameters = new KeyValuePairList<string, string>();
             loginParameters.Add("HeaderDigest", "None");
             loginParameters.Add("DataDigest", "None");
             loginParameters.Add("MaxRecvDataSegmentLength", connectionParameters.TargetMaxRecvDataSegmentLength.ToString());
-            if (!sessionParameters.IsDiscovery)
+            if (!session.IsDiscovery)
             {
-                loginParameters.Add("MaxConnections", sessionParameters.MaxConnections.ToString());
-                loginParameters.Add("InitialR2T", sessionParameters.InitialR2T ? "Yes" : "No");    // Microsoft iSCSI Target support InitialR2T = No
-                loginParameters.Add("ImmediateData", sessionParameters.ImmediateData ? "Yes" : "No");
-                loginParameters.Add("MaxBurstLength", sessionParameters.MaxBurstLength.ToString());
-                loginParameters.Add("FirstBurstLength", sessionParameters.FirstBurstLength.ToString());
-                loginParameters.Add("MaxOutstandingR2T", sessionParameters.MaxOutstandingR2T.ToString());
-                loginParameters.Add("DataPDUInOrder", sessionParameters.DataPDUInOrder ? "Yes" : "No");
-                loginParameters.Add("DataSequenceInOrder", sessionParameters.DataSequenceInOrder ? "Yes" : "No");
-                loginParameters.Add("ErrorRecoveryLevel", sessionParameters.ErrorRecoveryLevel.ToString());
+                loginParameters.Add("MaxConnections", session.MaxConnections.ToString());
+                loginParameters.Add("InitialR2T", session.InitialR2T ? "Yes" : "No");    // Microsoft iSCSI Target support InitialR2T = No
+                loginParameters.Add("ImmediateData", session.ImmediateData ? "Yes" : "No");
+                loginParameters.Add("MaxBurstLength", session.MaxBurstLength.ToString());
+                loginParameters.Add("FirstBurstLength", session.FirstBurstLength.ToString());
+                loginParameters.Add("MaxOutstandingR2T", session.MaxOutstandingR2T.ToString());
+                loginParameters.Add("DataPDUInOrder", session.DataPDUInOrder ? "Yes" : "No");
+                loginParameters.Add("DataSequenceInOrder", session.DataSequenceInOrder ? "Yes" : "No");
+                loginParameters.Add("ErrorRecoveryLevel", session.ErrorRecoveryLevel.ToString());
             }
-            loginParameters.Add("DefaultTime2Wait", sessionParameters.DefaultTime2Wait.ToString());
-            loginParameters.Add("DefaultTime2Retain", sessionParameters.DefaultTime2Retain.ToString());
+            loginParameters.Add("DefaultTime2Wait", session.DefaultTime2Wait.ToString());
+            loginParameters.Add("DefaultTime2Retain", session.DefaultTime2Retain.ToString());
             
             return loginParameters;
         }
