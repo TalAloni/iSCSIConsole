@@ -92,3 +92,8 @@ Revision History:
         Bugfix: SCSI Data-In PDUs were sent without ExpCmdSN / MaxCmdSN being set.
         Each connection now use a dedicaded thread for send operations.
         SCSITarget now implements a queue for async command execution and use a dedicated thread.
+        
+1.3.8 - Improvements in VHD creation mechanism.
+        Bugfix: incorrect server behavior when a single R2T was answered with a sequence of Data-Out PDUs.
+        Bugfix: iSCSI server incorrectly assumed unnegotiated connection parameters.
+        API Improvements: More control over the iSCSI server TCP listening port, including IPv6 support.
