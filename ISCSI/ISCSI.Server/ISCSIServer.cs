@@ -34,13 +34,11 @@ namespace ISCSI.Server
         public ISCSIServer(List<ISCSITarget> targets) : this(targets, DefaultPort)
         { }
 
-        public ISCSIServer(List<ISCSITarget> targets, int port) : this(targets, port, String.Empty)
-        { }
-
         /// <summary>
         /// Server needs to be started with Start()
         /// </summary>
-        public ISCSIServer(List<ISCSITarget> targets, int port, string logFilePath)
+        /// <param name="port">The port on which the iSCSI server will listen</param>
+        public ISCSIServer(List<ISCSITarget> targets, int port)
         {
             m_port = port;
             m_targets = targets;
