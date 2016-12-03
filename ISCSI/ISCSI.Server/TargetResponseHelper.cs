@@ -35,6 +35,12 @@ namespace ISCSI.Server
                 // Send R2Ts:
                 uint bytesLeft = command.ExpectedDataTransferLength - command.DataSegmentLength;
                 uint nextOffset = command.DataSegmentLength;
+                if (!session.InitialR2T)
+                {
+                    uint firstDataPDULength = Math.Min((uint)session.FirstBurstLength, command.ExpectedDataTransferLength) - command.DataSegmentLength;
+                    bytesLeft -= firstDataPDULength;
+                    nextOffset += firstDataPDULength;
+                }
                 int totalR2Ts = (int)Math.Ceiling((double)bytesLeft / connection.TargetMaxRecvDataSegmentLength);
                 int outgoingR2Ts = Math.Min(session.MaxOutstandingR2T, totalR2Ts);
 
