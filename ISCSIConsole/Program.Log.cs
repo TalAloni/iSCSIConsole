@@ -38,7 +38,7 @@ namespace ISCSIConsole
 
         public static void OnLogEntry(object sender, LogEntry entry)
         {
-            if (m_logFile != null)
+            if (m_logFile != null && entry.Severity != Severity.Trace)
             {
                 lock (m_logFile)
                 {

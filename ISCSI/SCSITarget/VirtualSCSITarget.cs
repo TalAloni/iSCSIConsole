@@ -62,7 +62,7 @@ namespace SCSI
             }
             else if (lun >= m_disks.Count)
             {
-                Log(Severity.Error, "LUN {0}: Invalid LUN", lun);
+                Log(Severity.Warning, "Initiator error: tried to execute command on LUN {0} which does not exist", lun);
                 response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidLUNSenseData());
                 return SCSIStatusCodeName.CheckCondition;
             }
@@ -149,7 +149,7 @@ namespace SCSI
                 }
                 else
                 {
-                    Log(Severity.Error, "Inquiry: Invalid request");
+                    Log(Severity.Warning, "Initiator error: Invalid Inquiry request");
                     response = FormatSenseData(SenseDataParameter.GetIllegalRequestInvalidFieldInCDBSenseData());
                     return SCSIStatusCodeName.CheckCondition;
                 }

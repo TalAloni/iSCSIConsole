@@ -36,8 +36,11 @@ namespace ISCSI.Server
             response.TSIH = request.TSIH;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
 
+            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
+
             if (request.Transit && request.Continue)
             {
+                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connectionIdentifier);
                 response.Status = LoginResponseStatusName.InitiatorError;
                 return response;
             }
@@ -69,6 +72,7 @@ namespace ISCSI.Server
                 {
                     // RFC 3720: InitiatorName: The initiator of the TCP connection MUST provide this key [..]
                     // at the first Login of the Login Phase for every connection.
+                    Log(Severity.Warning, "[{0}] Initiator error: InitiatorName was not included in the login request", connectionIdentifier);
                     response.Status = LoginResponseStatusName.InitiatorError;
                     return response;
                 }
@@ -89,12 +93,14 @@ namespace ISCSI.Server
                             session.Target = m_targets[targetIndex];
                             if (!session.Target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
                             {
+                                Log(Severity.Warning, "[{0}] Initiator was not authorized to access {1}", connectionIdentifier, targetName);
                                 response.Status = LoginResponseStatusName.AuthorizationFailure;
                                 return response;
                             }
                         }
                         else
                         {
+                            Log(Severity.Warning, "[{0}] Initiator requested an unknown target: {1}", connectionIdentifier, targetName);
                             response.Status = LoginResponseStatusName.NotFound;
                             return response;
                         }
@@ -102,6 +108,7 @@ namespace ISCSI.Server
                     else
                     {
                         // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
+                        Log(Severity.Warning, "[{0}] Initiator error: TargetName was not included in a non-discovery session", connectionIdentifier);
                         response.Status = LoginResponseStatusName.InitiatorError;
                         return response;
                     }
@@ -125,6 +132,7 @@ namespace ISCSI.Server
                     }
                     else if (request.NextStage != 1)
                     {
+                        Log(Severity.Warning, "[{0}] Initiator error: Received login request with Invalid NextStage", connectionIdentifier);
                         response.Status = LoginResponseStatusName.InitiatorError;
                     }
                 }
@@ -142,6 +150,7 @@ namespace ISCSI.Server
                     }
                     else
                     {
+                        Log(Severity.Warning, "[{0}] Initiator error: Received login request with Invalid NextStage", connectionIdentifier);
                         response.Status = LoginResponseStatusName.InitiatorError;
                     }
                 }
@@ -149,6 +158,7 @@ namespace ISCSI.Server
             else
             {
                 // Not valid
+                Log(Severity.Warning, "[{0}] Initiator error: Received login request with Invalid CurrentStage", connectionIdentifier);
                 response.Status = LoginResponseStatusName.InitiatorError;
             }
 

@@ -86,7 +86,7 @@ namespace ISCSI.Server
                 else
                 {
                     // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
-                    Log(Severity.Error, "[{0}] Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    Log(Severity.Warning, "[{0}] Initiator error: Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                     if (state.Session.TSIH == 0)
                     {
                         // A target receiving any PDU except a Login request before the Login phase is started MUST
@@ -161,7 +161,7 @@ namespace ISCSI.Server
                 {
                     // The target MUST ONLY accept text requests with the SendTargets key and a logout
                     // request with the reason "close the session".  All other requests MUST be rejected.
-                    Log(Severity.Error, "[{0}] Improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
+                    Log(Severity.Warning, "[{0}] Initiator error: Improper command during discovery session, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
                     RejectPDU reject = new RejectPDU();
                     reject.Reason = RejectReason.ProtocolError;
                     reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
@@ -193,7 +193,7 @@ namespace ISCSI.Server
                         }
                         catch (InvalidTargetTransferTagException ex)
                         {
-                            Log(Severity.Error, "[{0}] Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
+                            Log(Severity.Warning, "[{0}] Initiator error: Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
                             RejectPDU reject = new RejectPDU();
                             reject.InitiatorTaskTag = request.InitiatorTaskTag;
                             reject.Reason = RejectReason.InvalidPDUField;
@@ -223,7 +223,7 @@ namespace ISCSI.Server
                 }
                 else if (pdu is LoginRequestPDU)
                 {
-                    Log(Severity.Error, "[{0}] Protocol Error (Login request during full feature phase)", state.ConnectionIdentifier);
+                    Log(Severity.Warning, "[{0}] Initiator Error: Login request during full feature phase", state.ConnectionIdentifier);
                     // RFC 3720: Login requests and responses MUST be used exclusively during Login.
                     // On any connection, the login phase MUST immediately follow TCP connection establishment and
                     // a subsequent Login Phase MUST NOT occur before tearing down a connection
