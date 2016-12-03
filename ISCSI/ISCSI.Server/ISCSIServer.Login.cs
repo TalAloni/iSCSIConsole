@@ -14,23 +14,23 @@ namespace ISCSI.Server
 {
     public partial class ISCSIServer
     {
-        private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ref ISCSISession session, ConnectionParameters connection)
         {
             if (request.Continue)
             {
                 connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
-                return GetPartialLoginResponsePDU(request, session, connection);
+                return GetPartialLoginResponsePDU(request, ref session, connection);
             }
             else
             {
                 string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
                 connection.RemoveTextSequence(request.InitiatorTaskTag);
                 KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
-                return GetFinalLoginResponsePDU(request, loginParameters, session, connection);
+                return GetFinalLoginResponsePDU(request, loginParameters, ref session, connection);
             }
         }
 
-        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ref ISCSISession session, ConnectionParameters connection)
         {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = false;
@@ -55,7 +55,7 @@ namespace ISCSI.Server
             return response;
         }
 
-        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ref ISCSISession session, ConnectionParameters connection)
         {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = request.Transit;
@@ -73,23 +73,38 @@ namespace ISCSI.Server
             response.ISID = request.ISID;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
 
-            if (request.TSIH == 0)
+            bool isFirstLoginRequest = false; // first login request in login phase
+            bool isNewSession = false;
+            if (session == null)
             {
-                // For a new session, the request TSIH is zero,
-                // As part of the response, the target generates a TSIH.
-                session.TSIH = m_sessionManager.GetNextTSIH();
-                session.ISID = request.ISID;
+                if (request.TSIH == 0)
+                {
+                    // For a new session, the request TSIH is zero,
+                    // As part of the response, the target generates a TSIH.
+                    session = m_sessionManager.StartSession(request.ISID);
+                    Log(Severity.Verbose, "[{0}] Session has been started", session.SessionIdentifier);
+                    session.CommandNumberingStarted = true;
+                    session.ExpCmdSN = request.CmdSN;
+                    isNewSession = true;
+                }
+                else
+                {
+                    session = m_sessionManager.FindSession(request.ISID, request.TSIH);
+                    if (session == null)
+                    {
+                        response.TSIH = request.TSIH;
+                        response.Status = LoginResponseStatusName.SessionDoesNotExist;
+                        return response;
+                    }
+                }
+                isFirstLoginRequest = true;
             }
             response.TSIH = session.TSIH;
 
             string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             response.Status = LoginResponseStatusName.Success;
 
-            // RFC 3720:  The login process proceeds in two stages - the security negotiation
-            // stage and the operational parameter negotiation stage.  Both stages are optional
-            // but at least one of them has to be present.
-            bool firstLoginRequest = (!session.IsDiscovery && session.Target == null);
-            if (firstLoginRequest)
+            if (isFirstLoginRequest)
             {
                 connection.InitiatorName = requestParameters.ValueOf("InitiatorName");
                 if (String.IsNullOrEmpty(connection.InitiatorName))
@@ -100,6 +115,10 @@ namespace ISCSI.Server
                     response.Status = LoginResponseStatusName.InitiatorError;
                     return response;
                 }
+            }
+
+            if (isNewSession)
+            {
                 string sessionType = requestParameters.ValueOf("SessionType");
                 if (sessionType == "Discovery")
                 {
@@ -139,6 +158,9 @@ namespace ISCSI.Server
                 }
             }
 
+            // RFC 3720:  The login process proceeds in two stages - the security negotiation
+            // stage and the operational parameter negotiation stage.  Both stages are optional
+            // but at least one of them has to be present.
             if (request.CurrentStage == 0)
             {
                 KeyValuePairList<string, string> responseParameters = new KeyValuePairList<string, string>();

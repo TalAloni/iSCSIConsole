@@ -173,7 +173,10 @@ namespace ISCSI.Server
                 // Wait for pending I/O to complete.
                 state.RunningSCSICommands.WaitUntilZero();
                 state.SendQueue.Stop();
-                m_connectionManager.RemoveConnection(state);
+                if (state.Session != null)
+                {
+                    m_connectionManager.RemoveConnection(state);
+                }
                 return;
             }
 
@@ -300,7 +303,10 @@ namespace ISCSI.Server
                 }
                 Socket clientSocket = state.ClientSocket;
                 PDUHelper.SetStatSN(response, state.ConnectionParameters.StatSN);
-                PDUHelper.SetExpCmdSN(response, state.Session.ExpCmdSN, state.Session.ExpCmdSN + state.Session.CommandQueueSize);
+                if (state.Session != null)
+                {
+                    PDUHelper.SetExpCmdSN(response, state.Session.ExpCmdSN, state.Session.ExpCmdSN + state.Session.CommandQueueSize);
+                }
                 if (response is SCSIResponsePDU ||
                     response is LoginResponsePDU ||
                     response is TextResponsePDU ||

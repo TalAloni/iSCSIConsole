@@ -13,16 +13,63 @@ namespace ISCSI.Server
 {
     internal class SessionManager
     {
-        private object m_syncLock = new object();
+        private object m_nextTSIHLock = new object();
         private ushort m_nextTSIH = 1; // Next Target Session Identifying Handle
-        
-        public ushort GetNextTSIH()
+        private List<ISCSISession> m_activeSessions = new List<ISCSISession>();
+
+        public ISCSISession StartSession(ulong isid)
+        {
+            ushort tsih = GetNextTSIH();
+            ISCSISession session = new ISCSISession(isid, tsih);
+            lock (m_activeSessions)
+            {
+                m_activeSessions.Add(session);
+            }
+            return session;
+        }
+
+        public ISCSISession FindSession(ulong isid, ushort tsih)
+        {
+            lock (m_activeSessions)
+            {
+                int index = GetSessionIndex(isid, tsih);
+                if (index >= 0)
+                {
+                    return m_activeSessions[index];
+                }
+            }
+            return null;
+        }
+
+        public void RemoveSession(ISCSISession session)
+        {
+            lock (m_activeSessions)
+            {
+                int index = GetSessionIndex(session.ISID, session.TSIH);
+                m_activeSessions.RemoveAt(index);
+            }
+        }
+
+        private int GetSessionIndex(ulong isid, ushort tsih)
+        {
+            for (int index = 0; index < m_activeSessions.Count; index++)
+            {
+                if (m_activeSessions[index].ISID == isid &&
+                    m_activeSessions[index].TSIH == tsih)
+                {
+                    return index;
+                }
+            }
+            return -1;
+        }
+
+        private ushort GetNextTSIH()
         {
             // The iSCSI Target selects a non-zero value for the TSIH at
             // session creation (when an initiator presents a 0 value at Login).
             // After being selected, the same TSIH value MUST be used whenever the
             // initiator or target refers to the session and a TSIH is required.
-            lock (m_syncLock)
+            lock (m_nextTSIHLock)
             {
                 ushort nextTSIH = m_nextTSIH;
                 m_nextTSIH++;

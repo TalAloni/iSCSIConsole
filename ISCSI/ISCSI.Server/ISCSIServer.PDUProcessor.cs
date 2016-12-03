@@ -17,6 +17,11 @@ namespace ISCSI.Server
     {
         private bool ValidateCommandNumbering(ISCSIPDU pdu, ConnectionState state)
         {
+            if (state.Session == null)
+            {
+                return true;
+            }
+
             uint? cmdSN = PDUHelper.GetCmdSN(pdu);
             Log(Severity.Verbose, "[{0}] Received PDU from initiator, Operation: {1}, Size: {2}, CmdSN: {3}", state.ConnectionIdentifier, (ISCSIOpCodeName)pdu.OpCode, pdu.Length, cmdSN);
             // RFC 3720: On any connection, the iSCSI initiator MUST send the commands in increasing order of CmdSN,
@@ -51,7 +56,7 @@ namespace ISCSI.Server
         {
             Log(Severity.Trace, "Entering ProcessPDU");
             
-            if (!state.Session.IsFullFeaturePhase)
+            if (state.Session == null || !state.Session.IsFullFeaturePhase)
             {
                 if (pdu is LoginRequestPDU)
                 {
@@ -74,8 +79,8 @@ namespace ISCSI.Server
                             Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }
-                    LoginResponsePDU response = GetLoginResponsePDU(request, state.Session, state.ConnectionParameters);
-                    if (state.Session.IsFullFeaturePhase)
+                    LoginResponsePDU response = GetLoginResponsePDU(request, ref state.Session, state.ConnectionParameters);
+                    if (state.Session != null && state.Session.IsFullFeaturePhase)
                     {
                         state.ConnectionParameters.CID = request.CID;
                         m_connectionManager.AddConnection(state);
@@ -87,7 +92,7 @@ namespace ISCSI.Server
                 {
                     // Before the Full Feature Phase is established, only Login Request and Login Response PDUs are allowed.
                     Log(Severity.Warning, "[{0}] Initiator error: Improper command during login phase, OpCode: 0x{1}", state.ConnectionIdentifier, pdu.OpCode.ToString("x"));
-                    if (state.Session.TSIH == 0)
+                    if (state.Session == null)
                     {
                         // A target receiving any PDU except a Login request before the Login phase is started MUST
                         // immediately terminate the connection on which the PDU was received.
@@ -156,6 +161,13 @@ namespace ISCSI.Server
                             }
                             m_connectionManager.RemoveConnection(connection);
                         }
+
+                        if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
+                        {
+                            Log(Severity.Verbose, "[{0}] Session has been closed", state.Session.SessionIdentifier);
+                            m_sessionManager.RemoveSession(state.Session);
+                        }
+
                         LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
                         state.SendQueue.Enqueue(response);
                         // connection will be closed after a LogoutResponsePDU has been sent.

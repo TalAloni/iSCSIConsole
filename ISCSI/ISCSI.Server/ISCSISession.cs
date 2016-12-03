@@ -26,8 +26,8 @@ namespace ISCSI.Server
 
         public uint CommandQueueSize = ISCSIServer.DefaultCommandQueueSize;
 
-        public ulong ISID; // Initiator Session ID
-        public ushort TSIH; // Target Session Identifying Handle
+        public readonly ulong ISID; // Initiator Session ID
+        public readonly ushort TSIH; // Target Session Identifying Handle
         public bool IsDiscovery; // Indicate whether this is a discovery session
         public bool IsFullFeaturePhase; // Indicate whether login has been completed
         public bool CommandNumberingStarted;
@@ -44,6 +44,12 @@ namespace ISCSI.Server
         /// </summary>
         private uint m_nextTransferTag = 0;
         private object m_transferTagLock = new object();
+
+        public ISCSISession(ulong isid, ushort tsih)
+        {
+            ISID = isid;
+            TSIH = tsih;
+        }
 
         public uint GetNextTransferTag()
         {
@@ -99,6 +105,14 @@ namespace ISCSI.Server
                 }
             }
             return result;
+        }
+
+        public string SessionIdentifier
+        {
+            get
+            {
+                return String.Format("ISID={0},TSIH={1}", ISID.ToString("x"), TSIH.ToString("x"));
+            }
         }
 
         /// <summary>
