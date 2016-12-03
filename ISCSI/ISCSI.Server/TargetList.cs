@@ -42,6 +42,20 @@ namespace ISCSI.Server
             }
         }
 
+        public bool RemoveTarget(string targetName)
+        {
+            lock (Lock)
+            {
+                int index = IndexOfTarget(targetName);
+                if (index >= 0)
+                {
+                    m_targets.RemoveAt(index);
+                    return true;
+                }
+                return false;
+            }
+        }
+
         /// <summary>
         /// Caller MUST obtain a lock on TargetList.Lock before calling this method
         /// </summary>

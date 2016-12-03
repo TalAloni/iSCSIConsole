@@ -50,6 +50,24 @@ namespace ISCSI.Server
             }
         }
 
+        public bool IsTargetInUse(string targetName)
+        {
+            lock (m_activeSessions)
+            {
+                foreach (ISCSISession session in m_activeSessions)
+                {
+                    if (session.Target != null)
+                    {
+                        if (String.Equals(session.Target.TargetName, targetName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         private int GetSessionIndex(ulong isid, ushort tsih)
         {
             for (int index = 0; index < m_activeSessions.Count; index++)
