@@ -45,7 +45,8 @@ namespace ISCSIConsole
                     {
                         logFile = parameters.ValueOf("log");
                     }
-                    m_server = new ISCSIServer(m_targets, port);
+                    m_server = new ISCSIServer(port);
+                    m_server.AddTargets(m_targets);
                     m_server.OnLogEntry += new EventHandler<LogEntry>(OnLogEntry);
                     if (logFile != String.Empty)
                     {

@@ -87,16 +87,16 @@ namespace ISCSI.Server
                     if (request.LoginParameters.ContainsKey("TargetName"))
                     {
                         string targetName = request.LoginParameters.ValueOf("TargetName");
-                        int targetIndex = GetTargetIndex(m_targets, targetName);
-                        if (targetIndex >= 0)
+                        ISCSITarget target = m_targets.FindTarget(targetName);
+                        if (target != null)
                         {
-                            session.Target = m_targets[targetIndex];
-                            if (!session.Target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
+                            if (!target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
                             {
                                 Log(Severity.Warning, "[{0}] Initiator was not authorized to access {1}", connectionIdentifier, targetName);
                                 response.Status = LoginResponseStatusName.AuthorizationFailure;
                                 return response;
                             }
+                            session.Target = target;
                         }
                         else
                         {
@@ -163,18 +163,6 @@ namespace ISCSI.Server
             }
 
             return response;
-        }
-
-        private static int GetTargetIndex(List<ISCSITarget> targets, string targetName)
-        {
-            for (int index = 0; index < targets.Count; index++)
-            {
-                if (String.Equals(targets[index].TargetName, targetName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return index;
-                }
-            }
-            return -1;
         }
 
         private static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ISCSISession session, ConnectionParameters connectionParameters)

@@ -23,23 +23,23 @@ namespace ISCSI.Server
         public const int DefaultPort = 3260;
 
         private IPEndPoint m_listenerEP;
-        private List<ISCSITarget> m_targets;
 
         private Socket m_listenerSocket;
         private bool m_listening;
+        private TargetList m_targets = new TargetList();
         private SessionManager m_sessionManager = new SessionManager();
         private ConnectionManager m_connectionManager = new ConnectionManager();
 
         public event EventHandler<LogEntry> OnLogEntry;
         
-        public ISCSIServer(List<ISCSITarget> targets) : this(targets, DefaultPort)
+        public ISCSIServer() : this(DefaultPort)
         { }
 
         /// <summary>
         /// Server needs to be started with Start()
         /// </summary>
         /// <param name="port">The port on which the iSCSI server will listen</param>
-        public ISCSIServer(List<ISCSITarget> targets, int port) : this(targets, new IPEndPoint(IPAddress.Any, port))
+        public ISCSIServer(int port) : this(new IPEndPoint(IPAddress.Any, port))
         {
         }
 
@@ -47,10 +47,22 @@ namespace ISCSI.Server
         /// Server needs to be started with Start()
         /// </summary>
         /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
-        public ISCSIServer(List<ISCSITarget> targets, IPEndPoint listenerEP)
+        public ISCSIServer(IPEndPoint listenerEP)
         {
             m_listenerEP = listenerEP;
-            m_targets = targets;
+        }
+
+        public void AddTarget(ISCSITarget target)
+        {
+            m_targets.AddTarget(target);
+        }
+
+        public void AddTargets(List<ISCSITarget> targets)
+        {
+            foreach (ISCSITarget target in targets)
+            {
+                m_targets.AddTarget(target);
+            }
         }
 
         public void Start()
