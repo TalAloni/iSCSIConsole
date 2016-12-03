@@ -16,6 +16,47 @@ namespace ISCSI.Server
     {
         private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ISCSISession session, ConnectionParameters connection)
         {
+            if (request.Continue)
+            {
+                connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
+                return GetPartialLoginResponsePDU(request, session, connection);
+            }
+            else
+            {
+                string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
+                connection.RemoveTextSequence(request.InitiatorTaskTag);
+                KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
+                return GetFinalLoginResponsePDU(request, loginParameters, session, connection);
+            }
+        }
+
+        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ISCSISession session, ConnectionParameters connection)
+        {
+            LoginResponsePDU response = new LoginResponsePDU();
+            response.Transit = false;
+            response.Continue = false;
+            response.CurrentStage = request.CurrentStage;
+            response.NextStage = request.NextStage;
+            response.VersionMax = request.VersionMax;
+            response.VersionActive = request.VersionMin;
+            response.ISID = request.ISID;
+            // TSIH: With the exception of the Login Final-Response in a new session, this field should
+            // be set to the TSIH provided by the initiator in the Login Request.
+            response.TSIH = request.TSIH;
+            response.InitiatorTaskTag = request.InitiatorTaskTag;
+            if (request.Transit)
+            {
+                string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
+                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connectionIdentifier);
+                response.Status = LoginResponseStatusName.InitiatorError;
+                return response;
+            }
+            response.Status = LoginResponseStatusName.Success;
+            return response;
+        }
+
+        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ISCSISession session, ConnectionParameters connection)
+        {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = request.Transit;
             response.Continue = false;
@@ -24,31 +65,13 @@ namespace ISCSI.Server
             // 0 - SecurityNegotiation
             // 1 - LoginOperationalNegotiation
             // 3 - FullFeaturePhase
-
             response.CurrentStage = request.CurrentStage;
             response.NextStage = request.NextStage;
 
             response.VersionMax = request.VersionMax;
             response.VersionActive = request.VersionMin;
             response.ISID = request.ISID;
-            // TSIH: With the exception of the Login Final-Response in a new session, this field should
-            // be set to the TSIH provided by the initiator in the Login Request.
-            response.TSIH = request.TSIH;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
-
-            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
-
-            if (request.Transit && request.Continue)
-            {
-                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connectionIdentifier);
-                response.Status = LoginResponseStatusName.InitiatorError;
-                return response;
-            }
-            else if (request.Continue)
-            {
-                response.Status = LoginResponseStatusName.Success;
-                return response;
-            }
 
             if (request.TSIH == 0)
             {
@@ -59,6 +82,7 @@ namespace ISCSI.Server
             }
             response.TSIH = session.TSIH;
 
+            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
             response.Status = LoginResponseStatusName.Success;
 
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
@@ -67,7 +91,7 @@ namespace ISCSI.Server
             bool firstLoginRequest = (!session.IsDiscovery && session.Target == null);
             if (firstLoginRequest)
             {
-                connection.InitiatorName = request.LoginParameters.ValueOf("InitiatorName");
+                connection.InitiatorName = requestParameters.ValueOf("InitiatorName");
                 if (String.IsNullOrEmpty(connection.InitiatorName))
                 {
                     // RFC 3720: InitiatorName: The initiator of the TCP connection MUST provide this key [..]
@@ -76,7 +100,7 @@ namespace ISCSI.Server
                     response.Status = LoginResponseStatusName.InitiatorError;
                     return response;
                 }
-                string sessionType = request.LoginParameters.ValueOf("SessionType");
+                string sessionType = requestParameters.ValueOf("SessionType");
                 if (sessionType == "Discovery")
                 {
                     session.IsDiscovery = true;
@@ -84,9 +108,9 @@ namespace ISCSI.Server
                 else //sessionType == "Normal" or unspecified (default is Normal)
                 {
                     session.IsDiscovery = false;
-                    if (request.LoginParameters.ContainsKey("TargetName"))
+                    if (requestParameters.ContainsKey("TargetName"))
                     {
-                        string targetName = request.LoginParameters.ValueOf("TargetName");
+                        string targetName = requestParameters.ValueOf("TargetName");
                         ISCSITarget target = m_targets.FindTarget(targetName);
                         if (target != null)
                         {
@@ -117,11 +141,12 @@ namespace ISCSI.Server
 
             if (request.CurrentStage == 0)
             {
-                response.LoginParameters.Add("AuthMethod", "None");
+                KeyValuePairList<string, string> responseParameters = new KeyValuePairList<string, string>();
+                responseParameters.Add("AuthMethod", "None");
                 if (session.Target != null)
                 {
                     // RFC 3720: During the Login Phase the iSCSI target MUST return the TargetPortalGroupTag key with the first Login Response PDU with which it is allowed to do so
-                    response.LoginParameters.Add("TargetPortalGroupTag", "1");
+                    responseParameters.Add("TargetPortalGroupTag", "1");
                 }
 
                 if (request.Transit)
@@ -136,11 +161,12 @@ namespace ISCSI.Server
                         response.Status = LoginResponseStatusName.InitiatorError;
                     }
                 }
+                response.LoginParameters = responseParameters;
             }
             else if (request.CurrentStage == 1)
             {
-                UpdateOperationalParameters(request.LoginParameters, session, connection);
-                response.LoginParameters = GetLoginOperationalParameters(session, connection);
+                UpdateOperationalParameters(requestParameters, session, connection);
+                response.LoginParameters = GetLoginResponseOperationalParameters(session, connection);
 
                 if (request.Transit)
                 {
@@ -234,7 +260,7 @@ namespace ISCSI.Server
             }
         }
 
-        private static KeyValuePairList<string, string> GetLoginOperationalParameters(ISCSISession session, ConnectionParameters connectionParameters)
+        private static KeyValuePairList<string, string> GetLoginResponseOperationalParameters(ISCSISession session, ConnectionParameters connectionParameters)
         {
             KeyValuePairList<string, string> loginParameters = new KeyValuePairList<string, string>();
             loginParameters.Add("HeaderDigest", "None");

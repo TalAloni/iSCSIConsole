@@ -21,7 +21,7 @@ namespace ISCSI
         public uint ExpCmdSN;
         public uint MaxCmdSN;
 
-        public string Text;
+        public string Text = String.Empty;
 
         public TextResponsePDU() : base()
         {

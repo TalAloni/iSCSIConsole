@@ -97,7 +97,8 @@ namespace ISCSI.Client
                 response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
                 if (response != null && response.Status == LoginResponseStatusName.Success)
                 {
-                    ClientHelper.UpdateOperationalParameters(response.LoginParameters, m_session, m_connection);
+                    KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(response.LoginParametersText);
+                    ClientHelper.UpdateOperationalParameters(loginParameters, m_session, m_connection);
                     return true;
                 }
             }

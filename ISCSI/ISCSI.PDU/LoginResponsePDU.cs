@@ -27,7 +27,7 @@ namespace ISCSI
         public uint ExpCmdSN;
         public uint MaxCmdSN;
         public LoginResponseStatusName Status; // StatusClass & StatusDetail
-        public KeyValuePairList<string, string> LoginParameters = new KeyValuePairList<string,string>(); // in text request format
+        public string LoginParametersText = String.Empty; // A key=value pair can start in one PDU and continue on the next
 
         public LoginResponsePDU() : base()
         {
@@ -78,10 +78,17 @@ namespace ISCSI
             Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
             Array.Copy(BigEndianConverter.GetBytes((ushort)Status), 0, OpCodeSpecific, 16, 2);
 
-            string parametersString = KeyValuePairUtils.ToNullDelimitedString(LoginParameters);
-            Data = ASCIIEncoding.ASCII.GetBytes(parametersString);
+            Data = ASCIIEncoding.ASCII.GetBytes(LoginParametersText);
             
             return base.GetBytes();
+        }
+
+        public KeyValuePairList<string, string> LoginParameters
+        {
+            set
+            {
+                LoginParametersText = KeyValuePairUtils.ToNullDelimitedString(value);
+            }
         }
     }
 }

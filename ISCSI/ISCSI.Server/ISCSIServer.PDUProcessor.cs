@@ -56,7 +56,7 @@ namespace ISCSI.Server
                 if (pdu is LoginRequestPDU)
                 {
                     LoginRequestPDU request = (LoginRequestPDU)pdu;
-                    Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, KeyValuePairUtils.ToString(request.LoginParameters));
+                    Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, FormatNullDelimitedText(request.LoginParametersText));
                     if (request.TSIH != 0)
                     {
                         // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
@@ -80,7 +80,7 @@ namespace ISCSI.Server
                         state.ConnectionParameters.CID = request.CID;
                         m_connectionManager.AddConnection(state);
                     }
-                    Log(Severity.Verbose, "[{0}] Login Response parameters: {1}", state.ConnectionIdentifier, KeyValuePairUtils.ToString(response.LoginParameters));
+                    Log(Severity.Verbose, "[{0}] Login Response parameters: {1}", state.ConnectionIdentifier, FormatNullDelimitedText(response.LoginParametersText));
                     state.SendQueue.Enqueue(response);
                 }
                 else
@@ -248,6 +248,16 @@ namespace ISCSI.Server
                 }
             }
             Log(Severity.Trace, "Leaving ProcessPDU");
+        }
+
+        private static string FormatNullDelimitedText(string text)
+        {
+            string result = String.Join(", ", text.Split('\0'));
+            if (result.EndsWith(", "))
+            {
+                result = result.Remove(result.Length - 2);
+            }
+            return result;
         }
     }
 }

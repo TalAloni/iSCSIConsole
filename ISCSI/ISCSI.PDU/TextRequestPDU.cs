@@ -20,7 +20,7 @@ namespace ISCSI
         public uint CmdSN;
         public uint ExpStatSN;
 
-        public string Text;
+        public string Text = String.Empty;
 
         public TextRequestPDU() : base()
         {

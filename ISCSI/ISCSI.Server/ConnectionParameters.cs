@@ -34,8 +34,31 @@ namespace ISCSI.Server
         public int TargetMaxRecvDataSegmentLength = ISCSIServer.DeclaredParameters.MaxRecvDataSegmentLength;
 
         public uint StatSN = 0; // Initial StatSN, any number will do
+        private Dictionary<uint, string> m_textSequences = new Dictionary<uint, string>();
         // Dictionary of current transfers: <transfer-tag, TransferEntry>
         private Dictionary<uint, TransferEntry> n_transfers = new Dictionary<uint, TransferEntry>();
+
+        public string AddTextToSequence(uint initiatorTaskTag, string text)
+        {
+            string precedingText;
+            if (m_textSequences.TryGetValue(initiatorTaskTag, out precedingText))
+            {
+                string sequence = precedingText + text;
+                m_textSequences[initiatorTaskTag] = sequence;
+                return sequence;
+
+            }
+            else
+            {
+                m_textSequences.Add(initiatorTaskTag, text);
+                return text;
+            }
+        }
+
+        public void RemoveTextSequence(uint initiatorTaskTag)
+        {
+            m_textSequences.Remove(initiatorTaskTag);
+        }
 
         public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2TSN)
         {
