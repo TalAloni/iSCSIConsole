@@ -27,7 +27,7 @@ namespace ISCSI.Server
             public static int FirstBurstLength = DefaultParameters.Session.FirstBurstLength;
             public static int DefaultTime2Wait = 0;
             public static int DefaultTime2Retain = 20;
-            public static int MaxOutstandingR2T = 1; // implementation limit
+            public static int MaxOutstandingR2T = 16;
             public static bool DataPDUInOrder = true; // implementation limit
             public static bool DataSequenceInOrder = true; // implementation limit
             public static int ErrorRecoveryLevel = 0; // implementation limit

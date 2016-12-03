@@ -32,18 +32,25 @@ namespace ISCSI.Server
                 // Create buffer for next segments (we only execute the command after receiving all of its data)
                 Array.Resize<byte>(ref command.Data, (int)command.ExpectedDataTransferLength);
                 
-                // Send R2T
-                ReadyToTransferPDU response = new ReadyToTransferPDU();
-                response.InitiatorTaskTag = command.InitiatorTaskTag;
-                response.R2TSN = 0; // R2Ts are sequenced per command and must start with 0 for each new command;
-                response.TargetTransferTag = transferTag;
-                response.BufferOffset = command.DataSegmentLength;
-                response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
+                // Send R2Ts:
+                uint bytesLeft = command.ExpectedDataTransferLength - command.DataSegmentLength;
+                uint nextOffset = command.DataSegmentLength;
+                int totalR2Ts = (int)Math.Ceiling((double)bytesLeft / connection.TargetMaxRecvDataSegmentLength);
+                int outgoingR2Ts = Math.Min(session.MaxOutstandingR2T, totalR2Ts);
 
-                connection.AddTransfer(transferTag, command, 1);
+                for (uint index = 0; index < outgoingR2Ts; index++)
+                {
+                    ReadyToTransferPDU response = new ReadyToTransferPDU();
+                    response.InitiatorTaskTag = command.InitiatorTaskTag;
+                    response.R2TSN = index; // R2Ts are sequenced per command and must start with 0 for each new command;
+                    response.TargetTransferTag = transferTag;
+                    response.BufferOffset = nextOffset;
+                    response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, command.ExpectedDataTransferLength - response.BufferOffset);
+                    responseList.Add(response);
+                    nextOffset += (uint)connection.TargetMaxRecvDataSegmentLength;
+                }
+                connection.AddTransfer(transferTag, command, (uint)outgoingR2Ts, nextOffset, (uint)totalR2Ts);
                 session.CommandsInTransfer.Add(command.CmdSN);
-
-                responseList.Add(response);
                 return responseList;
             }
 
@@ -107,16 +114,21 @@ namespace ISCSI.Server
                 // An R2T is considered outstanding until the last data PDU is transferred.
                 if (request.Final)
                 {
-                    // Send R2T
-                    ReadyToTransferPDU response = new ReadyToTransferPDU();
-                    response.InitiatorTaskTag = request.InitiatorTaskTag;
-                    response.TargetTransferTag = request.TargetTransferTag;
-                    response.R2TSN = transfer.NextR2TSN;
-                    response.BufferOffset = offset + request.DataSegmentLength; // where we left off
-                    response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
-                    responseList.Add(response);
-                    
-                    transfer.NextR2TSN++;
+                    // We already sent as many R2T as we could, we will only send R2T if any remained.
+                    if (transfer.NextR2TSN < transfer.TotalR2Ts)
+                    {
+                        // Send R2T
+                        ReadyToTransferPDU response = new ReadyToTransferPDU();
+                        response.InitiatorTaskTag = request.InitiatorTaskTag;
+                        response.TargetTransferTag = request.TargetTransferTag;
+                        response.R2TSN = transfer.NextR2TSN;
+                        response.BufferOffset = transfer.NextOffset + request.DataSegmentLength; // where we left off
+                        response.DesiredDataTransferLength = Math.Min((uint)connection.TargetMaxRecvDataSegmentLength, totalLength - response.BufferOffset);
+                        responseList.Add(response);
+
+                        transfer.NextR2TSN++;
+                        transfer.NextOffset += (uint)connection.TargetMaxRecvDataSegmentLength;
+                    }
                 }
                 return responseList;
             }

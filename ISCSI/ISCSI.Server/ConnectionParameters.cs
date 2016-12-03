@@ -16,11 +16,15 @@ namespace ISCSI.Server
     {
         public SCSICommandPDU Command;
         public uint NextR2TSN;
+        public uint NextOffset;
+        public uint TotalR2Ts; // Numbers of R2Ts that will be sent during this transfer
 
-        public TransferEntry(SCSICommandPDU command, uint nextR2TSN)
+        public TransferEntry(SCSICommandPDU command, uint nextR2TSN, uint nextOffset, uint totalR2Ts)
         {
             Command = command;
             NextR2TSN = nextR2TSN;
+            NextOffset = nextOffset;
+            TotalR2Ts = totalR2Ts;
         }
     }
 
@@ -60,9 +64,9 @@ namespace ISCSI.Server
             m_textSequences.Remove(initiatorTaskTag);
         }
 
-        public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2TSN)
+        public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2TSN, uint nextOffset, uint totalR2Ts)
         {
-            TransferEntry entry = new TransferEntry(command, nextR2TSN);
+            TransferEntry entry = new TransferEntry(command, nextR2TSN, nextOffset, totalR2Ts);
             n_transfers.Add(transferTag, entry);
             return entry;
         }
