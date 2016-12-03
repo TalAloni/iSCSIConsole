@@ -10,7 +10,7 @@ using System.Text;
 
 namespace ISCSI.Server
 {
-    public class InvalidTargetTransferTagException : Exception
+    internal class InvalidTargetTransferTagException : Exception
     {
         public uint TargetTransferTag;
 
