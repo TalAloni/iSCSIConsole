@@ -15,8 +15,9 @@ namespace ISCSI.Client
     public class ClientHelper
     {
         /// <param name="targetName">Set to null for discovery session</param>
-        internal static LoginRequestPDU GetFirstStageLoginRequest(string initiatorName, string targetName, ISCSISession session, ConnectionParameters connection)
+        internal static LoginRequestPDU GetFirstStageLoginRequest(string initiatorName, string targetName, ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             LoginRequestPDU request = new LoginRequestPDU();
             request.InitiatorTaskTag = session.GetNextTaskTag();
             request.ISID = session.ISID;
@@ -51,8 +52,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static LoginRequestPDU GetSecondStageLoginRequest(LoginResponsePDU firstStageResponse, ISCSISession session, ConnectionParameters connection, bool isDiscovery)
+        internal static LoginRequestPDU GetSecondStageLoginRequest(LoginResponsePDU firstStageResponse, ConnectionParameters connection, bool isDiscovery)
         {
+            ISCSISession session = connection.Session;
             LoginRequestPDU request = new LoginRequestPDU();
             request.ISID = firstStageResponse.ISID;
             request.TSIH = firstStageResponse.TSIH;
@@ -86,8 +88,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static LoginRequestPDU GetSingleStageLoginRequest(string initiatorName, string targetName, ISCSISession session, ConnectionParameters connection)
+        internal static LoginRequestPDU GetSingleStageLoginRequest(string initiatorName, string targetName, ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             LoginRequestPDU request = new LoginRequestPDU();
             request.ISID = session.ISID;
             request.TSIH = session.TSIH;
@@ -130,8 +133,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ISCSISession session, ConnectionParameters connection)
+        internal static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             string value = loginParameters.ValueOf("MaxRecvDataSegmentLength");
             if (value != null)
             {
@@ -249,8 +253,9 @@ namespace ISCSI.Client
             }
         }
 
-        internal static LogoutRequestPDU GetLogoutRequest(ISCSISession session, ConnectionParameters connection)
+        internal static LogoutRequestPDU GetLogoutRequest(ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             LogoutRequestPDU request = new LogoutRequestPDU();
             request.ReasonCode = LogoutReasonCode.CloseTheSession;
             request.InitiatorTaskTag = session.GetNextTaskTag();
@@ -260,8 +265,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static TextRequestPDU GetSendTargetsRequest(ISCSISession session, ConnectionParameters connection)
+        internal static TextRequestPDU GetSendTargetsRequest(ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             TextRequestPDU request = new TextRequestPDU();
             request.Text = "SendTargets=All";
             request.InitiatorTaskTag = session.GetNextTaskTag();
@@ -271,8 +277,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static SCSICommandPDU GetReportLUNsCommand(ISCSISession session, ConnectionParameters connection, uint allocationLength)
+        internal static SCSICommandPDU GetReportLUNsCommand(ConnectionParameters connection, uint allocationLength)
         {
+            ISCSISession session = connection.Session;
             SCSICommandDescriptorBlock reportLUNs = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReportLUNs);
             reportLUNs.TransferLength = allocationLength;
             
@@ -286,8 +293,9 @@ namespace ISCSI.Client
             return scsiCommand;
         }
 
-        internal static SCSICommandPDU GetReadCapacity10Command(ISCSISession session, ConnectionParameters connection, ushort LUN)
+        internal static SCSICommandPDU GetReadCapacity10Command(ConnectionParameters connection, ushort LUN)
         {
+            ISCSISession session = connection.Session;
             SCSICommandDescriptorBlock readCapacity10 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ReadCapacity10);
             readCapacity10.TransferLength = ReadCapacity10Parameter.Length;
 
@@ -302,8 +310,9 @@ namespace ISCSI.Client
             return scsiCommand;
         }
 
-        internal static SCSICommandPDU GetReadCapacity16Command(ISCSISession session, ConnectionParameters connection, ushort LUN)
+        internal static SCSICommandPDU GetReadCapacity16Command(ConnectionParameters connection, ushort LUN)
         {
+            ISCSISession session = connection.Session;
             SCSICommandDescriptorBlock serviceActionIn = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ServiceActionIn);
             serviceActionIn.ServiceAction = ServiceAction.ReadCapacity16;
             serviceActionIn.TransferLength = ReadCapacity16Parameter.Length;
@@ -319,8 +328,9 @@ namespace ISCSI.Client
             return scsiCommand;
         }
 
-        internal static SCSICommandPDU GetRead16Command(ISCSISession session, ConnectionParameters connection, ushort LUN, ulong sectorIndex, uint sectorCount, int bytesPerSector)
+        internal static SCSICommandPDU GetRead16Command(ConnectionParameters connection, ushort LUN, ulong sectorIndex, uint sectorCount, int bytesPerSector)
         {
+            ISCSISession session = connection.Session;
             SCSICommandDescriptorBlock read16 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Read16);
             read16.LogicalBlockAddress64 = sectorIndex;
             read16.TransferLength = sectorCount;
@@ -336,8 +346,9 @@ namespace ISCSI.Client
             return scsiCommand;
         }
 
-        internal static SCSICommandPDU GetWrite16Command(ISCSISession session, ConnectionParameters connection, ushort LUN, ulong sectorIndex, byte[] data, int bytesPerSector)
+        internal static SCSICommandPDU GetWrite16Command(ConnectionParameters connection, ushort LUN, ulong sectorIndex, byte[] data, int bytesPerSector)
         {
+            ISCSISession session = connection.Session;
             SCSICommandDescriptorBlock write16 = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.Write16);
             write16.LogicalBlockAddress64 = sectorIndex;
             write16.TransferLength = (uint)(data.Length / bytesPerSector);
@@ -358,7 +369,7 @@ namespace ISCSI.Client
             return scsiCommand;
         }
 
-        internal static List<SCSIDataOutPDU> GetWriteData(ISCSISession session, ConnectionParameters connection, ushort LUN, ulong sectorIndex, byte[] data, int bytesPerSector, ReadyToTransferPDU readyToTransfer)
+        internal static List<SCSIDataOutPDU> GetWriteData(ConnectionParameters connection, ushort LUN, ulong sectorIndex, byte[] data, int bytesPerSector, ReadyToTransferPDU readyToTransfer)
         {
             List<SCSIDataOutPDU> result = new List<SCSIDataOutPDU>();
             // if readyToTransfer.DesiredDataTransferLength <= connection.TargetMaxRecvDataSegmentLength we must send multiple Data-Out PDUs
@@ -382,8 +393,9 @@ namespace ISCSI.Client
             return result;
         }
 
-        internal static NOPOutPDU GetPingRequest(ISCSISession session, ConnectionParameters connection)
+        internal static NOPOutPDU GetPingRequest(ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             // Microsoft iSCSI Target v3.1 expects that CmdSN won't be incremented after this request regardless of whether the ImmediateDelivery bit is set or not,
             // So we set the ImmediateDelivery bit to work around the issue.
             NOPOutPDU request = new NOPOutPDU();
@@ -396,8 +408,9 @@ namespace ISCSI.Client
             return request;
         }
 
-        internal static NOPOutPDU GetPingResponse(NOPInPDU request, ISCSISession session, ConnectionParameters connection)
+        internal static NOPOutPDU GetPingResponse(NOPInPDU request, ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             NOPOutPDU response = new NOPOutPDU();
             // If the Initiator Task Tag contains 0xffffffff, the I bit MUST be set to 1 and the CmdSN is not advanced after this PDU is sent.
             response.ImmediateDelivery = true;

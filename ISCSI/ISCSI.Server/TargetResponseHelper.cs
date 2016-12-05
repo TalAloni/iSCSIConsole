@@ -17,13 +17,13 @@ namespace ISCSI.Server
 {
     internal class TargetResponseHelper
     {
-        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, ISCSISession session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSICommandPDU command, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             // We return either SCSIResponsePDU or List<SCSIDataInPDU>
             List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
-            
-            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
+
+            ISCSISession session = connection.Session;
 
             if (command.Write && command.DataSegmentLength < command.ExpectedDataTransferLength)
             {
@@ -71,12 +71,12 @@ namespace ISCSI.Server
             return responseList;
         }
 
-        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, ISCSISession session, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
+        internal static List<ReadyToTransferPDU> GetReadyToTransferPDUs(SCSIDataOutPDU request, ConnectionParameters connection, out List<SCSICommandPDU> commandsToExecute)
         {
             List<ReadyToTransferPDU> responseList = new List<ReadyToTransferPDU>();
             commandsToExecute = new List<SCSICommandPDU>();
 
-            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
+            ISCSISession session = connection.Session;
             TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
             if (transfer == null)
             {

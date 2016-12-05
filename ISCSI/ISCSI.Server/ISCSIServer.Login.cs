@@ -14,23 +14,23 @@ namespace ISCSI.Server
 {
     public partial class ISCSIServer
     {
-        private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ref ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ConnectionParameters connection)
         {
             if (request.Continue)
             {
                 connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
-                return GetPartialLoginResponsePDU(request, ref session, connection);
+                return GetPartialLoginResponsePDU(request, connection);
             }
             else
             {
                 string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
                 connection.RemoveTextSequence(request.InitiatorTaskTag);
                 KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
-                return GetFinalLoginResponsePDU(request, loginParameters, ref session, connection);
+                return GetFinalLoginResponsePDU(request, loginParameters, connection);
             }
         }
 
-        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ref ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ConnectionParameters connection)
         {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = false;
@@ -46,8 +46,7 @@ namespace ISCSI.Server
             response.InitiatorTaskTag = request.InitiatorTaskTag;
             if (request.Transit)
             {
-                string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
-                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connectionIdentifier);
+                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connection.ConnectionIdentifier);
                 response.Status = LoginResponseStatusName.InitiatorError;
                 return response;
             }
@@ -55,7 +54,7 @@ namespace ISCSI.Server
             return response;
         }
 
-        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ref ISCSISession session, ConnectionParameters connection)
+        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ConnectionParameters connection)
         {
             LoginResponsePDU response = new LoginResponsePDU();
             response.Transit = request.Transit;
@@ -75,33 +74,34 @@ namespace ISCSI.Server
 
             bool isFirstLoginRequest = false; // first login request in login phase
             bool isNewSession = false;
-            if (session == null)
+            if (connection.Session == null)
             {
                 if (request.TSIH == 0)
                 {
                     // For a new session, the request TSIH is zero,
                     // As part of the response, the target generates a TSIH.
-                    session = m_sessionManager.StartSession(request.ISID);
-                    Log(Severity.Verbose, "[{0}] Session has been started", session.SessionIdentifier);
-                    session.CommandNumberingStarted = true;
-                    session.ExpCmdSN = request.CmdSN;
+                    connection.Session = m_sessionManager.StartSession(request.ISID);
+                    Log(Severity.Verbose, "[{0}] Session has been started", connection.Session.SessionIdentifier);
+                    connection.Session.CommandNumberingStarted = true;
+                    connection.Session.ExpCmdSN = request.CmdSN;
                     isNewSession = true;
                 }
                 else
                 {
-                    session = m_sessionManager.FindSession(request.ISID, request.TSIH);
-                    if (session == null)
+                    ISCSISession existingSession = m_sessionManager.FindSession(request.ISID, request.TSIH);
+                    if (existingSession == null)
                     {
                         response.TSIH = request.TSIH;
                         response.Status = LoginResponseStatusName.SessionDoesNotExist;
                         return response;
                     }
+                    connection.Session = existingSession;
                 }
                 isFirstLoginRequest = true;
             }
-            response.TSIH = session.TSIH;
+            response.TSIH = connection.Session.TSIH;
 
-            string connectionIdentifier = ConnectionState.GetConnectionIdentifier(session, connection);
+            string connectionIdentifier = connection.ConnectionIdentifier;
             response.Status = LoginResponseStatusName.Success;
 
             if (isFirstLoginRequest)
@@ -117,6 +117,7 @@ namespace ISCSI.Server
                 }
             }
 
+            ISCSISession session = connection.Session;
             if (isNewSession)
             {
                 string sessionType = requestParameters.ValueOf("SessionType");
@@ -191,8 +192,8 @@ namespace ISCSI.Server
             }
             else if (request.CurrentStage == 1)
             {
-                UpdateOperationalParameters(requestParameters, session, connection);
-                response.LoginParameters = GetLoginResponseOperationalParameters(session, connection);
+                UpdateOperationalParameters(requestParameters, connection);
+                response.LoginParameters = GetLoginResponseOperationalParameters(connection);
 
                 if (request.Transit)
                 {
@@ -217,12 +218,13 @@ namespace ISCSI.Server
             return response;
         }
 
-        private static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ISCSISession session, ConnectionParameters connectionParameters)
+        private static void UpdateOperationalParameters(KeyValuePairList<string, string> loginParameters, ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             string value = loginParameters.ValueOf("MaxRecvDataSegmentLength");
             if (value != null)
             {
-                connectionParameters.InitiatorMaxRecvDataSegmentLength = Convert.ToInt32(value);
+                connection.InitiatorMaxRecvDataSegmentLength = Convert.ToInt32(value);
             }
 
             value = loginParameters.ValueOf("MaxConnections");
@@ -286,12 +288,13 @@ namespace ISCSI.Server
             }
         }
 
-        private static KeyValuePairList<string, string> GetLoginResponseOperationalParameters(ISCSISession session, ConnectionParameters connectionParameters)
+        private static KeyValuePairList<string, string> GetLoginResponseOperationalParameters(ConnectionParameters connection)
         {
+            ISCSISession session = connection.Session;
             KeyValuePairList<string, string> loginParameters = new KeyValuePairList<string, string>();
             loginParameters.Add("HeaderDigest", "None");
             loginParameters.Add("DataDigest", "None");
-            loginParameters.Add("MaxRecvDataSegmentLength", connectionParameters.TargetMaxRecvDataSegmentLength.ToString());
+            loginParameters.Add("MaxRecvDataSegmentLength", connection.TargetMaxRecvDataSegmentLength.ToString());
             if (!session.IsDiscovery)
             {
                 loginParameters.Add("MaxConnections", session.MaxConnections.ToString());

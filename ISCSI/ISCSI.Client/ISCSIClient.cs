@@ -19,7 +19,6 @@ namespace ISCSI.Client
 {
     public partial class ISCSIClient
     {
-        private ISCSISession m_session = new ISCSISession();
         private ConnectionParameters m_connection = new ConnectionParameters();
 
         private string m_initiatorName;
@@ -79,26 +78,27 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            m_session.ISID = ClientHelper.GetRandomISID();
-            m_connection.CID = m_session.GetNextCID();
+            m_connection.Session = new ISCSISession();
+            m_connection.Session.ISID = ClientHelper.GetRandomISID();
+            m_connection.CID = m_connection.Session.GetNextCID();
             // p.s. It's possible to perform a single stage login (stage 1 to stage 3, tested against Microsoft iSCSI Target v3.1)
-            LoginRequestPDU request = ClientHelper.GetFirstStageLoginRequest(m_initiatorName, targetName, m_session, m_connection);
+            LoginRequestPDU request = ClientHelper.GetFirstStageLoginRequest(m_initiatorName, targetName, m_connection);
             SendPDU(request);
             LoginResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
             if (response != null && response.Status == LoginResponseStatusName.Success)
             {
-                m_session.TSIH = response.TSIH;
+                m_connection.Session.TSIH = response.TSIH;
                 // Status numbering starts with the Login response to the first Login request of the connection
                 m_connection.StatusNumberingStarted = true;
                 m_connection.ExpStatSN = response.StatSN + 1;
 
-                request = ClientHelper.GetSecondStageLoginRequest(response, m_session, m_connection, targetName == null);
+                request = ClientHelper.GetSecondStageLoginRequest(response, m_connection, targetName == null);
                 SendPDU(request);
                 response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
                 if (response != null && response.Status == LoginResponseStatusName.Success)
                 {
                     KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(response.LoginParametersText);
-                    ClientHelper.UpdateOperationalParameters(loginParameters, m_session, m_connection);
+                    ClientHelper.UpdateOperationalParameters(loginParameters, m_connection);
                     return true;
                 }
             }
@@ -111,7 +111,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            LogoutRequestPDU request = ClientHelper.GetLogoutRequest(m_session, m_connection);
+            LogoutRequestPDU request = ClientHelper.GetLogoutRequest(m_connection);
             SendPDU(request);
             LogoutResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LogoutResponsePDU;
             return (response != null && response.Response == LogoutResponse.ClosedSuccessfully);
@@ -123,7 +123,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            TextRequestPDU request = ClientHelper.GetSendTargetsRequest(m_session, m_connection);
+            TextRequestPDU request = ClientHelper.GetSendTargetsRequest(m_connection);
             SendPDU(request);
             TextResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as TextResponsePDU;
             if (response != null && response.Final)
@@ -148,7 +148,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            SCSICommandPDU reportLUNs = ClientHelper.GetReportLUNsCommand(m_session, m_connection, ReportLUNsParameter.MinimumAllocationLength);
+            SCSICommandPDU reportLUNs = ClientHelper.GetReportLUNsCommand(m_connection, ReportLUNsParameter.MinimumAllocationLength);
             SendPDU(reportLUNs);
             SCSIDataInPDU data = WaitForPDU(reportLUNs.InitiatorTaskTag) as SCSIDataInPDU;
             if (data != null && data.StatusPresent && data.Status == SCSIStatusCodeName.Good)
@@ -156,7 +156,7 @@ namespace ISCSI.Client
                 uint requiredAllocationLength = ReportLUNsParameter.GetRequiredAllocationLength(data.Data);
                 if (requiredAllocationLength > ReportLUNsParameter.MinimumAllocationLength)
                 {
-                    reportLUNs = ClientHelper.GetReportLUNsCommand(m_session, m_connection, requiredAllocationLength);
+                    reportLUNs = ClientHelper.GetReportLUNsCommand(m_connection, requiredAllocationLength);
                     m_clientSocket.Send(reportLUNs.GetBytes());
                     data = WaitForPDU(reportLUNs.InitiatorTaskTag) as SCSIDataInPDU;
 
@@ -188,7 +188,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            SCSICommandPDU readCapacity = ClientHelper.GetReadCapacity10Command(m_session, m_connection, LUN);
+            SCSICommandPDU readCapacity = ClientHelper.GetReadCapacity10Command(m_connection, LUN);
             SendPDU(readCapacity);
             // SCSIResponsePDU with CheckCondition could be returned in case of an error
             SCSIDataInPDU data = WaitForPDU(readCapacity.InitiatorTaskTag) as SCSIDataInPDU;
@@ -201,7 +201,7 @@ namespace ISCSI.Client
                     return (ulong)(capacity.ReturnedLBA + 1) * capacity.BlockLengthInBytes;
                 }
 
-                readCapacity = ClientHelper.GetReadCapacity16Command(m_session, m_connection, LUN);
+                readCapacity = ClientHelper.GetReadCapacity16Command(m_connection, LUN);
                 m_clientSocket.Send(readCapacity.GetBytes());
                 data = WaitForPDU(readCapacity.InitiatorTaskTag) as SCSIDataInPDU;
                 if (data != null && data.StatusPresent && data.Status == SCSIStatusCodeName.Good)
@@ -222,7 +222,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            SCSICommandPDU readCommand = ClientHelper.GetRead16Command(m_session, m_connection, LUN, sectorIndex, sectorCount, bytesPerSector);
+            SCSICommandPDU readCommand = ClientHelper.GetRead16Command(m_connection, LUN, sectorIndex, sectorCount, bytesPerSector);
             SendPDU(readCommand);
             // RFC 3720: Data payload is associated with a specific SCSI command through the Initiator Task Tag
             SCSIDataInPDU data = WaitForPDU(readCommand.InitiatorTaskTag) as SCSIDataInPDU;
@@ -252,12 +252,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            SCSICommandPDU writeCommand = ClientHelper.GetWrite16Command(m_session, m_connection, LUN, sectorIndex, data, bytesPerSector);
+            SCSICommandPDU writeCommand = ClientHelper.GetWrite16Command(m_connection, LUN, sectorIndex, data, bytesPerSector);
             SendPDU(writeCommand);
             ISCSIPDU response = WaitForPDU(writeCommand.InitiatorTaskTag);
             while (response is ReadyToTransferPDU)
             {
-                List<SCSIDataOutPDU> requestedData = ClientHelper.GetWriteData(m_session, m_connection, LUN, sectorIndex, data, bytesPerSector, (ReadyToTransferPDU)response);
+                List<SCSIDataOutPDU> requestedData = ClientHelper.GetWriteData(m_connection, LUN, sectorIndex, data, bytesPerSector, (ReadyToTransferPDU)response);
                 foreach (SCSIDataOutPDU dataOut in requestedData)
                 {
                     SendPDU(dataOut);
@@ -281,7 +281,7 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
-            NOPOutPDU request = ClientHelper.GetPingRequest(m_session, m_connection);
+            NOPOutPDU request = ClientHelper.GetPingRequest(m_connection);
             SendPDU(request);
             NOPInPDU response = WaitForPDU(request.InitiatorTaskTag) as NOPInPDU;
             return response != null;
@@ -427,7 +427,7 @@ namespace ISCSI.Client
                 if (((NOPInPDU)pdu).TargetTransferTag != 0xFFFFFFFF)
                 {
                     // Send NOP-OUT
-                    NOPOutPDU response = ClientHelper.GetPingResponse((NOPInPDU)pdu, m_session, m_connection);
+                    NOPOutPDU response = ClientHelper.GetPingResponse((NOPInPDU)pdu, m_connection);
                     SendPDU(response);
                     return;
                 }
@@ -481,24 +481,16 @@ namespace ISCSI.Client
                     PDUHelper.SetExpStatSN(request, m_connection.ExpStatSN);
                 }
                 m_clientSocket.Send(request.GetBytes());
-                Log("[{0}][SendPDU] Sent request to target, Operation: {1}, Size: {2}", this.ConnectionIdentifier, (ISCSIOpCodeName)request.OpCode, request.Length);
+                Log("[{0}][SendPDU] Sent request to target, Operation: {1}, Size: {2}", m_connection.ConnectionIdentifier, (ISCSIOpCodeName)request.OpCode, request.Length);
             }
             catch (SocketException ex)
             {
-                Log("[{0}][SendPDU] Failed to send PDU to target (Operation: {1}, Size: {2}), SocketException: {3}", this.ConnectionIdentifier, (ISCSIOpCodeName)request.OpCode, request.Length, ex.Message);
+                Log("[{0}][SendPDU] Failed to send PDU to target (Operation: {1}, Size: {2}), SocketException: {3}", m_connection.ConnectionIdentifier, (ISCSIOpCodeName)request.OpCode, request.Length, ex.Message);
                 m_isConnected = false;
             }
             catch (ObjectDisposedException)
             {
                 m_isConnected = false;
-            }
-        }
-
-        public string ConnectionIdentifier
-        {
-            get
-            {
-                return String.Format("ISID={0},TSIH={1},CID={2}", m_session.ISID.ToString("x"), m_session.TSIH.ToString("x"), m_connection.CID.ToString("x"));
             }
         }
 

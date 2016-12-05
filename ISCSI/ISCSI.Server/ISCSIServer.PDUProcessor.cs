@@ -75,7 +75,7 @@ namespace ISCSI.Server
                             Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }
-                    LoginResponsePDU response = GetLoginResponsePDU(request, ref state.Session, state.ConnectionParameters);
+                    LoginResponsePDU response = GetLoginResponsePDU(request, state.ConnectionParameters);
                     if (state.Session != null && state.Session.IsFullFeaturePhase)
                     {
                         state.ConnectionParameters.CID = request.CID;
@@ -201,7 +201,7 @@ namespace ISCSI.Server
                         Log(Severity.Debug, "[{0}] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
                         try
                         {
-                            readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.Session, state.ConnectionParameters, out commandsToExecute);
+                            readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.ConnectionParameters, out commandsToExecute);
                         }
                         catch (InvalidTargetTransferTagException ex)
                         {
@@ -217,7 +217,7 @@ namespace ISCSI.Server
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
                         Log(Severity.Debug, "[{0}] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
-                        readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.Session, state.ConnectionParameters, out commandsToExecute);
+                        readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.ConnectionParameters, out commandsToExecute);
                     }
                     foreach (ReadyToTransferPDU readyToTransferPDU in readyToTransferPDUs)
                     {
