@@ -46,7 +46,10 @@ namespace ISCSI.Server
             lock (m_activeSessions)
             {
                 int index = GetSessionIndex(session.ISID);
-                m_activeSessions.RemoveAt(index);
+                if (index >= 0)
+                {
+                    m_activeSessions.RemoveAt(index);
+                }
             }
         }
 
