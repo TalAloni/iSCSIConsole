@@ -184,6 +184,27 @@ namespace ISCSI.Server
                 // The other side has closed the connection
                 Log(Severity.Verbose, "The initiator has closed the connection");
                 m_connectionManager.ReleaseConnection(state);
+                if (state.Session != null)
+                {
+                    List<ConnectionState> connections = m_connectionManager.GetSessionConnections(state.Session);
+                    if (connections.Count == 0)
+                    {
+                        Thread timeoutThread = new Thread(delegate()
+                        {
+                            // Session timeout is an event defined to occur when the last connection [..] timeout expires
+                            int timeout = state.Session.DefaultTime2Wait + state.Session.DefaultTime2Retain;
+                            Thread.Sleep(timeout * 1000);
+                            // Check if there are still no connections in this session
+                            connections = m_connectionManager.GetSessionConnections(state.Session);
+                            if (connections.Count == 0)
+                            {
+                                m_sessionManager.RemoveSession(state.Session);
+                            }
+                        });
+                        timeoutThread.IsBackground = true;
+                        timeoutThread.Start();
+                    }
+                }
                 return;
             }
 
