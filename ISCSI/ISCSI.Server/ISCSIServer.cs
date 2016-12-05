@@ -182,15 +182,8 @@ namespace ISCSI.Server
             if (numberOfBytesReceived == 0)
             {
                 // The other side has closed the connection
-                clientSocket.Close();
                 Log(Severity.Verbose, "The initiator has closed the connection");
-                // Wait for pending I/O to complete.
-                state.RunningSCSICommands.WaitUntilZero();
-                state.SendQueue.Stop();
-                if (state.Session != null)
-                {
-                    m_connectionManager.RemoveConnection(state);
-                }
+                m_connectionManager.ReleaseConnection(state);
                 return;
             }
 

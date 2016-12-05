@@ -71,11 +71,7 @@ namespace ISCSI.Server
                         {
                             // Perform implicit logout
                             Log(Severity.Verbose, "[{0}] Initiating implicit logout", state.ConnectionIdentifier);
-                            // Wait for pending I/O to complete.
-                            existingConnection.RunningSCSICommands.WaitUntilZero();
-                            SocketUtils.ReleaseSocket(existingConnection.ClientSocket);
-                            existingConnection.SendQueue.Stop();
-                            m_connectionManager.RemoveConnection(existingConnection);
+                            m_connectionManager.ReleaseConnection(existingConnection);
                             Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
                         }
                     }

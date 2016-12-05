@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Utilities;
 
 namespace ISCSI.Server
 {
@@ -38,6 +39,18 @@ namespace ISCSI.Server
                     return true;
                 }
                 return false;
+            }
+        }
+
+        public void ReleaseConnection(ConnectionState connection)
+        {
+            // Wait for pending I/O to complete.
+            connection.RunningSCSICommands.WaitUntilZero();
+            connection.SendQueue.Stop();
+            SocketUtils.ReleaseSocket(connection.ClientSocket);
+            if (connection.Session != null)
+            {
+                RemoveConnection(connection);
             }
         }
 
