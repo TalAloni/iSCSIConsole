@@ -28,11 +28,11 @@ namespace ISCSI.Server
             return session;
         }
 
-        public ISCSISession FindSession(ulong isid, ushort tsih)
+        public ISCSISession FindSession(ulong isid)
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(isid, tsih);
+                int index = GetSessionIndex(isid);
                 if (index >= 0)
                 {
                     return m_activeSessions[index];
@@ -45,7 +45,7 @@ namespace ISCSI.Server
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(session.ISID, session.TSIH);
+                int index = GetSessionIndex(session.ISID);
                 m_activeSessions.RemoveAt(index);
             }
         }
@@ -68,12 +68,11 @@ namespace ISCSI.Server
             return false;
         }
 
-        private int GetSessionIndex(ulong isid, ushort tsih)
+        private int GetSessionIndex(ulong isid)
         {
             for (int index = 0; index < m_activeSessions.Count; index++)
             {
-                if (m_activeSessions[index].ISID == isid &&
-                    m_activeSessions[index].TSIH == tsih)
+                if (m_activeSessions[index].ISID == isid)
                 {
                     return index;
                 }

@@ -76,26 +76,53 @@ namespace ISCSI.Server
             bool isNewSession = false;
             if (connection.Session == null)
             {
+                ISCSISession existingSession = m_sessionManager.FindSession(request.ISID);
                 if (request.TSIH == 0)
                 {
+                    if (existingSession != null)
+                    {
+                        // Do session reinstatement:
+                        List<ConnectionState> existingConnections = m_connectionManager.GetSessionConnections(existingSession);
+                        foreach (ConnectionState existingConnection in existingConnections)
+                        {
+                            m_connectionManager.ReleaseConnection(existingConnection);
+                        }
+                        m_sessionManager.RemoveSession(existingSession);
+                    }
                     // For a new session, the request TSIH is zero,
                     // As part of the response, the target generates a TSIH.
                     connection.Session = m_sessionManager.StartSession(request.ISID);
+                    connection.CID = request.CID;
                     Log(Severity.Verbose, "[{0}] Session has been started", connection.Session.SessionIdentifier);
                     connection.Session.CommandNumberingStarted = true;
                     connection.Session.ExpCmdSN = request.CmdSN;
                     isNewSession = true;
                 }
+                else if ((existingSession == null) ||
+                         (existingSession != null && request.TSIH != existingSession.TSIH))
+                {
+                    response.TSIH = request.TSIH;
+                    response.Status = LoginResponseStatusName.SessionDoesNotExist;
+                    return response;
+                }
                 else
                 {
-                    ISCSISession existingSession = m_sessionManager.FindSession(request.ISID, request.TSIH);
-                    if (existingSession == null)
+                    connection.Session = existingSession;
+                    connection.CID = request.CID;
+                    ConnectionState existingConnection = m_connectionManager.FindConnection(request.ISID, request.TSIH, request.CID);
+                    if (existingConnection != null)
                     {
+                        // do connection reinstatement
+                        Log(Severity.Verbose, "[{0}] Initiating implicit logout", existingConnection.ConnectionIdentifier);
+                        m_connectionManager.ReleaseConnection(existingConnection);
+                    }
+                    else
+                    {
+                        // add a new connection to the session
                         response.TSIH = request.TSIH;
-                        response.Status = LoginResponseStatusName.SessionDoesNotExist;
+                        response.Status = LoginResponseStatusName.TooManyConnections;
                         return response;
                     }
-                    connection.Session = existingSession;
                 }
                 isFirstLoginRequest = true;
             }

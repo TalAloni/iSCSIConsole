@@ -72,6 +72,11 @@ namespace ISCSI.Server
             }
         }
 
+        public List<ConnectionState> GetSessionConnections(ISCSISession session)
+        {
+            return GetSessionConnections(session.ISID, session.TSIH);
+        }
+
         public List<ConnectionState> GetSessionConnections(ulong isid, ushort tsih)
         {
             List<ConnectionState> result = new List<ConnectionState>();

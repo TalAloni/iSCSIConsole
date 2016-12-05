@@ -62,23 +62,9 @@ namespace ISCSI.Server
                 {
                     LoginRequestPDU request = (LoginRequestPDU)pdu;
                     Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, FormatNullDelimitedText(request.LoginParametersText));
-                    if (request.TSIH != 0)
-                    {
-                        // RFC 3720: A Login Request with a non-zero TSIH and a CID equal to that of an existing
-                        // connection implies a logout of the connection followed by a Login
-                        ConnectionState existingConnection = m_connectionManager.FindConnection(request.ISID, request.TSIH, request.CID);
-                        if (existingConnection != null)
-                        {
-                            // Perform implicit logout
-                            Log(Severity.Verbose, "[{0}] Initiating implicit logout", state.ConnectionIdentifier);
-                            m_connectionManager.ReleaseConnection(existingConnection);
-                            Log(Severity.Verbose, "[{0}] Implicit logout completed", state.ConnectionIdentifier);
-                        }
-                    }
                     LoginResponsePDU response = GetLoginResponsePDU(request, state.ConnectionParameters);
                     if (state.Session != null && state.Session.IsFullFeaturePhase)
                     {
-                        state.ConnectionParameters.CID = request.CID;
                         m_connectionManager.AddConnection(state);
                     }
                     Log(Severity.Verbose, "[{0}] Login Response parameters: {1}", state.ConnectionIdentifier, FormatNullDelimitedText(response.LoginParametersText));
