@@ -355,8 +355,9 @@ namespace ISCSI.Server
                     }
                     else if (response is LoginResponsePDU)
                     {
-                        if (((LoginResponsePDU)response).Status == LoginResponseStatusName.InvalidDuringLogon)
+                        if (((LoginResponsePDU)response).Status != LoginResponseStatusName.Success)
                         {
+                            // Login Response: If the Status Class is not 0, the initiator and target MUST close the TCP connection.
                             clientSocket.Close(); // We can close the connection now
                             Log(Severity.Trace, "Leaving ProcessSendQueue");
                             return;                            
