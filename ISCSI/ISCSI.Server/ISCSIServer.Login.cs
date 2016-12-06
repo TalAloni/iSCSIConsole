@@ -16,64 +16,12 @@ namespace ISCSI.Server
     {
         private LoginResponsePDU GetLoginResponsePDU(LoginRequestPDU request, ConnectionParameters connection)
         {
-            if (request.Continue)
-            {
-                connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
-                return GetPartialLoginResponsePDU(request, connection);
-            }
-            else
-            {
-                string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
-                connection.RemoveTextSequence(request.InitiatorTaskTag);
-                KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
-                return GetFinalLoginResponsePDU(request, loginParameters, connection);
-            }
-        }
-
-        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ConnectionParameters connection)
-        {
-            LoginResponsePDU response = new LoginResponsePDU();
-            response.Transit = false;
-            response.Continue = false;
-            response.CurrentStage = request.CurrentStage;
-            response.NextStage = request.NextStage;
-            response.VersionMax = request.VersionMax;
-            response.VersionActive = request.VersionMin;
-            response.ISID = request.ISID;
-            // TSIH: With the exception of the Login Final-Response in a new session, this field should
-            // be set to the TSIH provided by the initiator in the Login Request.
-            response.TSIH = request.TSIH;
-            response.InitiatorTaskTag = request.InitiatorTaskTag;
-            if (request.Transit)
-            {
-                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connection.ConnectionIdentifier);
-                response.Status = LoginResponseStatusName.InitiatorError;
-                return response;
-            }
-            response.Status = LoginResponseStatusName.Success;
-            return response;
-        }
-
-        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ConnectionParameters connection)
-        {
-            LoginResponsePDU response = new LoginResponsePDU();
+            // RFC 3720: The numbering fields (StatSN, ExpCmdSN, MaxCmdSN) are only valid if status-Class is 0.
+            // RFC 3720: Command numbering starts with the first login request on the first connection of a session
+            // This means we have to set up the session before returning LoginResponseStatusName.Success
+            LoginResponsePDU response = GetLoginResponseTemplate(request);
             response.Transit = request.Transit;
-            response.Continue = false;
-            
-            // The stage codes are:
-            // 0 - SecurityNegotiation
-            // 1 - LoginOperationalNegotiation
-            // 3 - FullFeaturePhase
-            response.CurrentStage = request.CurrentStage;
-            response.NextStage = request.NextStage;
 
-            response.VersionMax = request.VersionMax;
-            response.VersionActive = request.VersionMin;
-            response.ISID = request.ISID;
-            response.InitiatorTaskTag = request.InitiatorTaskTag;
-
-            bool isFirstLoginRequest = false; // first login request in login phase
-            bool isNewSession = false;
             if (connection.Session == null)
             {
                 ISCSISession existingSession = m_sessionManager.FindSession(request.ISID);
@@ -96,12 +44,10 @@ namespace ISCSI.Server
                     Log(Severity.Verbose, "[{0}] Session has been started", connection.Session.SessionIdentifier);
                     connection.Session.CommandNumberingStarted = true;
                     connection.Session.ExpCmdSN = request.CmdSN;
-                    isNewSession = true;
                 }
                 else if ((existingSession == null) ||
                          (existingSession != null && request.TSIH != existingSession.TSIH))
                 {
-                    response.TSIH = request.TSIH;
                     response.Status = LoginResponseStatusName.SessionDoesNotExist;
                     return response;
                 }
@@ -119,19 +65,51 @@ namespace ISCSI.Server
                     else
                     {
                         // add a new connection to the session
-                        response.TSIH = request.TSIH;
                         response.Status = LoginResponseStatusName.TooManyConnections;
                         return response;
                     }
                 }
-                isFirstLoginRequest = true;
             }
+
+            if (request.Continue)
+            {
+                connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
+                return GetPartialLoginResponsePDU(request, connection);
+            }
+            else
+            {
+                string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
+                connection.RemoveTextSequence(request.InitiatorTaskTag);
+                KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
+                return GetFinalLoginResponsePDU(request, loginParameters, connection);
+            }
+        }
+
+        private LoginResponsePDU GetPartialLoginResponsePDU(LoginRequestPDU request, ConnectionParameters connection)
+        {
+            LoginResponsePDU response = GetLoginResponseTemplate(request);
+            response.Transit = false;
+            response.InitiatorTaskTag = request.InitiatorTaskTag;
+            if (request.Transit)
+            {
+                Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connection.ConnectionIdentifier);
+                response.Status = LoginResponseStatusName.InitiatorError;
+                return response;
+            }
+            response.Status = LoginResponseStatusName.Success;
+            return response;
+        }
+
+        private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ConnectionParameters connection)
+        {
+            LoginResponsePDU response = GetLoginResponseTemplate(request);
+            response.Transit = request.Transit;
             response.TSIH = connection.Session.TSIH;
 
             string connectionIdentifier = connection.ConnectionIdentifier;
             response.Status = LoginResponseStatusName.Success;
 
-            if (isFirstLoginRequest)
+            if (String.IsNullOrEmpty(connection.InitiatorName))
             {
                 connection.InitiatorName = requestParameters.ValueOf("InitiatorName");
                 if (String.IsNullOrEmpty(connection.InitiatorName))
@@ -145,6 +123,7 @@ namespace ISCSI.Server
             }
 
             ISCSISession session = connection.Session;
+            bool isNewSession = (!session.IsDiscovery && session.Target == null);
             if (isNewSession)
             {
                 string sessionType = requestParameters.ValueOf("SessionType");
@@ -193,6 +172,11 @@ namespace ISCSI.Server
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
             // stage and the operational parameter negotiation stage.  Both stages are optional
             // but at least one of them has to be present.
+            
+            // The stage codes are:
+            // 0 - SecurityNegotiation
+            // 1 - LoginOperationalNegotiation
+            // 3 - FullFeaturePhase
             if (request.CurrentStage == 0)
             {
                 KeyValuePairList<string, string> responseParameters = new KeyValuePairList<string, string>();
@@ -242,6 +226,22 @@ namespace ISCSI.Server
                 response.Status = LoginResponseStatusName.InitiatorError;
             }
 
+            return response;
+        }
+
+        private LoginResponsePDU GetLoginResponseTemplate(LoginRequestPDU request)
+        {
+            LoginResponsePDU response = new LoginResponsePDU();
+            response.Continue = false;
+            response.CurrentStage = request.CurrentStage;
+            response.NextStage = request.NextStage;
+            response.VersionMax = request.VersionMax;
+            response.VersionActive = request.VersionMin;
+            response.ISID = request.ISID;
+            // TSIH: With the exception of the Login Final-Response in a new session, this field should
+            // be set to the TSIH provided by the initiator in the Login Request.
+            response.TSIH = request.TSIH;
+            response.InitiatorTaskTag = request.InitiatorTaskTag;
             return response;
         }
 
