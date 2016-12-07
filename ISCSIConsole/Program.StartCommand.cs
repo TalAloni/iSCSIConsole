@@ -45,7 +45,7 @@ namespace ISCSIConsole
                     {
                         logFile = parameters.ValueOf("log");
                     }
-                    m_server = new ISCSIServer(port);
+                    m_server = new ISCSIServer();
                     m_server.AddTargets(m_targets);
                     m_server.OnLogEntry += new EventHandler<LogEntry>(OnLogEntry);
                     if (logFile != String.Empty)
@@ -63,7 +63,7 @@ namespace ISCSIConsole
 
                     try
                     {
-                        m_server.Start();
+                        m_server.Start(port);
                         Console.WriteLine("Server started, listening on port {0}", port);
                     }
                     catch (SocketException)

@@ -22,8 +22,6 @@ namespace ISCSI.Server
     {
         public const int DefaultPort = 3260;
 
-        private IPEndPoint m_listenerEP;
-
         private Socket m_listenerSocket;
         private bool m_listening;
         private TargetList m_targets = new TargetList();
@@ -31,25 +29,12 @@ namespace ISCSI.Server
         private ConnectionManager m_connectionManager = new ConnectionManager();
 
         public event EventHandler<LogEntry> OnLogEntry;
-        
-        public ISCSIServer() : this(DefaultPort)
-        { }
 
         /// <summary>
         /// Server needs to be started with Start()
         /// </summary>
-        /// <param name="port">The port on which the iSCSI server will listen</param>
-        public ISCSIServer(int port) : this(new IPEndPoint(IPAddress.Any, port))
+        public ISCSIServer()
         {
-        }
-
-        /// <summary>
-        /// Server needs to be started with Start()
-        /// </summary>
-        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
-        public ISCSIServer(IPEndPoint listenerEP)
-        {
-            m_listenerEP = listenerEP;
         }
 
         public void AddTarget(ISCSITarget target)
@@ -81,13 +66,25 @@ namespace ISCSI.Server
 
         public void Start()
         {
+            Start(DefaultPort);
+        }
+
+        /// <param name="listenerPort">The port on which the iSCSI server will listen</param>
+        public void Start(int listenerPort)
+        {
+            Start(new IPEndPoint(IPAddress.Any, listenerPort));
+        }
+
+        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
+        public void Start(IPEndPoint listenerEndPoint)
+        {
             if (!m_listening)
             {
                 Log(Severity.Information, "Starting Server");
                 m_listening = true;
 
-                m_listenerSocket = new Socket(m_listenerEP.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                m_listenerSocket.Bind(m_listenerEP);
+                m_listenerSocket = new Socket(listenerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                m_listenerSocket.Bind(listenerEndPoint);
                 m_listenerSocket.Listen(1000);
                 m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
             }
