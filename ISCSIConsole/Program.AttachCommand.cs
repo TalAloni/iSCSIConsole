@@ -221,11 +221,11 @@ namespace ISCSIConsole
                 if (parameters.ContainsKey("target"))
                 {
                     string name = parameters.ValueOf("target");
-                    if (IsValidISCSIName(name))
+                    if (ISCSINameHelper.IsValidISCSIName(name))
                     {
                         targetName = name;
                     }
-                    else if (IsValidStorageTargetName(name))
+                    else if (ISCSINameHelper.IsValidSubQualifier(name))
                     {
                         targetName = DefaultTargetIQN + ":" + name;
                     }
@@ -273,121 +273,6 @@ namespace ISCSIConsole
                 }
             }
             return null;
-        }
-
-        /// <summary>
-        /// Check if a name is a valid initiator or target name (a.k.a. iSCSI name)
-        /// </summary>
-        public static bool IsValidISCSIName(string name)
-        {
-            if (name.ToLower().StartsWith("iqn."))
-            {
-                return IsValidIQN(name);
-            }
-            else
-            {
-                return IsValidEUI(name);
-            }
-        }
-
-        public static bool IsValidIQN(string name)
-        {
-            if (name.ToLower().StartsWith("iqn."))
-            {
-                if (name.Length > 12 && name[8] == '-' && name[11] == '.')
-                {
-                    int year = Conversion.ToInt32(name.Substring(4, 4), -1);
-                    int month = Conversion.ToInt32(name.Substring(9, 2), -1);
-                    if (year != -1 && (month >= 1 && month <= 12))
-                    {
-                        string reversedDomain;
-                        string storageTargetName = String.Empty;
-                        int index = name.IndexOf(":");
-                        if (index >= 12) // index cannot be < 12
-                        {
-                            reversedDomain = name.Substring(12, index - 12);
-                            storageTargetName = name.Substring(index + 1);
-                            return IsValidReversedDomainName(reversedDomain) && IsValidStorageTargetName(storageTargetName);
-                        }
-                        else
-                        {
-                            reversedDomain = name.Substring(12);
-                            return IsValidReversedDomainName(reversedDomain);
-                        }
-                    }
-                }
-
-            }
-            return false;
-        }
-
-        public static bool IsValidReversedDomainName(string name)
-        {
-            string[] components = name.Split('.');
-            if (components.Length < 1)
-            {
-                return false;
-            }
-
-            foreach (string component in components)
-            {
-                if (component.Length == 0 || component.StartsWith("-") || component.EndsWith("-"))
-                {
-                    return false;
-                }
-
-                for (int index = 0; index < component.Length; index++)
-                {
-                    bool isValid = (component[index] >= '0' && component[index] <= '9') ||
-                                   (component[index] >= 'a' && component[index] <= 'z') ||
-                                   (component[index] >= 'A' && component[index] <= 'Z') ||
-                                   (component[index] == '-');
-
-                    if (!isValid)
-                    {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-        public static bool IsValidStorageTargetName(string name)
-        {
-            // With the exception of the colon prefix, the owner of the domain name can assign everything after the reversed domain name as desired
-            // No whitespace characters are used in iSCSI names
-            // Note: String.Empty is a valid storage target name
-            if (name.StartsWith(":") || name.Contains(" "))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        public static bool IsValidEUI(string name)
-        {
-            if (name.ToLower().StartsWith("eui.") && name.Length == 20)
-            {
-                string identifier = name.Substring(5);
-                return OnlyHexChars(identifier);
-            }
-            return false;
-        }
-
-        public static bool OnlyHexChars(string value)
-        {
-            for (int index = 0; index < value.Length; index++)
-            {
-                bool isValid = (value[index] >= '0' && value[index] <= '9') ||
-                               (value[index] >= 'a' && value[index] <= 'f') ||
-                               (value[index] >= 'A' && value[index] <= 'F');
-
-                if (!isValid)
-                {
-                    return false;
-                }
-            }
-            return true;
         }
     }
 }
