@@ -21,6 +21,7 @@ namespace ISCSI.Server
         public class DesiredParameters
         {
             // Session parameters that will be offered to the initiator:
+            public static int MaxConnections = 1; // implementation limit
             public static bool InitialR2T = false;
             public static bool ImmediateData = true;
             public static int MaxBurstLength = DefaultParameters.Session.MaxBurstLength;
@@ -31,7 +32,6 @@ namespace ISCSI.Server
             public static bool DataPDUInOrder = true; // implementation limit
             public static bool DataSequenceInOrder = true; // implementation limit
             public static int ErrorRecoveryLevel = 0; // implementation limit
-            public static int MaxConnections = 1; // implementation limit
         }
 
         public class DeclaredParameters
