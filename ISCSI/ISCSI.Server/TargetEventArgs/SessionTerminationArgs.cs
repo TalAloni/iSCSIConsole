@@ -13,6 +13,7 @@ namespace ISCSI.Server
         Logout,
         ImplicitLogout, // Session reinstatement
         ConnectionFailure,
+        TargetReset,
     }
 
     public class SessionTerminationArgs : EventArgs

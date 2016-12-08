@@ -144,6 +144,31 @@ namespace ISCSI.Server
             Log(Severity.Information, "Stopping Server");
             m_listening = false;
             SocketUtils.ReleaseSocket(m_listenerSocket);
+            lock (m_targets.Lock)
+            {
+                List<ISCSITarget> targets = m_targets.GetList();
+                foreach (ISCSITarget target in targets)
+                {
+                    ResetTarget(target.TargetName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Will terminate all TCP connections to all initiators (all sessions will be terminated)
+        /// </summary>
+        public void ResetTarget(string targetName)
+        {
+            List<ISCSISession> targetSessions = m_sessionManager.FindTargetSessions(targetName);
+            foreach (ISCSISession session in targetSessions)
+            {
+                List<ConnectionState> sessionConnections = m_connectionManager.GetSessionConnections(session);
+                foreach (ConnectionState sessionConnection in sessionConnections)
+                {
+                    m_connectionManager.ReleaseConnection(sessionConnection);
+                }
+                m_sessionManager.RemoveSession(session, SessionTerminationReason.TargetReset);
+            }
         }
 
         private void ReceiveCallback(IAsyncResult result)

@@ -59,6 +59,25 @@ namespace ISCSI.Server
             return null;
         }
 
+        public List<ISCSISession> FindTargetSessions(string targetName)
+        {
+            lock (m_activeSessions)
+            {
+                List<ISCSISession> result = new List<ISCSISession>();
+                foreach (ISCSISession session in m_activeSessions)
+                {
+                    if (session.Target != null)
+                    {
+                        if (String.Equals(session.Target.TargetName, targetName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Add(session);
+                        }
+                    }
+                }
+                return result;
+            }
+        }
+
         public void RemoveSession(ISCSISession session, SessionTerminationReason reason)
         {
             lock (m_activeSessions)
