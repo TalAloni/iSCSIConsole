@@ -28,14 +28,32 @@ namespace ISCSI.Server
             return session;
         }
 
-        public ISCSISession FindSession(ulong isid)
+        public ISCSISession FindSession(ulong isid, ushort tsih)
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(isid);
+                int index = GetSessionIndex(isid, tsih);
                 if (index >= 0)
                 {
                     return m_activeSessions[index];
+                }
+            }
+            return null;
+        }
+
+        public ISCSISession FindSession(ulong isid, string targetName)
+        {
+            lock (m_activeSessions)
+            {
+                for (int index = 0; index < m_activeSessions.Count; index++)
+                {
+                    ISCSISession session = m_activeSessions[index];
+                    if (session.ISID == isid &&
+                        session.Target != null &&
+                        String.Equals(session.Target.TargetName, targetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return session;
+                    }
                 }
             }
             return null;
@@ -45,7 +63,7 @@ namespace ISCSI.Server
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(session.ISID);
+                int index = GetSessionIndex(session.ISID, session.TSIH);
                 if (index >= 0)
                 {
                     m_activeSessions.RemoveAt(index);
@@ -71,11 +89,11 @@ namespace ISCSI.Server
             return false;
         }
 
-        private int GetSessionIndex(ulong isid)
+        private int GetSessionIndex(ulong isid, ushort tsih)
         {
             for (int index = 0; index < m_activeSessions.Count; index++)
             {
-                if (m_activeSessions[index].ISID == isid)
+                if (m_activeSessions[index].ISID == isid && m_activeSessions[index].TSIH == tsih)
                 {
                     return index;
                 }
