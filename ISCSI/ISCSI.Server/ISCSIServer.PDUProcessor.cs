@@ -61,7 +61,8 @@ namespace ISCSI.Server
                 if (pdu is LoginRequestPDU)
                 {
                     LoginRequestPDU request = (LoginRequestPDU)pdu;
-                    Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", state.ConnectionIdentifier, request.CurrentStage, request.NextStage, FormatNullDelimitedText(request.LoginParametersText));
+                    string loginIdentifier = String.Format("ISID={0},TSIH={1},CID={2}", request.ISID.ToString("x"), request.TSIH.ToString("x"), request.CID.ToString("x"));
+                    Log(Severity.Verbose, "[{0}] Login Request, current stage: {1}, next stage: {2}, parameters: {3}", loginIdentifier, request.CurrentStage, request.NextStage, FormatNullDelimitedText(request.LoginParametersText));
                     LoginResponsePDU response = GetLoginResponsePDU(request, state.ConnectionParameters);
                     if (state.Session != null && state.Session.IsFullFeaturePhase)
                     {

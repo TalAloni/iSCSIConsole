@@ -179,7 +179,7 @@ namespace ISCSI.Server
             if (numberOfBytesReceived == 0)
             {
                 // The other side has closed the connection
-                Log(Severity.Verbose, "The initiator has closed the connection");
+                Log(Severity.Verbose, "[{0}] The initiator has closed the connection", state.ConnectionIdentifier);
                 m_connectionManager.ReleaseConnection(state);
                 if (state.Session != null)
                 {
