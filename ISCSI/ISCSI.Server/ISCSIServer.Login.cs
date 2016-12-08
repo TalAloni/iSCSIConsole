@@ -142,7 +142,7 @@ namespace ISCSI.Server
                             {
                                 m_connectionManager.ReleaseConnection(existingConnection);
                             }
-                            m_sessionManager.RemoveSession(existingSession);
+                            m_sessionManager.RemoveSession(existingSession, SessionTerminationReason.ImplicitLogout);
                         }
                         // We use m_targets.Lock to synchronize between the login logic and the target removal logic.
                         lock (m_targets.Lock)
@@ -150,7 +150,7 @@ namespace ISCSI.Server
                             ISCSITarget target = m_targets.FindTarget(targetName);
                             if (target != null)
                             {
-                                if (!target.AuthorizeInitiator(connection.InitiatorName, connection.InitiatorEndPoint))
+                                if (!target.AuthorizeInitiator(session.ISID, connection.InitiatorName, connection.InitiatorEndPoint))
                                 {
                                     Log(Severity.Warning, "[{0}] Initiator was not authorized to access {1}", connectionIdentifier, targetName);
                                     response.Status = LoginResponseStatusName.AuthorizationFailure;

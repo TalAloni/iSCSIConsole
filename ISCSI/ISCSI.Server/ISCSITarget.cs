@@ -13,24 +13,12 @@ using Utilities;
 
 namespace ISCSI.Server
 {
-    public class AuthorizationRequestArgs : EventArgs
-    {
-        public string InitiatorName;
-        public IPEndPoint InitiatorEndPoint;
-        public bool Accept = true;
-
-        public AuthorizationRequestArgs(string initiatorName, IPEndPoint initiatorEndPoint)
-        {
-            InitiatorName = initiatorName;
-            InitiatorEndPoint = initiatorEndPoint;
-        }
-    }
-
     public class ISCSITarget : SCSITarget
     {
         private string m_targetName; // ISCSI name
         private SCSITarget m_target;
         public event EventHandler<AuthorizationRequestArgs> OnAuthorizationRequest;
+        public event EventHandler<SessionTerminationArgs> OnSessionTermination;
 
         public ISCSITarget(string targetName, List<Disk> disks) : this(targetName, new VirtualSCSITarget(disks))
         {
@@ -62,17 +50,27 @@ namespace ISCSI.Server
             NotifyDeviceIdentificationInquiry(this, args);
         }
 
-        public bool AuthorizeInitiator(string initiatorName, IPEndPoint initiatorEndPoint)
+        public bool AuthorizeInitiator(ulong isid, string initiatorName, IPEndPoint initiatorEndPoint)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<AuthorizationRequestArgs> handler = OnAuthorizationRequest;
             if (handler != null)
             {
-                AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorName, initiatorEndPoint);
+                AuthorizationRequestArgs args = new AuthorizationRequestArgs(isid, initiatorName, initiatorEndPoint);
                 OnAuthorizationRequest(this, args);
                 return args.Accept;
             }
             return true;
+        }
+
+        internal void NotifySessionTermination(ulong isid, SessionTerminationReason reason)
+        {
+            EventHandler<SessionTerminationArgs> handler = OnSessionTermination;
+            if (handler != null)
+            {
+                SessionTerminationArgs args = new SessionTerminationArgs(isid, reason);
+                OnSessionTermination(this, args);
+            }
         }
 
         public string TargetName

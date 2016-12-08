@@ -148,7 +148,7 @@ namespace ISCSI.Server
                         if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
                         {
                             Log(Severity.Verbose, "[{0}] Session has been closed", state.Session.SessionIdentifier);
-                            m_sessionManager.RemoveSession(state.Session);
+                            m_sessionManager.RemoveSession(state.Session, SessionTerminationReason.Logout);
                         }
 
                         LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);

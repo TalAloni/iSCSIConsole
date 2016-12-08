@@ -59,13 +59,18 @@ namespace ISCSI.Server
             return null;
         }
 
-        public void RemoveSession(ISCSISession session)
+        public void RemoveSession(ISCSISession session, SessionTerminationReason reason)
         {
             lock (m_activeSessions)
             {
                 int index = GetSessionIndex(session.ISID, session.TSIH);
                 if (index >= 0)
                 {
+                    ISCSITarget target = m_activeSessions[index].Target;
+                    if (target != null)
+                    {
+                        target.NotifySessionTermination(session.ISID, reason);
+                    }
                     m_activeSessions.RemoveAt(index);
                 }
             }

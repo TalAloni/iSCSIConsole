@@ -77,6 +77,8 @@
     <Compile Include="ISCSI.Server\PDUHelper.cs" />
     <Compile Include="ISCSI.Server\ServerResponseHelper.cs" />
     <Compile Include="ISCSI.Server\SessionManager.cs" />
+    <Compile Include="ISCSI.Server\TargetEventArgs\AuthorizationRequestArgs.cs" />
+    <Compile Include="ISCSI.Server\TargetEventArgs\SessionTerminationArgs.cs" />
     <Compile Include="ISCSI.Server\TargetList.cs" />
     <Compile Include="ISCSI.Server\TargetResponseHelper.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />

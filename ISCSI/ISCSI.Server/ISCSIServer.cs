@@ -195,7 +195,7 @@ namespace ISCSI.Server
                             connections = m_connectionManager.GetSessionConnections(state.Session);
                             if (connections.Count == 0)
                             {
-                                m_sessionManager.RemoveSession(state.Session);
+                                m_sessionManager.RemoveSession(state.Session, SessionTerminationReason.ConnectionFailure);
                             }
                         });
                         timeoutThread.IsBackground = true;
