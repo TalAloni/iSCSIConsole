@@ -121,17 +121,37 @@ namespace ISCSI.Server
                         List<ConnectionState> connectionsToClose = new List<ConnectionState>();
                         if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
                         {
-                            connectionsToClose = m_connectionManager.GetSessionConnections(state.Session.ISID, state.Session.TSIH);
+                            connectionsToClose = m_connectionManager.GetSessionConnections(state.Session);
                         }
-                        else
+                        else if (request.ReasonCode == LogoutReasonCode.CloseTheConnection)
                         {
                             // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
-                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.Session.ISID, state.Session.TSIH, request.CID);
-                            if (existingConnection != null && existingConnection != state)
+                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.Session, request.CID);
+                            if (existingConnection != null)
                             {
                                 connectionsToClose.Add(existingConnection);
                             }
-                            connectionsToClose.Add(state);
+                            else
+                            {
+                                LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.CIDNotFound);
+                                state.SendQueue.Enqueue(response);
+                                return;
+                            }
+                        }
+                        else if (request.ReasonCode == LogoutReasonCode.RemoveTheConnectionForRecovery)
+                        {
+                            LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.ConnectionRecoveryNotSupported);
+                            state.SendQueue.Enqueue(response);
+                            return;
+                        }
+                        else
+                        {
+                            // Unknown LogoutRequest ReasonCode
+                            RejectPDU reject = new RejectPDU();
+                            reject.Reason = RejectReason.ProtocolError;
+                            reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
+                            state.SendQueue.Enqueue(reject);
+                            return;
                         }
 
                         foreach (ConnectionState connection in connectionsToClose)
@@ -151,8 +171,8 @@ namespace ISCSI.Server
                             m_sessionManager.RemoveSession(state.Session, SessionTerminationReason.Logout);
                         }
 
-                        LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request);
-                        state.SendQueue.Enqueue(response);
+                        LogoutResponsePDU successResponse = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.ClosedSuccessfully);
+                        state.SendQueue.Enqueue(successResponse);
                         // connection will be closed after a LogoutResponsePDU has been sent.
                     }
                 }

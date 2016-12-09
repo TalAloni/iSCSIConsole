@@ -25,14 +25,9 @@ namespace ISCSI.Server
 
         public bool RemoveConnection(ConnectionState connection)
         {
-            return RemoveConnection(connection.Session.ISID, connection.Session.TSIH, connection.ConnectionParameters.CID);
-        }
-
-        public bool RemoveConnection(ulong isid, ushort tsih, ushort cid)
-        {
             lock (m_activeConnections)
             {
-                int connectionIndex = GetConnectionStateIndex(isid, tsih, cid);
+                int connectionIndex = GetConnectionStateIndex(connection.Session, connection.ConnectionParameters.CID);
                 if (connectionIndex >= 0)
                 {
                     m_activeConnections.RemoveAt(connectionIndex);
@@ -54,16 +49,11 @@ namespace ISCSI.Server
             }
         }
 
-        public ConnectionState FindConnection(ConnectionState connection)
-        {
-            return FindConnection(connection.Session.ISID, connection.Session.TSIH, connection.ConnectionParameters.CID);
-        }
-
-        public ConnectionState FindConnection(ulong isid, ushort tsih, ushort cid)
+        public ConnectionState FindConnection(ISCSISession session, ushort cid)
         {
             lock (m_activeConnections)
             {
-                int index = GetConnectionStateIndex(isid, tsih, cid);
+                int index = GetConnectionStateIndex(session, cid);
                 if (index >= 0)
                 {
                     return m_activeConnections[index];
@@ -74,18 +64,14 @@ namespace ISCSI.Server
 
         public List<ConnectionState> GetSessionConnections(ISCSISession session)
         {
-            return GetSessionConnections(session.ISID, session.TSIH);
-        }
-
-        public List<ConnectionState> GetSessionConnections(ulong isid, ushort tsih)
-        {
             List<ConnectionState> result = new List<ConnectionState>();
             lock (m_activeConnections)
             {
                 for (int index = 0; index < m_activeConnections.Count; index++)
                 {
-                    if (m_activeConnections[index].Session.ISID == isid &&
-                        m_activeConnections[index].Session.TSIH == tsih)
+                    if (String.Equals(m_activeConnections[index].Session.InitiatorName, session.InitiatorName, StringComparison.OrdinalIgnoreCase) &&
+                        m_activeConnections[index].Session.ISID == session.ISID &&
+                        m_activeConnections[index].Session.TSIH == session.TSIH)
                     {
                         result.Add(m_activeConnections[index]);
                     }
@@ -94,12 +80,13 @@ namespace ISCSI.Server
             return result;
         }
 
-        private int GetConnectionStateIndex(ulong isid, ushort tsih, ushort cid)
+        private int GetConnectionStateIndex(ISCSISession session, ushort cid)
         {
             for (int index = 0; index < m_activeConnections.Count; index++)
             {
-                if (m_activeConnections[index].Session.ISID == isid &&
-                    m_activeConnections[index].Session.TSIH == tsih &&
+                if (String.Equals(m_activeConnections[index].Session.InitiatorName, session.InitiatorName, StringComparison.OrdinalIgnoreCase) &&
+                    m_activeConnections[index].Session.ISID == session.ISID &&
+                    m_activeConnections[index].Session.TSIH == session.TSIH &&
                     m_activeConnections[index].ConnectionParameters.CID == cid)
                 {
                     return index;

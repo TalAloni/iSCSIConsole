@@ -11,15 +11,15 @@ namespace ISCSI.Server
 {
     public class AuthorizationRequestArgs : EventArgs
     {
-        public ulong ISID;
         public string InitiatorName;
+        public ulong ISID;
         public IPEndPoint InitiatorEndPoint;
         public bool Accept = true;
 
-        public AuthorizationRequestArgs(ulong isid, string initiatorName, IPEndPoint initiatorEndPoint)
+        public AuthorizationRequestArgs(string initiatorName, ulong isid, IPEndPoint initiatorEndPoint)
         {
-            ISID = isid;
             InitiatorName = initiatorName;
+            ISID = isid;
             InitiatorEndPoint = initiatorEndPoint;
         }
     }

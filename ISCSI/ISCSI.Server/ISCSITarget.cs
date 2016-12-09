@@ -50,25 +50,25 @@ namespace ISCSI.Server
             NotifyDeviceIdentificationInquiry(this, args);
         }
 
-        public bool AuthorizeInitiator(ulong isid, string initiatorName, IPEndPoint initiatorEndPoint)
+        public bool AuthorizeInitiator(string initiatorName, ulong isid, IPEndPoint initiatorEndPoint)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<AuthorizationRequestArgs> handler = OnAuthorizationRequest;
             if (handler != null)
             {
-                AuthorizationRequestArgs args = new AuthorizationRequestArgs(isid, initiatorName, initiatorEndPoint);
+                AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorName, isid, initiatorEndPoint);
                 OnAuthorizationRequest(this, args);
                 return args.Accept;
             }
             return true;
         }
 
-        internal void NotifySessionTermination(ulong isid, SessionTerminationReason reason)
+        internal void NotifySessionTermination(string initiatorName, ulong isid, SessionTerminationReason reason)
         {
             EventHandler<SessionTerminationArgs> handler = OnSessionTermination;
             if (handler != null)
             {
-                SessionTerminationArgs args = new SessionTerminationArgs(isid, reason);
+                SessionTerminationArgs args = new SessionTerminationArgs(initiatorName, isid, reason);
                 OnSessionTermination(this, args);
             }
         }

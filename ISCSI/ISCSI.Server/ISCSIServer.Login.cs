@@ -18,54 +18,6 @@ namespace ISCSI.Server
         {
             // RFC 3720: The numbering fields (StatSN, ExpCmdSN, MaxCmdSN) are only valid if status-Class is 0.
             // RFC 3720: Command numbering starts with the first login request on the first connection of a session
-            // This means we have to set up the session before returning LoginResponseStatusName.Success
-            LoginResponsePDU response = GetLoginResponseTemplate(request);
-            response.Transit = request.Transit;
-
-            if (connection.Session == null)
-            {
-                if (request.TSIH == 0)
-                {
-                    // Note: An initiator could login with the same ISID to a different target (another session),
-                    // We should only perform session reinstatement when an initiator is logging in to the same target.
-
-                    // For a new session, the request TSIH is zero,
-                    // As part of the response, the target generates a TSIH.
-                    connection.Session = m_sessionManager.StartSession(request.ISID);
-                    connection.CID = request.CID;
-                    Log(Severity.Verbose, "[{0}] Session has been started", connection.Session.SessionIdentifier);
-                    connection.Session.CommandNumberingStarted = true;
-                    connection.Session.ExpCmdSN = request.CmdSN;
-                }
-                else
-                {
-                    ISCSISession existingSession = m_sessionManager.FindSession(request.ISID, request.TSIH);
-                    if (existingSession == null)
-                    {
-                        response.Status = LoginResponseStatusName.SessionDoesNotExist;
-                        return response;
-                    }
-                    else
-                    {
-                        connection.Session = existingSession;
-                        connection.CID = request.CID;
-                        ConnectionState existingConnection = m_connectionManager.FindConnection(request.ISID, request.TSIH, request.CID);
-                        if (existingConnection != null)
-                        {
-                            // do connection reinstatement
-                            Log(Severity.Verbose, "[{0}] Initiating implicit logout", existingConnection.ConnectionIdentifier);
-                            m_connectionManager.ReleaseConnection(existingConnection);
-                        }
-                        else
-                        {
-                            // add a new connection to the session
-                            response.Status = LoginResponseStatusName.TooManyConnections;
-                            return response;
-                        }
-                    }
-                }
-            }
-
             if (request.Continue)
             {
                 connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
@@ -76,6 +28,17 @@ namespace ISCSI.Server
                 string text = connection.AddTextToSequence(request.InitiatorTaskTag, request.LoginParametersText);
                 connection.RemoveTextSequence(request.InitiatorTaskTag);
                 KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(text);
+                if (connection.Session == null)
+                {
+                    LoginResponseStatusName status = SetUpSession(request, loginParameters, connection);
+                    if (status != LoginResponseStatusName.Success)
+                    {
+                        LoginResponsePDU response = GetLoginResponseTemplate(request);
+                        response.Transit = request.Transit;
+                        response.Status = status;
+                        return response;
+                    }
+                }
                 return GetFinalLoginResponsePDU(request, loginParameters, connection);
             }
         }
@@ -85,6 +48,7 @@ namespace ISCSI.Server
             LoginResponsePDU response = GetLoginResponseTemplate(request);
             response.Transit = false;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
+            response.ExpCmdSN = request.CmdSN; // We must set ExpCmdSN ourselves because we haven't set up the session yet.
             if (request.Transit)
             {
                 Log(Severity.Warning, "[{0}] Initiator error: Received login request with both Transit and Continue set to true", connection.ConnectionIdentifier);
@@ -93,6 +57,122 @@ namespace ISCSI.Server
             }
             response.Status = LoginResponseStatusName.Success;
             return response;
+        }
+
+        private LoginResponseStatusName SetUpSession(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ConnectionParameters connection)
+        {
+            string initiatorName = requestParameters.ValueOf("InitiatorName");
+            if (String.IsNullOrEmpty(initiatorName))
+            {
+                // RFC 3720: InitiatorName: The initiator of the TCP connection MUST provide this key [..]
+                // at the first Login of the Login Phase for every connection.
+                string loginIdentifier = String.Format("ISID={0},TSIH={1},CID={2}", request.ISID.ToString("x"), request.TSIH.ToString("x"), request.CID.ToString("x"));
+                Log(Severity.Warning, "[{0}] Initiator error: InitiatorName was not included in the login request", loginIdentifier);
+                return LoginResponseStatusName.InitiatorError;
+            }
+
+            if (request.TSIH == 0)
+            {
+                // Note: An initiator could login with the same ISID to a different target (another session),
+                // We should only perform session reinstatement when an initiator is logging in to the same target.
+
+                // For a new session, the request TSIH is zero,
+                // As part of the response, the target generates a TSIH.
+                connection.Session = m_sessionManager.StartSession(initiatorName, request.ISID);
+                connection.CID = request.CID;
+                Log(Severity.Verbose, "[{0}] Session has been started", connection.Session.SessionIdentifier);
+                connection.Session.CommandNumberingStarted = true;
+                connection.Session.ExpCmdSN = request.CmdSN;
+
+                string sessionType = requestParameters.ValueOf("SessionType");
+                if (sessionType == "Discovery")
+                {
+                    connection.Session.IsDiscovery = true;
+                }
+                else //sessionType == "Normal" or unspecified (default is Normal)
+                {
+                    if (requestParameters.ContainsKey("TargetName"))
+                    {
+                        string targetName = requestParameters.ValueOf("TargetName");
+                        return SetUpNormalSession(request, targetName, connection);
+                    }
+                    else
+                    {
+                        // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
+                        Log(Severity.Warning, "[{0}] Initiator error: TargetName was not included in a non-discovery session", connection.ConnectionIdentifier);
+                        return LoginResponseStatusName.InitiatorError;
+                    }
+                }
+            }
+            else
+            {
+                ISCSISession existingSession = m_sessionManager.FindSession(initiatorName, request.ISID, request.TSIH);
+                if (existingSession == null)
+                {
+                    return LoginResponseStatusName.SessionDoesNotExist;
+                }
+                else
+                {
+                    connection.Session = existingSession;
+                    ConnectionState existingConnection = m_connectionManager.FindConnection(existingSession, request.CID);
+                    if (existingConnection != null)
+                    {
+                        // do connection reinstatement
+                        Log(Severity.Verbose, "[{0}] Initiating implicit logout", existingConnection.ConnectionIdentifier);
+                        m_connectionManager.ReleaseConnection(existingConnection);
+                    }
+                    else
+                    {
+                        // add a new connection to the session
+                        if (m_connectionManager.GetSessionConnections(existingSession).Count > existingSession.MaxConnections)
+                        {
+                            return LoginResponseStatusName.TooManyConnections;
+                        }
+                    }
+                    connection.CID = request.CID;
+                }
+            }
+            return LoginResponseStatusName.Success;
+        }
+
+        private LoginResponseStatusName SetUpNormalSession(LoginRequestPDU request, string targetName, ConnectionParameters connection)
+        {
+            ISCSISession session = connection.Session;
+            session.IsDiscovery = false;
+            // If there's an existing session between this initiator and the target, we should terminate the
+            // old session before reinstating a new iSCSI session in its place.
+            ISCSISession existingSession = m_sessionManager.FindSession(session.InitiatorName, request.ISID, targetName);
+            if (existingSession != null)
+            {
+                Log(Severity.Verbose, "[{0}] Terminating old session with target: {1}", connection.ConnectionIdentifier, targetName);
+                List<ConnectionState> existingConnections = m_connectionManager.GetSessionConnections(existingSession);
+                foreach (ConnectionState existingConnection in existingConnections)
+                {
+                    m_connectionManager.ReleaseConnection(existingConnection);
+                }
+                m_sessionManager.RemoveSession(existingSession, SessionTerminationReason.ImplicitLogout);
+            }
+            // We use m_targets.Lock to synchronize between the login logic and the target removal logic.
+            lock (m_targets.Lock)
+            {
+                ISCSITarget target = m_targets.FindTarget(targetName);
+                if (target != null)
+                {
+                    if (!target.AuthorizeInitiator(session.InitiatorName, session.ISID, connection.InitiatorEndPoint))
+                    {
+                        Log(Severity.Warning, "[{0}] Initiator was not authorized to access {1}", connection.ConnectionIdentifier, targetName);
+                        return LoginResponseStatusName.AuthorizationFailure;
+                    }
+                    session.Target = target;
+                }
+                else
+                {
+                    Log(Severity.Warning, "[{0}] Initiator requested an unknown target: {1}", connection.ConnectionIdentifier, targetName);
+                    return LoginResponseStatusName.NotFound;
+                }
+            }
+
+            return LoginResponseStatusName.Success;
         }
 
         private LoginResponsePDU GetFinalLoginResponsePDU(LoginRequestPDU request, KeyValuePairList<string, string> requestParameters, ConnectionParameters connection)
@@ -104,77 +184,7 @@ namespace ISCSI.Server
             string connectionIdentifier = connection.ConnectionIdentifier;
             response.Status = LoginResponseStatusName.Success;
 
-            if (String.IsNullOrEmpty(connection.InitiatorName))
-            {
-                connection.InitiatorName = requestParameters.ValueOf("InitiatorName");
-                if (String.IsNullOrEmpty(connection.InitiatorName))
-                {
-                    // RFC 3720: InitiatorName: The initiator of the TCP connection MUST provide this key [..]
-                    // at the first Login of the Login Phase for every connection.
-                    Log(Severity.Warning, "[{0}] Initiator error: InitiatorName was not included in the login request", connectionIdentifier);
-                    response.Status = LoginResponseStatusName.InitiatorError;
-                    return response;
-                }
-            }
-
             ISCSISession session = connection.Session;
-            bool isNewSession = (!session.IsDiscovery && session.Target == null);
-            if (isNewSession)
-            {
-                string sessionType = requestParameters.ValueOf("SessionType");
-                if (sessionType == "Discovery")
-                {
-                    session.IsDiscovery = true;
-                }
-                else //sessionType == "Normal" or unspecified (default is Normal)
-                {
-                    session.IsDiscovery = false;
-                    if (requestParameters.ContainsKey("TargetName"))
-                    {
-                        string targetName = requestParameters.ValueOf("TargetName");
-                        // If there's an existing session between this initiator and the target, we should terminate the
-                        // old session before reinstating a new iSCSI session in its place.
-                        ISCSISession existingSession = m_sessionManager.FindSession(request.ISID, targetName);
-                        if (existingSession != null)
-                        {
-                            List<ConnectionState> existingConnections = m_connectionManager.GetSessionConnections(existingSession);
-                            foreach (ConnectionState existingConnection in existingConnections)
-                            {
-                                m_connectionManager.ReleaseConnection(existingConnection);
-                            }
-                            m_sessionManager.RemoveSession(existingSession, SessionTerminationReason.ImplicitLogout);
-                        }
-                        // We use m_targets.Lock to synchronize between the login logic and the target removal logic.
-                        lock (m_targets.Lock)
-                        {
-                            ISCSITarget target = m_targets.FindTarget(targetName);
-                            if (target != null)
-                            {
-                                if (!target.AuthorizeInitiator(session.ISID, connection.InitiatorName, connection.InitiatorEndPoint))
-                                {
-                                    Log(Severity.Warning, "[{0}] Initiator was not authorized to access {1}", connectionIdentifier, targetName);
-                                    response.Status = LoginResponseStatusName.AuthorizationFailure;
-                                    return response;
-                                }
-                                session.Target = target;
-                            }
-                            else
-                            {
-                                Log(Severity.Warning, "[{0}] Initiator requested an unknown target: {1}", connectionIdentifier, targetName);
-                                response.Status = LoginResponseStatusName.NotFound;
-                                return response;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
-                        Log(Severity.Warning, "[{0}] Initiator error: TargetName was not included in a non-discovery session", connectionIdentifier);
-                        response.Status = LoginResponseStatusName.InitiatorError;
-                        return response;
-                    }
-                }
-            }
 
             // RFC 3720:  The login process proceeds in two stages - the security negotiation
             // stage and the operational parameter negotiation stage.  Both stages are optional

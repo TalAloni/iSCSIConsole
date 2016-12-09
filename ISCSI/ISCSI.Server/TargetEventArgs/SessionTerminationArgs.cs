@@ -18,11 +18,13 @@ namespace ISCSI.Server
 
     public class SessionTerminationArgs : EventArgs
     {
+        public string InitiatorName;
         public ulong ISID;
         public SessionTerminationReason Reason;
 
-        public SessionTerminationArgs(ulong isid, SessionTerminationReason reason)
+        public SessionTerminationArgs(string initiatorName, ulong isid, SessionTerminationReason reason)
         {
+            InitiatorName = initiatorName;
             ISID = isid;
             Reason = reason;
         }

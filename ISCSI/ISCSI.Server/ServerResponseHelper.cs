@@ -19,7 +19,7 @@ namespace ISCSI.Server
             response.Data = request.Data;
             // When a target receives the NOP-Out with a valid Initiator Task Tag (not the reserved value 0xffffffff),
             // it MUST respond with a NOP-In with the same Initiator Task Tag that was provided in the NOP-Out request.
-            // For such a response, the Target Transfer Tag MUST be 0xffffffff
+            // For such a response, the Target Transfer Tag MUST be 0xffffffff.
             response.InitiatorTaskTag = request.InitiatorTaskTag;
             response.TargetTransferTag = 0xFFFFFFFF;
             return response;
@@ -39,10 +39,10 @@ namespace ISCSI.Server
             return response;
         }
 
-        internal static LogoutResponsePDU GetLogoutResponsePDU(LogoutRequestPDU request)
+        internal static LogoutResponsePDU GetLogoutResponsePDU(LogoutRequestPDU request, LogoutResponse responseCode)
         {
             LogoutResponsePDU response = new LogoutResponsePDU();
-            response.Response = LogoutResponse.ClosedSuccessfully;
+            response.Response = responseCode;
             response.Final = true;
             response.InitiatorTaskTag = request.InitiatorTaskTag;
             return response;

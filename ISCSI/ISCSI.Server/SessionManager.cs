@@ -17,10 +17,10 @@ namespace ISCSI.Server
         private ushort m_nextTSIH = 1; // Next Target Session Identifying Handle
         private List<ISCSISession> m_activeSessions = new List<ISCSISession>();
 
-        public ISCSISession StartSession(ulong isid)
+        public ISCSISession StartSession(string initiatorName, ulong isid)
         {
             ushort tsih = GetNextTSIH();
-            ISCSISession session = new ISCSISession(isid, tsih);
+            ISCSISession session = new ISCSISession(initiatorName, isid, tsih);
             lock (m_activeSessions)
             {
                 m_activeSessions.Add(session);
@@ -28,11 +28,11 @@ namespace ISCSI.Server
             return session;
         }
 
-        public ISCSISession FindSession(ulong isid, ushort tsih)
+        public ISCSISession FindSession(string initiatorName, ulong isid, ushort tsih)
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(isid, tsih);
+                int index = GetSessionIndex(initiatorName, isid, tsih);
                 if (index >= 0)
                 {
                     return m_activeSessions[index];
@@ -41,14 +41,15 @@ namespace ISCSI.Server
             return null;
         }
 
-        public ISCSISession FindSession(ulong isid, string targetName)
+        public ISCSISession FindSession(string initiatorName, ulong isid, string targetName)
         {
             lock (m_activeSessions)
             {
                 for (int index = 0; index < m_activeSessions.Count; index++)
                 {
                     ISCSISession session = m_activeSessions[index];
-                    if (session.ISID == isid &&
+                    if (String.Equals(session.InitiatorName, initiatorName, StringComparison.OrdinalIgnoreCase) &&
+                        session.ISID == isid &&
                         session.Target != null &&
                         String.Equals(session.Target.TargetName, targetName, StringComparison.OrdinalIgnoreCase))
                     {
@@ -82,13 +83,13 @@ namespace ISCSI.Server
         {
             lock (m_activeSessions)
             {
-                int index = GetSessionIndex(session.ISID, session.TSIH);
+                int index = GetSessionIndex(session.InitiatorName, session.ISID, session.TSIH);
                 if (index >= 0)
                 {
                     ISCSITarget target = m_activeSessions[index].Target;
                     if (target != null)
                     {
-                        target.NotifySessionTermination(session.ISID, reason);
+                        target.NotifySessionTermination(session.InitiatorName, session.ISID, reason);
                     }
                     m_activeSessions.RemoveAt(index);
                 }
@@ -113,11 +114,13 @@ namespace ISCSI.Server
             return false;
         }
 
-        private int GetSessionIndex(ulong isid, ushort tsih)
+        private int GetSessionIndex(string initiatorName, ulong isid, ushort tsih)
         {
             for (int index = 0; index < m_activeSessions.Count; index++)
             {
-                if (m_activeSessions[index].ISID == isid && m_activeSessions[index].TSIH == tsih)
+                if (String.Equals(initiatorName, m_activeSessions[index].InitiatorName, StringComparison.OrdinalIgnoreCase) &&
+                    m_activeSessions[index].ISID == isid &&
+                    m_activeSessions[index].TSIH == tsih)
                 {
                     return index;
                 }
