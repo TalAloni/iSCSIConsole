@@ -24,6 +24,7 @@ namespace ISCSI.Server
 
         private Socket m_listenerSocket;
         private bool m_listening;
+        private Thread m_keepAliveThread;
         private TargetList m_targets = new TargetList();
         private SessionManager m_sessionManager = new SessionManager();
         private ConnectionManager m_connectionManager = new ConnectionManager();
@@ -75,8 +76,14 @@ namespace ISCSI.Server
             Start(new IPEndPoint(IPAddress.Any, listenerPort));
         }
 
-        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
         public void Start(IPEndPoint listenerEndPoint)
+        {
+            Start(listenerEndPoint, TimeSpan.FromMinutes(5));
+        }
+
+        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
+        /// <param name="keepAliveTime">The duration between keep-alive transmissions</param>        
+        public void Start(IPEndPoint listenerEndPoint, TimeSpan? keepAliveTime)
         {
             if (!m_listening)
             {
@@ -87,6 +94,20 @@ namespace ISCSI.Server
                 m_listenerSocket.Bind(listenerEndPoint);
                 m_listenerSocket.Listen(1000);
                 m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
+
+                if (keepAliveTime.HasValue)
+                {
+                    m_keepAliveThread = new Thread(delegate()
+                    {
+                        while (m_listening)
+                        {
+                            Thread.Sleep(keepAliveTime.Value);
+                            m_connectionManager.SendKeepAlive();
+                        }
+                    });
+                    m_keepAliveThread.IsBackground = true;
+                    m_keepAliveThread.Start();
+                }
             }
         }
 
@@ -143,6 +164,10 @@ namespace ISCSI.Server
         {
             Log(Severity.Information, "Stopping Server");
             m_listening = false;
+            if (m_keepAliveThread != null)
+            {
+                m_keepAliveThread.Abort();
+            }
             SocketUtils.ReleaseSocket(m_listenerSocket);
             lock (m_targets.Lock)
             {

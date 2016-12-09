@@ -13,6 +13,18 @@ namespace ISCSI.Server
 {
     internal class ServerResponseHelper
     {
+        internal static NOPInPDU GetKeepAlivePDU()
+        {
+            NOPInPDU response = new NOPInPDU();
+            // when a target sends a NOP-In that is not a response to a Nop-Out received from the
+            // initiator, the Initiator Task Tag MUST be set to 0xffffffff.
+            response.InitiatorTaskTag = 0xFFFFFFFF;
+            // Target Transfer Tag: If the target is initiating a NOP-In without wanting to receive a
+            // corresponding NOP-Out, this field MUST hold the reserved value of 0xffffffff.
+            response.TargetTransferTag = 0xFFFFFFFF;
+            return response;
+        }
+
         internal static NOPInPDU GetNOPResponsePDU(NOPOutPDU request)
         {
             NOPInPDU response = new NOPInPDU();

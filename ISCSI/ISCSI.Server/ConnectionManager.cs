@@ -80,6 +80,23 @@ namespace ISCSI.Server
             return result;
         }
 
+        /// <summary>
+        /// This method will check for dead peers (initiators).
+        /// Because TCP broken connections can only be detected by sending data, we send a NOP-In PDU,
+        /// If the connection is dead, the send failure will trigger the necessary connection termination logic.
+        /// See: http://blog.stephencleary.com/2009/05/detection-of-half-open-dropped.html
+        /// </summary>
+        public void SendKeepAlive()
+        {
+            lock (m_activeConnections)
+            {
+                foreach (ConnectionState connection in m_activeConnections)
+                {
+                    connection.SendQueue.Enqueue(ServerResponseHelper.GetKeepAlivePDU());
+                }
+            }
+        }
+
         private int GetConnectionStateIndex(ISCSISession session, ushort cid)
         {
             for (int index = 0; index < m_activeConnections.Count; index++)
