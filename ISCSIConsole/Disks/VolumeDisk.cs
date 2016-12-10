@@ -42,5 +42,13 @@ namespace ISCSIConsole
                 return m_volume.Size;
             }
         }
+
+        public Volume Volume
+        {
+            get
+            {
+                return m_volume;
+            }
+        }
     }
 }
