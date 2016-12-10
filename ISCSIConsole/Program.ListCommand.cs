@@ -125,8 +125,8 @@ namespace ISCSIConsole
             for (int index = 0; index < volumes.Count; index++)
             {
                 Volume volume = volumes[index];
-                string type = String.Empty;
-                string status = String.Empty;
+                string type = VolumeHelper.GetVolumeTypeString(volume);
+                string status = VolumeHelper.GetVolumeStatusString(volume);
 
                 ulong volumeID = 0;
                 string name = String.Empty;
@@ -135,49 +135,6 @@ namespace ISCSIConsole
                 {
                     volumeID = ((DynamicVolume)volume).VolumeID;
                     name = ((DynamicVolume)volume).Name;
-                    
-                    if (((DynamicVolume)volume).IsHealthy)
-                    {
-                        status = "Healthy";
-                    }
-                    else
-                    {
-                        status = "Failed";
-                    }
-                }
-
-                if (volume is SimpleVolume)
-                {
-                    type = "Simple";
-                }
-                else if (volume is SpannedVolume)
-                {
-                    type = "Spanned";
-                }
-                else if (volume is StripedVolume)
-                {
-                    type = "Striped";
-                }
-                else if (volume is MirroredVolume)
-                {
-                    type = "Mirrored";
-                    if (!((MirroredVolume)volume).IsHealthy && ((MirroredVolume)volume).IsOperational)
-                    {
-                        status = "Failed Rd";
-                    }
-                }
-                else if (volume is Raid5Volume)
-                {
-                    type = "RAID-5";
-                    if (!((Raid5Volume)volume).IsHealthy && ((Raid5Volume)volume).IsOperational)
-                    {
-                        status = "Failed Rd";
-                    }
-                }
-                else if (volume is Partition)
-                {
-                    type = "Partition";
-                    status = "Healthy";
                 }
 
                 string volumeNumber = index.ToString().PadLeft(2);
