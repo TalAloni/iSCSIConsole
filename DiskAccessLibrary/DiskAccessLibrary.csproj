@@ -133,18 +133,18 @@
     <Compile Include="LogicalDiskManager\TOCBlock\TOCRegion.cs" />
     <Compile Include="LogicalDiskManager\VolumeManagerDatabase.cs" />
     <Compile Include="LogicalDiskManager\VolumeManagerDatabaseHeader.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\DynamicColumn.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\DynamicVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\MirroredVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\Raid5Volume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\SimpleVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\SpannedVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\StripedVolume.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Volumes\DynamicColumn.cs" />
-    <Compile Include="Volumes\DynamicVolume.cs" />
     <Compile Include="Volumes\GPTPartition.cs" />
     <Compile Include="Volumes\MBRPartition.cs" />
-    <Compile Include="Volumes\MirroredVolume.cs" />
     <Compile Include="Volumes\Partition.cs" />
-    <Compile Include="Volumes\Raid5Volume.cs" />
     <Compile Include="Volumes\RemovableVolume.cs" />
-    <Compile Include="Volumes\SimpleVolume.cs" />
-    <Compile Include="Volumes\SpannedVolume.cs" />
-    <Compile Include="Volumes\StripedVolume.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Win32\Disks\DiskImage.Win32.cs" />

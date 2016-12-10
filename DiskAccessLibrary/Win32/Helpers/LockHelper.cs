@@ -46,7 +46,7 @@ namespace DiskAccessLibrary
                 }
             }
 
-            success = LockAllMountedVolumesOrNone(volumeGuids);
+            success = LockAllVolumesOrNone(volumeGuids);
             if (!success)
             {
                 disk.ReleaseLock();
@@ -63,24 +63,20 @@ namespace DiskAccessLibrary
                 Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(partition);
                 if (windowsVolumeGuid.HasValue)
                 {
-                    if (WindowsVolumeManager.IsMounted(windowsVolumeGuid.Value))
-                    {
-                        WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
-                    }
+                    WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
                 }
             }
 
             disk.ReleaseLock();
         }
 
-        public static bool LockAllMountedVolumesOrNone(List<Guid> volumeGuids)
+        public static bool LockAllVolumesOrNone(List<Guid> volumeGuids)
         {
             bool success = true;
             int lockIndex;
             for (lockIndex = 0; lockIndex < volumeGuids.Count; lockIndex++)
             {
-                // NOTE: The fact that a volume does not have mount points, does not mean it is not mounted and cannot be accessed by Windows
-                success = WindowsVolumeManager.ExclusiveLockIfMounted(volumeGuids[lockIndex]);
+                success = WindowsVolumeManager.ExclusiveLock(volumeGuids[lockIndex]);
                 if (!success)
                 {
                     break;

@@ -13,7 +13,7 @@ using Utilities;
 
 namespace DiskAccessLibrary
 {
-    class VolumeHandlePool
+    public class VolumeHandlePool
     {
         // We will use the handle pool to share handles to volumes across the application (useful when handle need to lock access to a volume)
         private static Dictionary<Guid, SafeFileHandle> m_handlePool = new Dictionary<Guid, SafeFileHandle>();

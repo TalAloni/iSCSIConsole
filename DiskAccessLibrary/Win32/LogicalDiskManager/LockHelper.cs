@@ -22,7 +22,7 @@ namespace DiskAccessLibrary
             }
 
             List<Guid> volumeGuids = DynamicVolumeHelper.GetVolumeGuids(volumesToLock);
-            success = LockAllMountedVolumesOrNone(volumeGuids);
+            success = LockAllVolumesOrNone(volumeGuids);
             if (!success)
             {
                 DiskLockHelper.ReleaseLock(disksToLock);

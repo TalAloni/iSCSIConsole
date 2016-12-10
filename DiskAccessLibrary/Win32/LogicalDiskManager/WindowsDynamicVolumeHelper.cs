@@ -32,7 +32,17 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
             }
 
-            return DynamicVolumeHelper.GetDynamicVolumes(disks);
+            List<DynamicVolume> dynamicVolumes = DynamicVolumeHelper.GetDynamicVolumes(disks);
+            for (int index = 0; index < dynamicVolumes.Count; index++)
+            {
+                // non-operational volumes cannot be locked
+                if (!dynamicVolumes[index].IsOperational)
+                {
+                    dynamicVolumes.RemoveAt(index);
+                    index--;
+                }
+            }
+            return dynamicVolumes;
         }
     }
 }

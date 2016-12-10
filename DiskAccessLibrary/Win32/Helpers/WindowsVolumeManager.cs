@@ -16,23 +16,6 @@ namespace DiskAccessLibrary
 {
     public class WindowsVolumeManager
     {
-        public static bool ExclusiveLockIfMounted(Guid windowsVolumeGuid)
-        {
-            return ExclusiveLockIfMounted(windowsVolumeGuid, FileAccess.ReadWrite);
-        }
-
-        public static bool ExclusiveLockIfMounted(Guid windowsVolumeGuid, FileAccess fileAccess)
-        {
-            if (IsMounted(windowsVolumeGuid))
-            {
-                return ExclusiveLock(windowsVolumeGuid, fileAccess);
-            }
-            else
-            {
-                return true;
-            }
-        }
-
         public static bool ExclusiveLock(Guid windowsVolumeGuid)
         {
             return ExclusiveLock(windowsVolumeGuid, FileAccess.ReadWrite);
@@ -40,7 +23,7 @@ namespace DiskAccessLibrary
 
         /// <summary>
         /// Windows will flush all cached data to the volume before locking it.
-        /// Note: we can only lock a dynamic volume if the disk is online.
+        /// Note: we can only lock a dynamic volume if the disk is online and the volume is operational.
         /// </summary>
         /// <returns>True if a new lock has been obtained</returns>
         public static bool ExclusiveLock(Guid windowsVolumeGuid, FileAccess fileAccess)
@@ -98,6 +81,11 @@ namespace DiskAccessLibrary
             return VolumeHandlePool.ReleaseHandle(windowsVolumeGuid);
         }
 
+        /// <summary>
+        /// If Windows Automount is turned off, then partitions on new disks are not mounted. (but can be locked).
+        /// Failed dynamic volumes are not mounted as well. (and can't be locked).
+        /// Note: A volume can have 0 mount points and still be mounted and access by Windows.
+        /// </summary>
         public static bool IsMounted(Guid windowsVolumeGuid)
         {
             return VolumeUtils.IsVolumeMounted(windowsVolumeGuid);
