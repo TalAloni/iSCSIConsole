@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using DiskAccessLibrary.LogicalDiskManager;
 
-namespace DiskAccessLibrary
+namespace DiskAccessLibrary.LogicalDiskManager
 {
     public class DiskLockHelper
     {

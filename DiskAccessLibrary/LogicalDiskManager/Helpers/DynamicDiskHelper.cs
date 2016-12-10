@@ -8,10 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using DiskAccessLibrary.LogicalDiskManager;
 using Utilities;
 
-namespace DiskAccessLibrary
+namespace DiskAccessLibrary.LogicalDiskManager
 {
     public partial class DynamicDiskHelper
     {

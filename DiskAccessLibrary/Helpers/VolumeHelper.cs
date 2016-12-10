@@ -14,50 +14,6 @@ namespace DiskAccessLibrary
 {
     public partial class VolumeHelper
     {
-        /// <summary>
-        /// Will return or generate a persistent volume unique ID
-        /// </summary>
-        [Obsolete]
-        public static Guid? GetVolumeUniqueID(Volume volume)
-        {
-            if (volume is MBRPartition)
-            {
-                MBRPartition partition = (MBRPartition)volume;
-                MasterBootRecord mbr = MasterBootRecord.ReadFromDisk(partition.Disk);
-                byte[] firstSectorBytes = BigEndianConverter.GetBytes(partition.FirstSector);
-                return new Guid((int)mbr.DiskSignature, 0, 0, firstSectorBytes);
-            }
-            else if (volume is GPTPartition)
-            {
-                return ((GPTPartition)volume).VolumeGuid;
-            }
-            else if (volume is DynamicVolume)
-            {
-                return ((DynamicVolume)volume).VolumeGuid;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        [Obsolete]
-        public static Volume GetVolumeByGuid(List<Disk> disks, Guid volumeGuid)
-        {
-            List<Volume> volumes = GetVolumes(disks);
-            foreach (Volume volume in volumes)
-            {
-                Guid? guid = GetVolumeUniqueID(volume);
-                if (guid == volumeGuid)
-                {
-                    {
-                        return volume;
-                    }
-                }
-            }
-            return null;
-        }
-
         public static List<Volume> GetVolumes(List<Disk> disks)
         {
             List<Volume> result = new List<Volume>();
@@ -90,52 +46,74 @@ namespace DiskAccessLibrary
             return result;
         }
 
-        /// <summary>
-        /// Return volumes that are stored (or partially stored) on the given disk
-        /// </summary>
-        [Obsolete]
-        public static List<Volume> GetDiskVolumes(Disk disk)
+        public static string GetVolumeTypeString(Volume volume)
         {
-            List<Volume> result = new List<Volume>();
-
-            DynamicDisk dynamicDisk = DynamicDisk.ReadFromDisk(disk);
-
-            if (dynamicDisk == null)
+            if (volume is SimpleVolume)
             {
-                // basic disk
-                List<Partition> partitions = BasicDiskHelper.GetPartitions(disk);
-                foreach (MBRPartition partition in partitions)
-                {
-                    result.Add(partition);
-                }
+                return "Simple";
+            }
+            else if (volume is SpannedVolume)
+            {
+                return "Spanned";
+            }
+            else if (volume is StripedVolume)
+            {
+                return "Striped";
+            }
+            else if (volume is MirroredVolume)
+            {
+                return "Mirrored";
+            }
+            else if (volume is Raid5Volume)
+            {
+                return "RAID-5";
+            }
+            else if (volume is Partition)
+            {
+                return "Partition";
             }
             else
             {
-                // dynamic disk
-                List<DynamicVolume> dynamicVolumes = DynamicVolumeHelper.GetDynamicDiskVolumes(dynamicDisk);
-                foreach (DynamicVolume volume in dynamicVolumes)
-                {
-                    result.Add(volume);
-                }
+                return "Unknown";
             }
-            return result;
         }
 
-        [Obsolete]
-        public static bool ContainsVolumeGuid(List<Volume> volumes, Guid volumeGuid)
+        public static string GetVolumeStatusString(Volume volume)
         {
-            foreach (Volume volume in volumes)
+            if (volume is DynamicVolume)
             {
-                if (volume is DynamicVolume)
+                if (volume is MirroredVolume)
                 {
-                    DynamicVolume dynamicVolume = (DynamicVolume)volume;
-                    if (dynamicVolume.VolumeGuid == volumeGuid)
+                    if (!((MirroredVolume)volume).IsHealthy && ((MirroredVolume)volume).IsOperational)
                     {
-                        return true;
+                        return "Failed Rd";
                     }
                 }
+                else if (volume is Raid5Volume)
+                {
+                    if (!((Raid5Volume)volume).IsHealthy && ((Raid5Volume)volume).IsOperational)
+                    {
+                        return "Failed Rd";
+                    }
+                }
+
+                if (((DynamicVolume)volume).IsHealthy)
+                {
+                    return "Healthy";
+                }
+                else
+                {
+                    return "Failed";
+                }
             }
-            return false;
+            else if (volume is Partition)
+            {
+                return "Healthy";
+            }
+            else
+            {
+                return String.Empty;
+            }
         }
     }
 }

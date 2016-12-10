@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -8,69 +8,95 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using DiskAccessLibrary;
-using DiskAccessLibrary.LogicalDiskManager;
 
-namespace DiskAccessLibrary.LogicalDiskManager
+namespace DiskAccessLibrary
 {
     public enum LockStatus
-    { 
+    {
         Success,
         CannotLockDisk,
         CannotLockVolume,
     }
 
-    public class LockHelper
+    public partial class LockHelper
     {
-        private static List<DynamicDisk> m_lockedDisks = new List<DynamicDisk>();
-        private static List<DynamicVolume> m_lockedVolumes = new List<DynamicVolume>();
-
-        public static LockStatus LockAllOrNone(List<DynamicDisk> disksToLock, List<DynamicVolume> volumesToLock)
+        /// <summary>
+        /// Will lock physical basic disk and all volumes on it.
+        /// If the operation is not completed successfully, all locks will be releases.
+        /// </summary>
+        public static LockStatus LockBasicDiskAndVolumesOrNone(PhysicalDisk disk)
         {
-            bool success = DiskLockHelper.LockAllOrNone(disksToLock);
+            bool success = disk.ExclusiveLock();
             if (!success)
             {
                 return LockStatus.CannotLockDisk;
             }
-
-            success = WindowsDynamicVolumeHelper.LockAllMountedOrNone(volumesToLock);
-            if (!success)
+            List<Partition> partitions = BasicDiskHelper.GetPartitions(disk);
+            List<Guid> volumeGuids = new List<Guid>();
+            foreach (Partition partition in partitions)
             {
-                DiskLockHelper.ReleaseLock(disksToLock);
-                return LockStatus.CannotLockVolume;
+                Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(partition);
+                if (windowsVolumeGuid.HasValue)
+                {
+                    volumeGuids.Add(windowsVolumeGuid.Value);
+                }
+                else
+                {
+                    return LockStatus.CannotLockVolume;
+                }
             }
 
+            success = LockAllMountedVolumesOrNone(volumeGuids);
+            if (!success)
+            {
+                disk.ReleaseLock();
+                return LockStatus.CannotLockVolume;
+            }
             return LockStatus.Success;
         }
 
-        public static LockStatus LockAllDynamicDisks(bool lockAllDynamicVolumes)
+        public static void UnlockBasicDiskAndVolumes(PhysicalDisk disk)
         {
-            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks();
-            List<DynamicVolume> volumesToLock = new List<DynamicVolume>();
-
-            if (lockAllDynamicVolumes)
+            List<Partition> partitions = BasicDiskHelper.GetPartitions(disk);
+            foreach (Partition partition in partitions)
             {
-                volumesToLock = WindowsDynamicVolumeHelper.GetLockableDynamicVolumes(disksToLock);
+                Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(partition);
+                if (windowsVolumeGuid.HasValue)
+                {
+                    if (WindowsVolumeManager.IsMounted(windowsVolumeGuid.Value))
+                    {
+                        WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
+                    }
+                }
             }
 
-            LockStatus status = LockAllOrNone(disksToLock, volumesToLock);
-            if (status == LockStatus.Success)
-            {
-                m_lockedDisks.AddRange(disksToLock);
-                m_lockedVolumes.AddRange(volumesToLock);
-            }
-            return status;
+            disk.ReleaseLock();
         }
 
-        public static void UnlockAllDisksAndVolumes()
+        public static bool LockAllMountedVolumesOrNone(List<Guid> volumeGuids)
         {
-            DiskLockHelper.ReleaseLock(m_lockedDisks);
-
-            foreach (DynamicVolume volumeToUnlock in m_lockedVolumes)
+            bool success = true;
+            int lockIndex;
+            for (lockIndex = 0; lockIndex < volumeGuids.Count; lockIndex++)
             {
-                WindowsVolumeManager.ReleaseLock(volumeToUnlock.VolumeGuid);
+                // NOTE: The fact that a volume does not have mount points, does not mean it is not mounted and cannot be accessed by Windows
+                success = WindowsVolumeManager.ExclusiveLockIfMounted(volumeGuids[lockIndex]);
+                if (!success)
+                {
+                    break;
+                }
             }
-            m_lockedDisks.Clear();
-            m_lockedVolumes.Clear();
+
+            if (!success)
+            {
+                // release the volumes that were locked
+                for (int index = 0; index < lockIndex; index++)
+                {
+                    WindowsVolumeManager.ReleaseLock(volumeGuids[lockIndex]);
+                }
+            }
+
+            return success;
         }
     }
 }

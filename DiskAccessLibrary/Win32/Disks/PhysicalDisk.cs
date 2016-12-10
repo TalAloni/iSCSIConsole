@@ -196,6 +196,7 @@ namespace DiskAccessLibrary
         /// <summary>
         /// Invalidates the cached partition table and re-enumerates the device
         /// </summary>
+        /// <exception cref="System.IO.IOException"></exception>
         public void UpdateProperties()
         {
             bool releaseHandle;
@@ -304,6 +305,7 @@ namespace DiskAccessLibrary
         /// <summary>
         /// Available on Windows Vista and newer
         /// </summary>
+        /// <exception cref="System.IO.IOException"></exception>
         public bool GetOnlineStatus(out bool isReadOnly)
         {
             bool releaseHandle;
@@ -340,6 +342,7 @@ namespace DiskAccessLibrary
         /// <summary>
         /// Available on Windows Vista and newer
         /// </summary>
+        /// <exception cref="System.IO.IOException"></exception>
         public bool SetOnlineStatus(bool online, bool persist)
         {
             bool releaseHandle;

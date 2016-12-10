@@ -239,7 +239,7 @@ namespace DiskAccessLibrary
         /// <param name="length">In bytes</param>
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public static VirtualHardDisk Create(string path, long length)
+        public static VirtualHardDisk Create(string path, long size)
         {
 #if Win32
             // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
@@ -249,7 +249,7 @@ namespace DiskAccessLibrary
             FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             try
             {
-                stream.SetLength(length + 512); // VHD footer is 512 bytes
+                stream.SetLength(size + 512); // VHD footer is 512 bytes
             }
             catch (IOException)
             {
@@ -270,7 +270,7 @@ namespace DiskAccessLibrary
             {
                 try
                 {
-                    FileStreamUtils.SetValidLength(stream, length + 512);
+                    FileStreamUtils.SetValidLength(stream, size + 512);
                 }
                 catch (IOException)
                 {
@@ -279,11 +279,11 @@ namespace DiskAccessLibrary
 #endif
 
             VHDFooter footer = new VHDFooter();
-            footer.OriginalSize = (ulong)length;
-            footer.CurrentSize = (ulong)length;
+            footer.OriginalSize = (ulong)size;
+            footer.CurrentSize = (ulong)size;
             footer.SetCurrentTimeStamp();
-            footer.SetDiskGeometry((ulong)length / DiskImage.BytesPerDiskImageSector);
-            stream.Seek(length, SeekOrigin.Begin);
+            footer.SetDiskGeometry((ulong)size / DiskImage.BytesPerDiskImageSector);
+            stream.Seek(size, SeekOrigin.Begin);
             stream.Write(footer.GetBytes(), 0, VHDFooter.Length);
             stream.Close();
             return new VirtualHardDisk(path);

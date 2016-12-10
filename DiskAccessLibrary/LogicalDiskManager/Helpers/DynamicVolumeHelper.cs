@@ -8,13 +8,22 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using DiskAccessLibrary.LogicalDiskManager;
 using Utilities;
 
-namespace DiskAccessLibrary
+namespace DiskAccessLibrary.LogicalDiskManager
 {
     public partial class DynamicVolumeHelper
     {
+        public static List<Guid> GetVolumeGuids(List<DynamicVolume> volumes)
+        {
+            List<Guid> volumeGuids = new List<Guid>();
+            foreach (DynamicVolume volume in volumes)
+            {
+                volumeGuids.Add(volume.VolumeGuid);
+            }
+            return volumeGuids;
+        }
+
         public static DynamicVolume GetVolumeByGuid(List<DynamicDisk> disks, Guid volumeGuid)
         {
             List<DynamicVolume> volumes = GetDynamicVolumes(disks);
@@ -42,38 +51,6 @@ namespace DiskAccessLibrary
                 }
             }
 
-            return result;
-        }
-
-        /// <summary>
-        /// Return volumes that are stored (or partially stored) on the given disk
-        /// </summary>
-        [Obsolete]
-        public static List<DynamicVolume> GetDynamicDiskVolumes(DynamicDisk disk)
-        {
-            VolumeManagerDatabase database = VolumeManagerDatabase.ReadFromDisk(disk);
-            List<DynamicDisk> disks = new List<DynamicDisk>();
-            disks.Add(disk);
-
-            List<DynamicVolume> result = new List<DynamicVolume>();
-            if (database != null)
-            {
-                foreach (VolumeRecord volumeRecord in database.VolumeRecords)
-                {
-                    DynamicVolume volume = GetVolume(disks, database, volumeRecord);
-                    if (volume != null)
-                    {
-                        foreach (DynamicDiskExtent extent in volume.Extents)
-                        {
-                            if (extent.DiskGuid == disk.DiskGuid)
-                            {
-                                result.Add(volume);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
             return result;
         }
 

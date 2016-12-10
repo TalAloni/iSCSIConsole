@@ -7,10 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using DiskAccessLibrary.LogicalDiskManager;
 using Utilities;
 
-namespace DiskAccessLibrary
+namespace DiskAccessLibrary.LogicalDiskManager
 {
     public class WindowsDynamicVolumeHelper
     {
@@ -34,32 +33,6 @@ namespace DiskAccessLibrary
             }
 
             return DynamicVolumeHelper.GetDynamicVolumes(disks);
-        }
-
-        public static bool LockAllMountedOrNone(List<DynamicVolume> volumes)
-        {
-            bool success = true;
-            int lockIndex;
-            for (lockIndex = 0; lockIndex < volumes.Count; lockIndex++)
-            {
-                // NOTE: The fact that a volume does not have mount points, does not mean it is not mounted and cannot be accessed by Windows
-                success = WindowsVolumeManager.ExclusiveLockIfMounted(volumes[lockIndex].VolumeGuid);
-                if (!success)
-                {
-                    break;
-                }
-            }
-
-            if (!success)
-            {
-                // release the volumes that were locked
-                for (int index = 0; index < lockIndex; index++)
-                {
-                    WindowsVolumeManager.ReleaseLock(volumes[index].VolumeGuid);
-                }
-            }
-
-            return success;
         }
     }
 }
