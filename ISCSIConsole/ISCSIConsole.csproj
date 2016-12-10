@@ -33,8 +33,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Disks\VolumeDisk.cs" />
-    <Compile Include="FormattingHelper.cs" />
-    <Compile Include="ISCSINameHelper.cs" />
+    <Compile Include="Helpers\FormattingHelper.cs" />
+    <Compile Include="Helpers\ISCSINameHelper.cs" />
     <Compile Include="OfflineCommand.cs" />
     <Compile Include="Program.AttachCommand.cs" />
     <Compile Include="Program.CreateCommand.cs" />

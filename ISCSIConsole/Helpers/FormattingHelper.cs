@@ -33,7 +33,7 @@ namespace ISCSIConsole
             }
             else
             {
-                return "Too Big";
+                return "> 9999 EB";
             }
         }
     }
