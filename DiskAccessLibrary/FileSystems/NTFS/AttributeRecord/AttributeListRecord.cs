@@ -6,6 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using Utilities;
 
@@ -39,7 +40,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 if (entry.Length < AttributeListEntry.HeaderLength)
                 {
                     string message = String.Format("Invalid attribute list entry, data length: {0}, position: {1}", data.Length, position);
-                    throw new Exception(message);
+                    throw new InvalidDataException(message);
                 }
             }
         }

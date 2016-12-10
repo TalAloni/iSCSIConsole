@@ -106,7 +106,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             long clusterCount = HighestVCN - LowestVCN + 1;
             if (clusterCount > Int32.MaxValue)
             {
-                throw new Exception("Improper usage of GetData() method");
+                throw new InvalidOperationException("Improper usage of GetData() method");
             }
             return ReadDataClusters(volume, LowestVCN, (int)clusterCount);
         }

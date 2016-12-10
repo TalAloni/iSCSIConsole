@@ -30,7 +30,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
             }
 
-            throw new Exception("Cannot read from a failed volume");
+            throw new InvalidOperationException("Cannot read from a failed volume");
         }
 
         public override void WriteSectors(long sectorIndex, byte[] data)

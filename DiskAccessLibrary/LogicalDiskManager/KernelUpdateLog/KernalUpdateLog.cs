@@ -37,7 +37,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
             else
             {
-                throw new Exception("KLog records have not been previously read from disk");
+                throw new InvalidOperationException("KLog records have not been previously read from disk");
             }
         }
 

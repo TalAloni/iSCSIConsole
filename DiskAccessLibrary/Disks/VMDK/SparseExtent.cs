@@ -118,12 +118,12 @@ namespace DiskAccessLibrary.VMDK
 
         public override void WriteSectors(long sectorIndex, byte[] data)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void Extend(long additionalNumberOfBytes)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override long Size

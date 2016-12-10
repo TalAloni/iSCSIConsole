@@ -349,17 +349,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 NonResidentAttributeRecord baseAttribute = attributeFragments[0];
                 if (baseAttribute.LowestVCN != 0)
                 {
-                    Console.WriteLine(baseAttribute.AttributeType);
-                    Console.WriteLine(segments[0].MftSegmentNumber);
-                    throw new InvalidDataException("attribute fragments must be sorted");
+                    string message = String.Format("Attribute fragments must be sorted, MftSegmentNumber: {0}, attribute type: {1}",
+                                                   segments[0].MftSegmentNumber, baseAttribute.AttributeType);
+                    throw new InvalidDataException(message);
                 }
 
                 if (baseAttribute.DataRunSequence.DataClusterCount != baseAttribute.HighestVCN + 1)
                 {
-                    Console.WriteLine(baseAttribute.DataRunSequence.ToString());
                     string message = String.Format("Cannot properly assemble data run sequence 0, expected length: {0}, sequence length: {1}",
-                        baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
-                    throw new Exception(message);
+                                                   baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
+                    throw new InvalidDataException(message);
                 }
 
                 for (int index = 1; index < attributeFragments.Count; index++)
@@ -379,10 +378,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
                         if (baseAttribute.DataRunSequence.DataClusterCount != baseAttribute.HighestVCN + 1)
                         {
-                            Console.WriteLine(attributeFragment.DataRunSequence.ToString());
                             string message = String.Format("Cannot properly assemble data run sequence, expected length: {0}, sequence length: {1}",
-                                baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
-                            throw new Exception(message);
+                                                           baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
+                            throw new InvalidDataException(message);
                         }
                     }
                     else

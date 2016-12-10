@@ -14,7 +14,7 @@ namespace DiskAccessLibrary
     {
         public override void ExtendFast(long additionalNumberOfBytes)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
     }
 }

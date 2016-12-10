@@ -44,22 +44,22 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public override FileSystemEntry CreateFile(string path)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override FileSystemEntry CreateDirectory(string path)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void Move(string source, string destination)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void Delete(string path)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override List<FileSystemEntry> ListEntriesInDirectory(string path)
@@ -107,7 +107,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     throw new FileNotFoundException();
                 }
             }
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void SetAttributes(string path, bool? isHidden, bool? isReadonly, bool? isArchived)
@@ -154,7 +154,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public override void SetDates(string path, DateTime? creationDT, DateTime? lastWriteDT, DateTime? lastAccessDT)
         {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public long GetMaximumSizeToExtend()
