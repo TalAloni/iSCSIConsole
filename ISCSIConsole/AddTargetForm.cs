@@ -97,6 +97,7 @@ namespace ISCSIConsole
             {
                 description = ((DiskImage)disk).Path;
             }
+#if Win32
             else if (disk is PhysicalDisk)
             {
                 description = String.Format("Physical Disk {0}", ((PhysicalDisk)disk).PhysicalDiskIndex);
@@ -105,6 +106,7 @@ namespace ISCSIConsole
             {
                 description = String.Format("Volume");
             }
+#endif
             ListViewItem item = new ListViewItem(description);
             item.SubItems.Add(sizeString);
             listDisks.Items.Add(item);
