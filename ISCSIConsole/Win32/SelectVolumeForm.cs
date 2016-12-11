@@ -63,28 +63,32 @@ namespace ISCSIConsole
                 }
                 if (!chkReadOnly.Checked)
                 {
-                    Guid? volumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(selectedVolume);
-                    if (Environment.OSVersion.Version.Major >= 6)
+                    bool skipLock = (Environment.OSVersion.Version.Major >= 6 && VolumeInfo.IsOffline(selectedVolume));
+                    if (!skipLock)
                     {
-                        // Windows Vista / 7 enforce various limitations on direct write operations to volumes and disks.
-                        // We either have to take the disk(s) offline or use the OS volume handle for write operations.
-                        if (!volumeGuid.HasValue)
+                        Guid? volumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(selectedVolume);
+                        if (Environment.OSVersion.Version.Major >= 6)
                         {
-                            MessageBox.Show("The selected volume is not recognized by your operating system");
+                            // Windows Vista / 7 enforce various limitations on direct write operations to volumes and disks.
+                            // We either have to take the disk(s) offline or use the OS volume handle for write operations.
+                            if (!volumeGuid.HasValue)
+                            {
+                                MessageBox.Show("The selected volume is not recognized by your operating system");
+                                return;
+                            }
+                            selectedVolume = new OperatingSystemVolume(volumeGuid.Value, selectedVolume.BytesPerSector, selectedVolume.Size, chkReadOnly.Checked);
+                        }
+
+                        bool isLocked = false;
+                        if (volumeGuid.HasValue)
+                        {
+                            isLocked = WindowsVolumeManager.ExclusiveLock(volumeGuid.Value);
+                        }
+                        if (!isLocked)
+                        {
+                            MessageBox.Show("Unable to lock the volume", "Error");
                             return;
                         }
-                        selectedVolume = new OperatingSystemVolume(volumeGuid.Value, selectedVolume.BytesPerSector, selectedVolume.Size, chkReadOnly.Checked);
-                    }
-
-                    bool isLocked = false;
-                    if (volumeGuid.HasValue)
-                    {
-                        isLocked = WindowsVolumeManager.ExclusiveLock(volumeGuid.Value);
-                    }
-                    if (!isLocked)
-                    {
-                        MessageBox.Show("Unable to lock the volume", "Error");
-                        return;
                     }
                 }
                 m_selectedVolume = selectedVolume;

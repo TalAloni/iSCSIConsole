@@ -44,10 +44,14 @@ namespace ISCSIConsole
             }
             else if (disk is VolumeDisk)
             {
-                Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(((VolumeDisk)disk).Volume);
-                if (windowsVolumeGuid.HasValue)
+                bool skippedLock = (Environment.OSVersion.Version.Major >= 6 && VolumeInfo.IsOffline(((VolumeDisk)disk).Volume));
+                if (!skippedLock)
                 {
-                    WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
+                    Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(((VolumeDisk)disk).Volume);
+                    if (windowsVolumeGuid.HasValue)
+                    {
+                        WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
+                    }
                 }
             }
 #endif

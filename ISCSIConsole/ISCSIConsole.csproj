@@ -99,6 +99,7 @@
     <Compile Include="Win32\SelectVolumeForm.Designer.cs">
       <DependentUpon>SelectVolumeForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Win32\VolumeInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Win32\SelectPhysicalDiskForm.resx">
