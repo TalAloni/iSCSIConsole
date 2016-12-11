@@ -23,9 +23,9 @@ namespace Utilities
             {
                 if (socket.Connected)
                 {
-                    socket.Shutdown(SocketShutdown.Both);
                     try
                     {
+                        socket.Shutdown(SocketShutdown.Both);
                         socket.Disconnect(false);
                     }
                     catch (ObjectDisposedException)
