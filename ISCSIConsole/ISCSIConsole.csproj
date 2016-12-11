@@ -5,17 +5,18 @@
     <ProductVersion>8.0.50727</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{6C9727E4-00AC-4DE0-86A3-5A10259DE3E4}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ISCSIConsole</RootNamespace>
     <AssemblyName>ISCSIConsole</AssemblyName>
+    <ApplicationIcon>Icons\SCSI.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;Win32</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -23,30 +24,94 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;Win32</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddTargetForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddTargetForm.Designer.cs">
+      <DependentUpon>AddTargetForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CreateDiskImageForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CreateDiskImageForm.Designer.cs">
+      <DependentUpon>CreateDiskImageForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Disks\VolumeDisk.cs" />
     <Compile Include="Helpers\FormattingHelper.cs" />
     <Compile Include="Helpers\ISCSINameHelper.cs" />
-    <Compile Include="OfflineCommand.cs" />
-    <Compile Include="Program.AttachCommand.cs" />
-    <Compile Include="Program.CreateCommand.cs" />
+    <Compile Include="Helpers\UsageCounter.cs" />
+    <Compile Include="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
-    <Compile Include="Program.DetailCommand.cs" />
-    <Compile Include="Program.HelpCommand.cs" />
-    <Compile Include="Program.ListCommand.cs" />
     <Compile Include="Program.Log.cs" />
-    <Compile Include="Program.SelectCommand.cs" />
-    <Compile Include="Program.SetCommand.cs" />
-    <Compile Include="Program.StartCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SelectDiskImageForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectDiskImageForm.Designer.cs">
+      <DependentUpon>SelectDiskImageForm.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AddTargetForm.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>AddTargetForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CreateDiskImageForm.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>CreateDiskImageForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MainForm.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectDiskImageForm.resx">
+      <DependentUpon>SelectDiskImageForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Win32\SecurityHelper.cs" />
+    <Compile Include="Win32\SelectPhysicalDiskForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Win32\SelectPhysicalDiskForm.Designer.cs">
+      <DependentUpon>SelectPhysicalDiskForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Win32\SelectVolumeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Win32\SelectVolumeForm.Designer.cs">
+      <DependentUpon>SelectVolumeForm.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Win32\SelectPhysicalDiskForm.resx">
+      <DependentUpon>SelectPhysicalDiskForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Win32\SelectVolumeForm.resx">
+      <DependentUpon>SelectVolumeForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Icons\SCSI.ico" />
+    <Content Include="RevisionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj">
@@ -61,9 +126,6 @@
       <Project>{6E0F2D1E-6167-4032-BA90-DEE3A99207D0}</Project>
       <Name>Utilities</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="RevisionHistory.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

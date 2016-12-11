@@ -1,203 +1,82 @@
+/* Copyright (C) 2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Principal;
-using System.Reflection;
 using System.Text;
-using DiskAccessLibrary.LogicalDiskManager;
-using DiskAccessLibrary;
-using Utilities;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace ISCSIConsole
 {
-    partial class Program
+    public partial class Program
     {
-        public static bool m_debug = false;
-
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
         static void Main(string[] args)
         {
-            Console.WriteLine("iSCSI Console v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            Console.WriteLine("Author: Tal Aloni (tal.aloni.il@gmail.com)");
+            Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            MainLoop();
-        }
-
-        public static void MainLoop()
-        {
-            bool exit = false;
-            while (true)
-            {
-                if (m_debug)
-                {
-                    exit = ProcessCommand();
-                }
-                else
-                {
-                    try
-                    {
-                        exit = ProcessCommand();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Unhandled exception: " + ex.ToString());
-                    }
-                }
-
-                if (exit)
-                {
-                    break;
-                }
-            }
-        }
-
-        /// <returns>true to exit</returns>
-        public static bool ProcessCommand()
-        {
-            Console.WriteLine();
-            Console.Write("iSCSI> ");
-            string command = Console.ReadLine();
-            string[] args = GetCommandArgsIgnoreEscape(command);
-            bool exit = false;
             if (args.Length > 0)
             {
-                string commandName = args[0];
-                switch (commandName.ToLower())
+                if (args[0] == "/help")
                 {
-                    case "attach":
-                        AttachCommand(args);
-                        break;
-                    case "create":
-                        CreateCommand(args);
-                        break;
-                    case "detail":
-                        DetailCommand(args);
-                        break;
-                    case "exit":
-                        exit = true;
-                        if (m_server != null)
-                        {
-                            m_server.Stop();
-                            m_server = null;
-                        }
-                        break;
-                    case "help":
-                        {
-                            HelpCommand(args);
-                            break;
-                        }
-                    case "list":
-                        ListCommand(args);
-                        break;
-                    case "offline":
-                        OfflineCommand(args);
-                        break;
-                    case "online":
-                        OnlineCommand(args);
-                        break;
-                    case "select":
-                        SelectCommand(args);
-                        break;
-                    case "set":
-                        SetCommand(args);
-                        break;
-                    case "start":
-                        StartCommand(args);
-                        break;
-                    case "stop":
-                        StopCommand(args);
-                        break;
-                    default:
-                        Console.WriteLine("Invalid command. use the 'HELP' command to see the list of commands.");
-                        break;
+                    
                 }
-            }
-            return exit;
-        }
-
-        public static KeyValuePairList<string, string> ParseParameters(string[] args, int start)
-        {
-            KeyValuePairList<string, string> result = new KeyValuePairList<string, string>();
-            for (int index = start; index < args.Length; index++)
-            {
-                string[] pair = args[index].Split('=');
-                if (pair.Length >= 2)
+                if (args[0] == "/log")
                 {
-                    string key = pair[0].ToLower(); // we search by the key, so it should be set to lowercase
-                    string value = pair[1];
-                    value = Unquote(value);
-                    result.Add(key, value);
+                    string path = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+                    if (!path.EndsWith(@"\"))
+                    {
+                        path += @"\";
+                    }
+                    path += String.Format("Log {0}.txt", DateTime.Now.ToString("yyyy-MM-dd HH-mm"));
+                    bool success = OpenLogFile(path);
+                    if (!success)
+                    {
+                        MessageBox.Show("Cannot open log file", "Error");
+                    }
                 }
                 else
                 {
-                    result.Add(pair[0].ToLower(), String.Empty);
+                    StringBuilder builder = new StringBuilder();
+                    builder.AppendLine("Command line arguments:");
+                    builder.AppendLine("/log - will write log file to executable directory");
+                    MessageBox.Show(builder.ToString(), "Error");
+                    return;
                 }
             }
-            return result;
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new MainForm());
         }
 
-        /// <summary>
-        /// Make sure all given parameters are allowed
-        /// </summary>
-        public static bool VerifyParameters(KeyValuePairList<string, string> parameters, params string[] allowedKeys)
+        public static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
         {
-            List<string> allowedList = new List<string>(allowedKeys);
-            List<string> keys = parameters.Keys;
-            foreach(string key in keys)
+            HandleUnhandledException(e.Exception);
+        }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject != null)
             {
-                if (!allowedList.Contains(key))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private static int IndexOfUnquotedSpace(string str)
-        {
-            return IndexOfUnquotedSpace(str, 0);
-        }
-
-        private static int IndexOfUnquotedSpace(string str, int startIndex)
-        {
-            return QuotedStringUtils.IndexOfUnquotedChar(str, ' ', startIndex);
-        }
-
-        public static string Unquote(string str)
-        {
-            string quote = '"'.ToString();
-            if (str.StartsWith(quote) && str.EndsWith(quote))
-            {
-                return str.Substring(1, str.Length - 2);
-            }
-            else
-            {
-                return str;
+                Exception ex = (Exception)e.ExceptionObject;
+                HandleUnhandledException(ex);
             }
         }
 
-        private static string[] GetCommandArgsIgnoreEscape(string commandLine)
+        private static void HandleUnhandledException(Exception ex)
         {
-            List<string> argsList = new List<string>();
-            int endIndex = IndexOfUnquotedSpace(commandLine);
-            int startIndex = 0;
-            while (endIndex != -1)
-            {
-                int length = endIndex - startIndex;
-                string nextArg = commandLine.Substring(startIndex, length);
-                nextArg = Unquote(nextArg);
-                argsList.Add(nextArg);
-                startIndex = endIndex + 1;
-                endIndex = IndexOfUnquotedSpace(commandLine, startIndex);
-            }
-
-            string lastArg = commandLine.Substring(startIndex);
-            lastArg = Unquote(lastArg);
-            if (lastArg != String.Empty)
-            {
-                argsList.Add(lastArg);
-            }
-
-            return argsList.ToArray();
+            string message = String.Format("Exception: {0}: {1} Source: {2} {3}", ex.GetType(), ex.Message, ex.Source, ex.StackTrace);
+            MessageBox.Show(message, "Error");
+            Application.Exit();
         }
     }
 }

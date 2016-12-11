@@ -1,3 +1,9 @@
+/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,17 +16,18 @@ namespace ISCSIConsole
     {
         private static FileStream m_logFile;
 
-        public static void OpenLogFile(string logFilePath)
+        public static bool OpenLogFile(string logFilePath)
         {
             try
             {
                 // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
                 // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
                 m_logFile = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read, 0x1000, FileOptions.WriteThrough);
+                return true;
             }
             catch
             {
-                Console.WriteLine("Cannot open log file");
+                return false;
             }
         }
 
