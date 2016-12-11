@@ -50,7 +50,7 @@ namespace ISCSIConsole
             // 
             this.numericDiskSize.Location = new System.Drawing.Point(56, 41);
             this.numericDiskSize.Maximum = new decimal(new int[] {
-            100000000,
+            16777215,
             0,
             0,
             0});
