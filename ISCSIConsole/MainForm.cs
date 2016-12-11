@@ -33,7 +33,8 @@ namespace ISCSIConsole
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            this.Text += " v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            Version version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text += " v" + version.ToString(3);
             m_server.OnLogEntry += Program.OnLogEntry;
 
             List<IPAddress> localIPs = GetHostIPAddresses();
