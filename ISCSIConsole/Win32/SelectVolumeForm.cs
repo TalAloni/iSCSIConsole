@@ -47,15 +47,15 @@ namespace ISCSIConsole
                 item.SubItems.Add(status);
                 item.SubItems.Add(FormattingHelper.GetStandardSizeString(volume.Size));
                 item.Tag = volume;
-                listPhysicalDisks.Items.Add(item);
+                listVolumes.Items.Add(item);
             }
         }
 
         private void btnOK_Click(object sender, EventArgs e)
         {
-            if (listPhysicalDisks.SelectedItems.Count > 0)
+            if (listVolumes.SelectedItems.Count > 0)
             {
-                Volume selectedVolume = (Volume)listPhysicalDisks.SelectedItems[0].Tag;
+                Volume selectedVolume = (Volume)listVolumes.SelectedItems[0].Tag;
                 if (!chkReadOnly.Checked)
                 {
                     Guid? volumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(selectedVolume);
