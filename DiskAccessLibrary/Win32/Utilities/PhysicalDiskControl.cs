@@ -125,7 +125,7 @@ namespace DiskAccessLibrary
         public uint Reserved2D;
     }
 
-    public class PhysicalDiskUtils
+    public class PhysicalDiskControl
     {
         private const uint IOCTL_DISK_GET_DRIVE_GEOMETRY = 0x00070000;
         private const int IOCTL_DISK_GET_DISK_ATTRIBUTES = 0x000700F0;

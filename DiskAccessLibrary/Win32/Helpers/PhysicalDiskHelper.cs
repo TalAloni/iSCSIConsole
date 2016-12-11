@@ -17,7 +17,7 @@ namespace DiskAccessLibrary
         public static List<PhysicalDisk> GetPhysicalDisks()
         {
             List<PhysicalDisk> result = new List<PhysicalDisk>();
-            List<int> diskIndexList = PhysicalDiskUtils.GetPhysicalDiskIndexList();
+            List<int> diskIndexList = PhysicalDiskControl.GetPhysicalDiskIndexList();
             foreach (int diskIndex in diskIndexList)
             {
                 PhysicalDisk disk;

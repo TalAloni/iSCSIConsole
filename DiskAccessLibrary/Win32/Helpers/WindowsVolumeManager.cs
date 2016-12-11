@@ -36,7 +36,7 @@ namespace DiskAccessLibrary
             {
                 if (!handle.IsInvalid)
                 {
-                    bool success = VolumeUtils.LockVolume(handle);
+                    bool success = VolumeControl.LockVolume(handle);
                     if (!success)
                     {
                         VolumeHandlePool.ReleaseHandle(windowsVolumeGuid);
@@ -65,7 +65,7 @@ namespace DiskAccessLibrary
             bool success = false;
             if (!handle.IsInvalid)
             {
-                success = VolumeUtils.DismountVolume(handle);
+                success = VolumeControl.DismountVolume(handle);
             }
 
             if (releaseHandle) // new allocation
@@ -88,12 +88,12 @@ namespace DiskAccessLibrary
         /// </summary>
         public static bool IsMounted(Guid windowsVolumeGuid)
         {
-            return VolumeUtils.IsVolumeMounted(windowsVolumeGuid);
+            return VolumeControl.IsVolumeMounted(windowsVolumeGuid);
         }
 
         public static List<string> GetMountPoints(Guid windowsVolumeGuid)
         {
-            return VolumeUtils.GetVolumeMountPoints(windowsVolumeGuid);
+            return VolumeControl.GetVolumeMountPoints(windowsVolumeGuid);
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace DiskAccessLibrary
 {
-    public class VolumeUtils
+    public class VolumeControl
     {
         private const uint FSCTL_IS_VOLUME_MOUNTED = 0x90028;
         private const uint FSCTL_DISMOUNT_VOLUME = 0x90020;
@@ -93,7 +93,7 @@ namespace DiskAccessLibrary
             if (!handle.IsInvalid)
             {
                 uint dummy;
-                bool mounted = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_IS_VOLUME_MOUNTED, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
+                bool mounted = PhysicalDiskControl.DeviceIoControl(handle, FSCTL_IS_VOLUME_MOUNTED, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 handle.Close();
                 return mounted;
             }
@@ -120,7 +120,7 @@ namespace DiskAccessLibrary
             if (!handle.IsInvalid)
             {
                 uint dummy;
-                bool success = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
+                bool success = PhysicalDiskControl.DeviceIoControl(handle, FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 return success;
             }
             else
@@ -141,7 +141,7 @@ namespace DiskAccessLibrary
             if (!handle.IsInvalid)
             {
                 uint dummy;
-                bool success = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
+                bool success = PhysicalDiskControl.DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 if (!success)
                 {
                     int errorCode = Marshal.GetLastWin32Error();
@@ -163,7 +163,7 @@ namespace DiskAccessLibrary
             if (!handle.IsInvalid)
             {
                 uint dummy;
-                bool success = PhysicalDiskUtils.DeviceIoControl(handle, FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
+                bool success = PhysicalDiskControl.DeviceIoControl(handle, FSCTL_ALLOW_EXTENDED_DASD_IO, IntPtr.Zero, 0, IntPtr.Zero, 0, out dummy, IntPtr.Zero);
                 if (!success)
                 {
                     int errorCode = Marshal.GetLastWin32Error();

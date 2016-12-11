@@ -203,7 +203,7 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = PhysicalDiskHandlePool.ObtainHandle(m_physicalDiskIndex, FileAccess.ReadWrite, ShareMode.Read, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                bool success = PhysicalDiskUtils.UpdateDiskProperties(handle);
+                bool success = PhysicalDiskControl.UpdateDiskProperties(handle);
                 if (!success)
                 {
                     throw new IOException("Failed to update disk properties");
@@ -226,11 +226,11 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = PhysicalDiskHandlePool.ObtainHandle(m_physicalDiskIndex, FileAccess.Read, ShareMode.ReadWrite, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                if (!PhysicalDiskUtils.IsMediaAccesible(handle))
+                if (!PhysicalDiskControl.IsMediaAccesible(handle))
                 {
                     throw new DeviceNotReadyException();
                 }
-                DISK_GEOMETRY diskGeometry = PhysicalDiskUtils.GetDiskGeometryAndSize(handle, out m_size);
+                DISK_GEOMETRY diskGeometry = PhysicalDiskControl.GetDiskGeometryAndSize(handle, out m_size);
                 if (releaseHandle)
                 {
                     PhysicalDiskHandlePool.ReleaseHandle(m_physicalDiskIndex);
@@ -267,8 +267,8 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = PhysicalDiskHandlePool.ObtainHandle(m_physicalDiskIndex, FileAccess.Read, ShareMode.ReadWrite, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                m_description = PhysicalDiskUtils.GetDeviceDescription(handle);
-                m_serialNumber = PhysicalDiskUtils.GetDeviceSerialNumber(handle);
+                m_description = PhysicalDiskControl.GetDeviceDescription(handle);
+                m_serialNumber = PhysicalDiskControl.GetDeviceSerialNumber(handle);
                 if (releaseHandle)
                 {
                     PhysicalDiskHandlePool.ReleaseHandle(m_physicalDiskIndex);
@@ -312,7 +312,7 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = PhysicalDiskHandlePool.ObtainHandle(m_physicalDiskIndex, FileAccess.ReadWrite, ShareMode.Read, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                bool isOnline = PhysicalDiskUtils.GetOnlineStatus(handle, out isReadOnly);
+                bool isOnline = PhysicalDiskControl.GetOnlineStatus(handle, out isReadOnly);
                 if (releaseHandle)
                 {
                     PhysicalDiskHandlePool.ReleaseHandle(m_physicalDiskIndex);
@@ -349,7 +349,7 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = PhysicalDiskHandlePool.ObtainHandle(m_physicalDiskIndex, FileAccess.ReadWrite, ShareMode.Read, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                bool success = PhysicalDiskUtils.SetOnlineStatus(handle, online, persist);
+                bool success = PhysicalDiskControl.SetOnlineStatus(handle, online, persist);
                 if (releaseHandle)
                 {
                     PhysicalDiskHandlePool.ReleaseHandle(m_physicalDiskIndex);

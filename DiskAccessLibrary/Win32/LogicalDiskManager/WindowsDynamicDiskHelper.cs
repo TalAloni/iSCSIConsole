@@ -41,7 +41,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public static DynamicDisk FindDisk(Guid diskGuid)
         {
-            List<int> diskIndexList = PhysicalDiskUtils.GetPhysicalDiskIndexList();
+            List<int> diskIndexList = PhysicalDiskControl.GetPhysicalDiskIndexList();
 
             foreach (int diskIndex in diskIndexList)
             {

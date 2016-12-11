@@ -113,7 +113,7 @@ namespace DiskAccessLibrary
                 m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
             }
             m_stream.SetLength(length + additionalNumberOfBytes);
-            if (m_isExclusiveLock)
+            if (!m_isExclusiveLock)
             {
                 m_stream.Close();
             }

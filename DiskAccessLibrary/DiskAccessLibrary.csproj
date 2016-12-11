@@ -170,9 +170,9 @@
     <Compile Include="Win32\Utilities\FileStreamEx.cs" />
     <Compile Include="Win32\Utilities\FileStreamUtils.cs" />
     <Compile Include="Win32\Utilities\HandleUtils.cs" />
-    <Compile Include="Win32\Utilities\PhysicalDiskUtils.cs" />
+    <Compile Include="Win32\Utilities\PhysicalDiskControl.cs" />
     <Compile Include="Win32\Utilities\SecurityUtils.cs" />
-    <Compile Include="Win32\Utilities\VolumeUtils.cs" />
+    <Compile Include="Win32\Utilities\VolumeControl.cs" />
     <Compile Include="Win32\Volumes\OperatingSystemVolume.cs" />
     <Compile Include="Win32\Volumes\VolumeHandlePool.cs" />
   </ItemGroup>

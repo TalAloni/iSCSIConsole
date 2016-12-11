@@ -167,7 +167,7 @@ namespace DiskAccessLibrary
             SafeFileHandle handle = VolumeHandlePool.ObtainHandle(m_volumeGuid, FileAccess.ReadWrite, ShareMode.None, out releaseHandle);
             if (!handle.IsInvalid)
             {
-                bool result = VolumeUtils.AllowExtendedIO(handle);
+                bool result = VolumeControl.AllowExtendedIO(handle);
                 if (releaseHandle)
                 {
                     VolumeHandlePool.ReleaseHandle(m_volumeGuid);
