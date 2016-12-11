@@ -102,3 +102,13 @@ Revision History:
         Improved logging.
         API: Ability to add iSCSI targets while the server is running.
         Support for login requests with the Continue bit set to 1.
+        
+1.4.0 - Added support for MaxOutstandingR2T > 1.
+        Added support for InitialR2T = False.
+        Improved session management logic.
+        Ability to remove (unused) iSCSI targets while the server is running.
+        Improved login logic.
+        Added dead peer detection mechanism.
+        API: Listener endpoint should now be passed to the Start method.
+        API: Added OnSessionTermination event to ISCSITarget
+        API: Added ResetTarget method to disconnect any connected initators.
