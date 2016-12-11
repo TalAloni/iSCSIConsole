@@ -56,6 +56,11 @@ namespace ISCSIConsole
             if (listVolumes.SelectedItems.Count > 0)
             {
                 Volume selectedVolume = (Volume)listVolumes.SelectedItems[0].Tag;
+                if (selectedVolume is DynamicVolume && !((DynamicVolume)selectedVolume).IsOperational)
+                {
+                    MessageBox.Show("The selected volume is not operational", "Error");
+                    return;
+                }
                 if (!chkReadOnly.Checked)
                 {
                     Guid? volumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(selectedVolume);
