@@ -118,7 +118,7 @@ namespace ISCSIConsole
             if (listDisks.SelectedIndices.Count > 0)
             {
                 int selectedIndex = listDisks.SelectedIndices[0];
-                ReleaseDisk(m_disks[selectedIndex]);
+                LockUtils.ReleaseDisk(m_disks[selectedIndex]);
                 m_disks.RemoveAt(selectedIndex);
                 listDisks.Items.RemoveAt(selectedIndex);
             }
@@ -166,48 +166,8 @@ namespace ISCSIConsole
         {
             if (this.DialogResult != DialogResult.OK)
             {
-                ReleaseDisks(m_disks);
+                LockUtils.ReleaseDisks(m_disks);
             }
-        }
-
-        public static void ReleaseDisks(List<Disk> disks)
-        {
-            foreach (Disk disk in disks)
-            {
-                ReleaseDisk(disk);
-            }
-        }
-
-        private static void ReleaseDisk(Disk disk)
-        {
-            if (disk is DiskImage)
-            {
-                ((DiskImage)disk).ReleaseLock();
-            }
-#if Win32
-            else if (disk is PhysicalDisk)
-            {
-                if (!DiskAccessLibrary.LogicalDiskManager.DynamicDisk.IsDynamicDisk(disk))
-                {
-                    LockHelper.UnlockBasicDiskAndVolumes((PhysicalDisk)disk);
-                    try
-                    {
-                        ((PhysicalDisk)disk).UpdateProperties();
-                    }
-                    catch (System.IO.IOException)
-                    {
-                    }
-                }
-            }
-            else if (disk is VolumeDisk)
-            {
-                Guid? windowsVolumeGuid = WindowsVolumeHelper.GetWindowsVolumeGuid(((VolumeDisk)disk).Volume);
-                if (windowsVolumeGuid.HasValue)
-                {
-                    WindowsVolumeManager.ReleaseLock(windowsVolumeGuid.Value);
-                }
-            }
-#endif
         }
     }
 }

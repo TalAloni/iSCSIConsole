@@ -130,7 +130,7 @@ namespace ISCSIConsole
                     return;
                 }
                 List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
-                AddTargetForm.ReleaseDisks(disks);
+                LockUtils.ReleaseDisks(disks);
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);
             }
