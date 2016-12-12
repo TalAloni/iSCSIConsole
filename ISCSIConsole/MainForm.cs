@@ -47,6 +47,7 @@ namespace ISCSIConsole
             comboIPAddress.DataSource = list;
             comboIPAddress.DisplayMember = "Key";
             comboIPAddress.ValueMember = "Value";
+            lblStatus.Text = "Author: Tal Aloni (tal.aloni.il@gmail.com)";
 #if Win32
             if (!SecurityHelper.IsAdministrator())
             {
