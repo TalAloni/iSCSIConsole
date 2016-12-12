@@ -37,12 +37,29 @@ namespace ISCSIConsole
             {
                 diskImage = DiskImage.GetDiskImage(path);
             }
-            catch (IOException)
+            catch (IOException ex)
             {
-                MessageBox.Show("Can't open disk image.", "Error");
+                MessageBox.Show("Can't open disk image: " + ex.Message, "Error");
                 return;
             }
-            bool isLocked = diskImage.ExclusiveLock();
+            catch (InvalidDataException ex)
+            {
+                MessageBox.Show("Invalid disk image: " + ex.Message, "Error");
+                return;
+            }
+            catch (NotImplementedException)
+            {
+                MessageBox.Show("Unsupported Disk Image Format", "Error");
+                return;
+            }
+            bool isLocked = false;
+            try
+            {
+                isLocked = diskImage.ExclusiveLock();
+            }
+            catch (IOException)
+            {
+            }
             if (!isLocked)
             {
                 MessageBox.Show("Cannot lock the disk image for exclusive access.", "Error");
