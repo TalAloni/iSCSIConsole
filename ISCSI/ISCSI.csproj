@@ -70,6 +70,7 @@
     <Compile Include="ISCSI.Server\Exceptions\InvalidTargetTransferTagException.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.Login.cs" />
+    <Compile Include="ISCSI.Server\ISCSIServer.Logout.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.Parameters.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.PDUProcessor.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.TextRequest.cs" />

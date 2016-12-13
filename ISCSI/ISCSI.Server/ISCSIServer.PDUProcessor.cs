@@ -102,75 +102,9 @@ namespace ISCSI.Server
                 }
                 else if (pdu is LogoutRequestPDU)
                 {
-                    Log(Severity.Verbose, "[{0}] Logour Request", state.ConnectionIdentifier);
                     LogoutRequestPDU request = (LogoutRequestPDU)pdu;
-                    if (state.Session.IsDiscovery && request.ReasonCode != LogoutReasonCode.CloseTheSession)
-                    {
-                        // RFC 3720: Discovery-session: The target MUST ONLY accept [..] logout request with the reason "close the session"
-                        RejectPDU reject = new RejectPDU();
-                        reject.Reason = RejectReason.ProtocolError;
-                        reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
-                        state.SendQueue.Enqueue(reject);
-                    }
-                    else
-                    {
-                        List<ConnectionState> connectionsToClose = new List<ConnectionState>();
-                        if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
-                        {
-                            connectionsToClose = m_connectionManager.GetSessionConnections(state.Session);
-                        }
-                        else if (request.ReasonCode == LogoutReasonCode.CloseTheConnection)
-                        {
-                            // RFC 3720: A Logout for a CID may be performed on a different transport connection when the TCP connection for the CID has already been terminated.
-                            ConnectionState existingConnection = m_connectionManager.FindConnection(state.Session, request.CID);
-                            if (existingConnection != null)
-                            {
-                                connectionsToClose.Add(existingConnection);
-                            }
-                            else
-                            {
-                                LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.CIDNotFound);
-                                state.SendQueue.Enqueue(response);
-                                return;
-                            }
-                        }
-                        else if (request.ReasonCode == LogoutReasonCode.RemoveTheConnectionForRecovery)
-                        {
-                            LogoutResponsePDU response = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.ConnectionRecoveryNotSupported);
-                            state.SendQueue.Enqueue(response);
-                            return;
-                        }
-                        else
-                        {
-                            // Unknown LogoutRequest ReasonCode
-                            RejectPDU reject = new RejectPDU();
-                            reject.Reason = RejectReason.ProtocolError;
-                            reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
-                            state.SendQueue.Enqueue(reject);
-                            return;
-                        }
-
-                        foreach (ConnectionState connection in connectionsToClose)
-                        {
-                            // Wait for pending I/O to complete.
-                            connection.RunningSCSICommands.WaitUntilZero();
-                            if (connection != state)
-                            {
-                                SocketUtils.ReleaseSocket(connection.ClientSocket);
-                            }
-                            m_connectionManager.RemoveConnection(connection);
-                        }
-
-                        if (request.ReasonCode == LogoutReasonCode.CloseTheSession)
-                        {
-                            Log(Severity.Verbose, "[{0}] Session has been closed", state.Session.SessionIdentifier);
-                            m_sessionManager.RemoveSession(state.Session, SessionTerminationReason.Logout);
-                        }
-
-                        LogoutResponsePDU successResponse = ServerResponseHelper.GetLogoutResponsePDU(request, LogoutResponse.ClosedSuccessfully);
-                        state.SendQueue.Enqueue(successResponse);
-                        // connection will be closed after a LogoutResponsePDU has been sent.
-                    }
+                    ISCSIPDU response = GetLogoutResponsePDU(request, state.ConnectionParameters);
+                    state.SendQueue.Enqueue(response);
                 }
                 else if (state.Session.IsDiscovery)
                 {
