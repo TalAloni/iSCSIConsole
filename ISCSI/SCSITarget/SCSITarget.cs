@@ -29,6 +29,8 @@ namespace SCSI
 
         public event EventHandler<StandardInquiryEventArgs> OnStandardInquiry;
 
+        public event EventHandler<UnitSerialNumberInquiryEventArgs> OnUnitSerialNumberInquiry;
+
         public event EventHandler<DeviceIdentificationInquiryEventArgs> OnDeviceIdentificationInquiry;
 
         public SCSITarget()
@@ -72,6 +74,16 @@ namespace SCSI
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<StandardInquiryEventArgs> handler = OnStandardInquiry;
+            if (handler != null)
+            {
+                handler(sender, args);
+            }
+        }
+
+        public void NotifyUnitSerialNumberInquiry(object sender, UnitSerialNumberInquiryEventArgs args)
+        {
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<UnitSerialNumberInquiryEventArgs> handler = OnUnitSerialNumberInquiry;
             if (handler != null)
             {
                 handler(sender, args);

@@ -84,6 +84,7 @@
     <Compile Include="ISCSI.Server\TargetEventArgs\TextRequestArgs.cs" />
     <Compile Include="ISCSI.Server\TargetList.cs" />
     <Compile Include="ISCSI.Server\TargetResponseHelper.cs" />
+    <Compile Include="SCSITarget\InquiryEventArgs\UnitSerialNumberInquiryEventArgs.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\Enums\ModePageCodeName.cs" />
     <Compile Include="SCSI\Enums\SCSIOpCodeName.cs" />

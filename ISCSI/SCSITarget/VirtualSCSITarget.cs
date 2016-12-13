@@ -175,6 +175,7 @@ namespace SCSI
                             // Microsoft iSCSI Target uses values such as "34E5A6FC-3ACC-452D-AEDA-6EE2EFF20FB4"
                             ulong serialNumber = 0;
                             page.ProductSerialNumber = serialNumber.ToString("00000000");
+                            NotifyUnitSerialNumberInquiry(this, new UnitSerialNumberInquiryEventArgs(lun, page));
                             response = page.GetBytes();
                             break;
                         }
