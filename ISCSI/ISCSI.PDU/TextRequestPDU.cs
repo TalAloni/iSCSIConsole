@@ -57,5 +57,13 @@ namespace ISCSI
 
             return base.GetBytes();
         }
+
+        public KeyValuePairList<string, string> TextParameters
+        {
+            set
+            {
+                Text = KeyValuePairUtils.ToNullDelimitedString(value);
+            }
+        }
     }
 }

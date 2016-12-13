@@ -18,6 +18,7 @@ namespace ISCSI.Server
         private string m_targetName; // ISCSI name
         private SCSITarget m_target;
         public event EventHandler<AuthorizationRequestArgs> OnAuthorizationRequest;
+        public event EventHandler<TextRequestArgs> OnTextRequest;
         public event EventHandler<SessionTerminationArgs> OnSessionTermination;
 
         public ISCSITarget(string targetName, List<Disk> disks) : this(targetName, new VirtualSCSITarget(disks))
@@ -61,6 +62,17 @@ namespace ISCSI.Server
                 return args.Accept;
             }
             return true;
+        }
+
+        internal KeyValuePairList<string, string> GetTextResponse(KeyValuePairList<string, string> requestParameters)
+        {
+            EventHandler<TextRequestArgs> handler = OnTextRequest;
+            if (handler != null)
+            {
+                TextRequestArgs args = new TextRequestArgs(requestParameters);
+                return args.ResponseParaemeters;
+            }
+            return new KeyValuePairList<string, string>();
         }
 
         internal void NotifySessionTermination(string initiatorName, ulong isid, SessionTerminationReason reason)

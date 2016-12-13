@@ -97,11 +97,7 @@ namespace ISCSI.Server
                 if (pdu is TextRequestPDU)
                 {
                     TextRequestPDU request = (TextRequestPDU)pdu;
-                    TextResponsePDU response;
-                    lock (m_targets.Lock)
-                    {
-                        response = ServerResponseHelper.GetTextResponsePDU(request, m_targets.GetList());
-                    }
+                    TextResponsePDU response = GetTextResponsePDU(request, state.ConnectionParameters);
                     state.SendQueue.Enqueue(response);
                 }
                 else if (pdu is LogoutRequestPDU)

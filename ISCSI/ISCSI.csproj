@@ -72,6 +72,7 @@
     <Compile Include="ISCSI.Server\ISCSIServer.Login.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.Parameters.cs" />
     <Compile Include="ISCSI.Server\ISCSIServer.PDUProcessor.cs" />
+    <Compile Include="ISCSI.Server\ISCSIServer.TextRequest.cs" />
     <Compile Include="ISCSI.Server\ISCSISession.cs" />
     <Compile Include="ISCSI.Server\ISCSITarget.cs" />
     <Compile Include="ISCSI.Server\PDUHelper.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="ISCSI.Server\SessionManager.cs" />
     <Compile Include="ISCSI.Server\TargetEventArgs\AuthorizationRequestArgs.cs" />
     <Compile Include="ISCSI.Server\TargetEventArgs\SessionTerminationArgs.cs" />
+    <Compile Include="ISCSI.Server\TargetEventArgs\TextRequestArgs.cs" />
     <Compile Include="ISCSI.Server\TargetList.cs" />
     <Compile Include="ISCSI.Server\TargetResponseHelper.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />

@@ -37,20 +37,6 @@ namespace ISCSI.Server
             return response;
         }
 
-        internal static TextResponsePDU GetTextResponsePDU(TextRequestPDU request, List<ISCSITarget> targets)
-        {
-            TextResponsePDU response = new TextResponsePDU();
-            response.Final = true;
-            response.InitiatorTaskTag = request.InitiatorTaskTag;
-            KeyValuePairList<string, string> entries = new KeyValuePairList<string, string>();
-            foreach (ISCSITarget target in targets)
-            {
-                entries.Add("TargetName", target.TargetName);
-            }
-            response.Text = KeyValuePairUtils.ToNullDelimitedString(entries);
-            return response;
-        }
-
         internal static LogoutResponsePDU GetLogoutResponsePDU(LogoutRequestPDU request, LogoutResponse responseCode)
         {
             LogoutResponsePDU response = new LogoutResponsePDU();
