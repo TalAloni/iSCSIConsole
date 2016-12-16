@@ -128,6 +128,7 @@
     <Compile Include="SCSITarget\InquiryEventArgs\StandardInquiryEventArgs.cs" />
     <Compile Include="SCSITarget\InquiryEventArgs\UnitSerialNumberInquiryEventArgs.cs" />
     <Compile Include="SCSITarget\SCSITarget.cs" />
+    <Compile Include="SCSITarget\SCSITargetInterface.cs" />
     <Compile Include="SCSITarget\VirtualSCSITarget.cs" />
     <Compile Include="Utilities\KeyValuePairUtils.cs" />
     <Compile Include="Utilities\LogEntry.cs" />

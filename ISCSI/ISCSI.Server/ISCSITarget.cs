@@ -13,10 +13,15 @@ using Utilities;
 
 namespace ISCSI.Server
 {
-    public class ISCSITarget : SCSITarget
+    public class ISCSITarget : SCSITargetInterface
     {
         private string m_targetName; // ISCSI name
-        private SCSITarget m_target;
+        private SCSITargetInterface m_target;
+        // SCSI events:
+        public event EventHandler<StandardInquiryEventArgs> OnStandardInquiry;
+        public event EventHandler<UnitSerialNumberInquiryEventArgs> OnUnitSerialNumberInquiry;
+        public event EventHandler<DeviceIdentificationInquiryEventArgs> OnDeviceIdentificationInquiry;
+        // iSCSI events:
         public event EventHandler<AuthorizationRequestArgs> OnAuthorizationRequest;
         public event EventHandler<TextRequestArgs> OnTextRequest;
         public event EventHandler<SessionTerminationArgs> OnSessionTermination;
@@ -25,15 +30,21 @@ namespace ISCSI.Server
         {
         }
 
-        public ISCSITarget(string targetName, SCSITarget scsiTarget)
+        public ISCSITarget(string targetName, SCSITargetInterface scsiTarget)
         {
             m_targetName = targetName;
             m_target = scsiTarget;
             m_target.OnStandardInquiry += new EventHandler<StandardInquiryEventArgs>(Target_OnStandardInquiry);
             m_target.OnDeviceIdentificationInquiry += new EventHandler<DeviceIdentificationInquiryEventArgs>(Target_OnDeviceIdentificationInquiry);
+            m_target.OnUnitSerialNumberInquiry += new EventHandler<UnitSerialNumberInquiryEventArgs>(Target_OnUnitSerialNumberInquiry);
         }
 
-        public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        public void QueueCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, OnCommandCompleted OnCommandCompleted)
+        {
+            m_target.QueueCommand(commandBytes, lun, data, task, OnCommandCompleted);
+        }
+
+        public SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
         {
             return m_target.ExecuteCommand(commandBytes, lun, data, out response);
         }
@@ -41,17 +52,37 @@ namespace ISCSI.Server
         public void Target_OnStandardInquiry(object sender, StandardInquiryEventArgs args)
         {
             args.Data.VersionDescriptors.Add(VersionDescriptorName.iSCSI);
-            NotifyStandardInquiry(this, args);
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<StandardInquiryEventArgs> handler = OnStandardInquiry;
+            if (handler != null)
+            {
+                handler(sender, args);
+            }
+        }
+
+        void Target_OnUnitSerialNumberInquiry(object sender, UnitSerialNumberInquiryEventArgs args)
+        {
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<UnitSerialNumberInquiryEventArgs> handler = OnUnitSerialNumberInquiry;
+            if (handler != null)
+            {
+                handler(sender, args);
+            }
         }
 
         public void Target_OnDeviceIdentificationInquiry(object sender, DeviceIdentificationInquiryEventArgs args)
         {
             // ISCSI identifier is needed for WinPE to pick up the disk during boot (after iPXE's sanhook)
             args.Page.IdentificationDescriptorList.Add(IdentificationDescriptor.GetSCSINameStringIdentifier(m_targetName));
-            NotifyDeviceIdentificationInquiry(this, args);
+            // To be thread-safe we must capture the delegate reference first
+            EventHandler<DeviceIdentificationInquiryEventArgs> handler = OnDeviceIdentificationInquiry;
+            if (handler != null)
+            {
+                handler(sender, args);
+            }
         }
 
-        public bool AuthorizeInitiator(string initiatorName, ulong isid, IPEndPoint initiatorEndPoint)
+        internal bool AuthorizeInitiator(string initiatorName, ulong isid, IPEndPoint initiatorEndPoint)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<AuthorizationRequestArgs> handler = OnAuthorizationRequest;
@@ -93,7 +124,7 @@ namespace ISCSI.Server
             }
         }
 
-        public SCSITarget SCSITarget
+        public SCSITargetInterface SCSITarget
         {
             get
             {

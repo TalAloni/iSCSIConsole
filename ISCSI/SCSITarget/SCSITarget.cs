@@ -12,9 +12,7 @@ using Utilities;
 
 namespace SCSI
 {
-    public delegate void OnCommandCompleted(SCSIStatusCodeName status, byte[] responseBytes, object task);
-
-    public abstract class SCSITarget
+    public abstract class SCSITarget : SCSITargetInterface
     {
         private class SCSICommand
         {
@@ -70,7 +68,7 @@ namespace SCSI
 
         public abstract SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response);
 
-        public void NotifyStandardInquiry(object sender, StandardInquiryEventArgs args)
+        protected void NotifyStandardInquiry(object sender, StandardInquiryEventArgs args)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<StandardInquiryEventArgs> handler = OnStandardInquiry;
@@ -80,7 +78,7 @@ namespace SCSI
             }
         }
 
-        public void NotifyUnitSerialNumberInquiry(object sender, UnitSerialNumberInquiryEventArgs args)
+        protected void NotifyUnitSerialNumberInquiry(object sender, UnitSerialNumberInquiryEventArgs args)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<UnitSerialNumberInquiryEventArgs> handler = OnUnitSerialNumberInquiry;
@@ -90,7 +88,7 @@ namespace SCSI
             }
         }
 
-        public void NotifyDeviceIdentificationInquiry(object sender, DeviceIdentificationInquiryEventArgs args)
+        protected void NotifyDeviceIdentificationInquiry(object sender, DeviceIdentificationInquiryEventArgs args)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<DeviceIdentificationInquiryEventArgs> handler = OnDeviceIdentificationInquiry;
