@@ -26,6 +26,13 @@ namespace DiskAccessLibrary
             m_diskBytes = new byte[size];
         }
 
+        public void Free()
+        {
+            m_diskBytes = null;
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
         public override byte[] ReadSectors(long sectorIndex, int sectorCount)
         {
             return ByteReader.ReadBytes(m_diskBytes, (int)sectorIndex * BytesPerRAMDiskSector, sectorCount * BytesPerRAMDiskSector);
