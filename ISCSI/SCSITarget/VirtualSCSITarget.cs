@@ -24,9 +24,6 @@ namespace SCSI
         public VirtualSCSITarget(List<Disk> disks)
         {
             m_disks = disks;
-            Thread workerThread = new Thread(ProcessCommandQueue);
-            workerThread.IsBackground = true;
-            workerThread.Start();
         }
 
         /// <summary>

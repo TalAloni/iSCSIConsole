@@ -38,7 +38,7 @@ namespace SCSI
             workerThread.Start();
         }
 
-        public void ProcessCommandQueue()
+        private void ProcessCommandQueue()
         {
             while (true)
             {
