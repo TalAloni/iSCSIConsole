@@ -29,11 +29,6 @@ namespace ISCSI.Client
         public class DeclaredParameters
         {
             // Connection parameters:
-            
-            /// <summary>
-            /// per direction parameter that the target or initator declares.
-            /// maximum data segment length that the target (or initator) can receive in a single iSCSI PDU.
-            /// </summary>
             public static int MaxRecvDataSegmentLength = 262144;
         }
     }

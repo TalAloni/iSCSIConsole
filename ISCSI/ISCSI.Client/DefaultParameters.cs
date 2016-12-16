@@ -41,12 +41,12 @@ namespace ISCSI.Client
             public const int FirstBurstLength = 65536;
 
             /// <summary>
-            /// minimum time, in seconds, to wait before attempting an explicit/implicit logout after connection termination / reset.
+            /// Minimum time, in seconds, to wait before attempting an explicit/implicit logout after connection termination / reset.
             /// </summary>
             public const int DefaultTime2Wait = 2;
 
             /// <summary>
-            /// maximum time, in seconds after an initial wait (Time2Wait), before which an active task reassignment
+            /// Maximum time, in seconds after an initial wait (Time2Wait), before which an active task reassignment
             /// is still possible after an unexpected connection termination or a connection reset.
             /// </summary>
             public const int DefaultTime2Retain = 20;
@@ -63,7 +63,9 @@ namespace ISCSI.Client
         public class Connection
         {
             /// <summary>
-            /// The default MaxRecvDataSegmentLength is used during Login
+            /// Maximum data segment length that the target or initator can receive in an iSCSI PDU.
+            /// Per direction parameter that the target or initator declares.
+            /// The default MaxRecvDataSegmentLength is used during Login.
             /// </summary>
             public const int MaxRecvDataSegmentLength = 8192;
         }
