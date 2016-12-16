@@ -112,3 +112,9 @@ Revision History:
         API: Listener endpoint should now be passed to the Start method.
         API: Added OnSessionTermination event to ISCSITarget
         API: Added ResetTarget method to disconnect any connected initators.
+
+1.4.1 - Bugfix: iSCSI Server did not start (when calling Start) after a SocketException.
+        Write performance have been improved by avoiding unnecessary memory copy operation when reading iSCSI PDU.
+        API: Added ISCSITarget.OnTextRequest event to handle vendor specific text requests.
+        API: Added SCSITarget.OnUnitSerialNumberInquiry event.
+        API: Added SCSITargetInterface to improve extensibility.
