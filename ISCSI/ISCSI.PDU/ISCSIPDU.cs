@@ -13,6 +13,8 @@ namespace ISCSI
 {
     public class ISCSIPDU
     {
+        public const int BasicHeaderSegmentLength = 48;
+
         public bool ImmediateDelivery;   // I-Bit - first byte
         public ISCSIOpCodeName OpCode;              // first byte
         public bool Final;               // F-Bit - first byte
@@ -77,7 +79,7 @@ namespace ISCSI
         {
             get
             {
-                int length = (int)(TotalAHSLength + DataSegmentLength + 48);
+                int length = (int)(BasicHeaderSegmentLength + TotalAHSLength + DataSegmentLength);
                 length = (int)Math.Ceiling((double)length / 4) * 4; // iSCSIPDUs are padded to the closest integer number of four byte words.
                 return length;
             }
@@ -129,8 +131,7 @@ namespace ISCSI
             byte totalAHSLength = buffer[offset + 4];
             int dataSegmentLength = buffer[offset + 5] << 16 | buffer[offset + 6] << 8 | buffer[offset + 7];
 
-            // Basic Header segment size is 48 bytes
-            int length = totalAHSLength + dataSegmentLength + 48;
+            int length = BasicHeaderSegmentLength + totalAHSLength + dataSegmentLength;
             length = (int)Math.Ceiling((double)length / 4) * 4; // iSCSIPDUs are padded to the closest integer number of four byte words.
 
             return length;
