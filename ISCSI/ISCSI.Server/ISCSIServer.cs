@@ -65,17 +65,20 @@ namespace ISCSI.Server
             return false;
         }
 
+        /// <exception cref="System.Net.Sockets.SocketException"></exception>
         public void Start()
         {
             Start(DefaultPort);
         }
 
         /// <param name="listenerPort">The port on which the iSCSI server will listen</param>
+        /// <exception cref="System.Net.Sockets.SocketException"></exception>
         public void Start(int listenerPort)
         {
             Start(new IPEndPoint(IPAddress.Any, listenerPort));
         }
 
+        /// <exception cref="System.Net.Sockets.SocketException"></exception>
         public void Start(IPEndPoint listenerEndPoint)
         {
             Start(listenerEndPoint, TimeSpan.FromMinutes(5));
@@ -83,17 +86,17 @@ namespace ISCSI.Server
 
         /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
         /// <param name="keepAliveTime">The duration between keep-alive transmissions</param>        
+        /// <exception cref="System.Net.Sockets.SocketException"></exception>
         public void Start(IPEndPoint listenerEndPoint, TimeSpan? keepAliveTime)
         {
             if (!m_listening)
             {
                 Log(Severity.Information, "Starting Server");
-                m_listening = true;
-
                 m_listenerSocket = new Socket(listenerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 m_listenerSocket.Bind(listenerEndPoint);
                 m_listenerSocket.Listen(1000);
                 m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
+                m_listening = true;
 
                 if (keepAliveTime.HasValue)
                 {
