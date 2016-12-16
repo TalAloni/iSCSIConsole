@@ -187,14 +187,18 @@ namespace ISCSIConsole
             this.Controls.Add(this.btnAddDiskImage);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.KeyPreview = true;
             this.MaximizeBox = false;
             this.MaximumSize = new System.Drawing.Size(500, 260);
             this.MinimumSize = new System.Drawing.Size(500, 260);
             this.Name = "AddTargetForm";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.Text = "Add iSCSI Target";
+            this.Deactivate += new System.EventHandler(this.AddTargetForm_Deactivate);
             this.Load += new System.EventHandler(this.AddTargetForm_Load);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.AddTargetForm_KeyUp);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AddTargetForm_FormClosing);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.AddTargetForm_KeyDown);
             this.ResumeLayout(false);
             this.PerformLayout();
 

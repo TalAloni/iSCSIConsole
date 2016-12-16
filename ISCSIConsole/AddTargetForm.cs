@@ -40,12 +40,25 @@ namespace ISCSIConsole
 
         private void btnCreateDiskImage_Click(object sender, EventArgs e)
         {
-            CreateDiskImageForm createDiskImage = new CreateDiskImageForm();
-            DialogResult result = createDiskImage.ShowDialog();
-            if (result == DialogResult.OK)
+            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
             {
-                DiskImage diskImage = createDiskImage.DiskImage;
-                AddDisk(diskImage);
+                CreateRAMDiskForm createRAMDisk = new CreateRAMDiskForm();
+                DialogResult result = createRAMDisk.ShowDialog();
+                if (result == DialogResult.OK)
+                {
+                    RAMDisk ramDisk = createRAMDisk.RAMDisk;
+                    AddDisk(ramDisk);
+                }
+            }
+            else
+            {
+                CreateDiskImageForm createDiskImage = new CreateDiskImageForm();
+                DialogResult result = createDiskImage.ShowDialog();
+                if (result == DialogResult.OK)
+                {
+                    DiskImage diskImage = createDiskImage.DiskImage;
+                    AddDisk(diskImage);
+                }
             }
         }
 
@@ -96,6 +109,10 @@ namespace ISCSIConsole
             if (disk is DiskImage)
             {
                 description = ((DiskImage)disk).Path;
+            }
+            else if (disk is RAMDisk)
+            {
+                description = "RAM Disk";
             }
 #if Win32
             else if (disk is PhysicalDisk)
@@ -168,6 +185,24 @@ namespace ISCSIConsole
             {
                 LockUtils.ReleaseDisks(m_disks);
             }
+        }
+
+        private void AddTargetForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Shift)
+            {
+                btnCreateDiskImage.Text = "Create RAM Disk";
+            }
+        }
+
+        private void AddTargetForm_KeyUp(object sender, KeyEventArgs e)
+        {
+            btnCreateDiskImage.Text = "Create Virtual Disk";
+        }
+
+        private void AddTargetForm_Deactivate(object sender, EventArgs e)
+        {
+            btnCreateDiskImage.Text = "Create Virtual Disk";
         }
     }
 }

@@ -46,6 +46,12 @@
     <Compile Include="CreateDiskImageForm.Designer.cs">
       <DependentUpon>CreateDiskImageForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="CreateRAMDiskForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CreateRAMDiskForm.Designer.cs">
+      <DependentUpon>CreateRAMDiskForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Disks\VolumeDisk.cs" />
     <Compile Include="Helpers\FormattingHelper.cs" />
     <Compile Include="Helpers\ISCSINameHelper.cs" />
@@ -75,6 +81,10 @@
     <EmbeddedResource Include="CreateDiskImageForm.resx">
       <SubType>Designer</SubType>
       <DependentUpon>CreateDiskImageForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CreateRAMDiskForm.resx">
+      <DependentUpon>CreateRAMDiskForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <SubType>Designer</SubType>

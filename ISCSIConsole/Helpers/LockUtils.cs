@@ -27,6 +27,10 @@ namespace ISCSIConsole
             {
                 ((DiskImage)disk).ReleaseLock();
             }
+            else if (disk is RAMDisk)
+            {
+                ((RAMDisk)disk).Free();
+            }
 #if Win32
             else if (disk is PhysicalDisk)
             {
