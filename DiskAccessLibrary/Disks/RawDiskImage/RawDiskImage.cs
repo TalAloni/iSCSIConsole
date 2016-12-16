@@ -22,6 +22,7 @@ namespace DiskAccessLibrary
         {
         }
 
+        /// <exception cref="System.IO.IOException"></exception>
         public override bool ExclusiveLock()
         {
             if (!m_isExclusiveLock)
@@ -100,6 +101,7 @@ namespace DiskAccessLibrary
             }
         }
 
+        /// <exception cref="System.IO.IOException"></exception>
         public override void Extend(long additionalNumberOfBytes)
         {
             if (additionalNumberOfBytes % this.BytesPerSector > 0)

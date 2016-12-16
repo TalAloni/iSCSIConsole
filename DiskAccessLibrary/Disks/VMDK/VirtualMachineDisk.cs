@@ -22,6 +22,10 @@ namespace DiskAccessLibrary
 
         private DiskImage m_extent;
 
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
         public VirtualMachineDisk(string descriptorPath) : base(descriptorPath)
         {
             m_descriptorPath = descriptorPath;

@@ -26,6 +26,10 @@ namespace DiskAccessLibrary
         private int m_tracksPerCylinder; // a.k.a. heads
         private int m_sectorsPerTrack;
 
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
         public VirtualHardDisk(string virtualHardDiskPath) : base(virtualHardDiskPath)
         {
             // We can't read the VHD footer using this.ReadSector() because it's out of the disk boundaries

@@ -45,6 +45,7 @@
     <Compile Include="Disks\MasterBootRecord\MasterBootRecord.cs" />
     <Compile Include="Disks\MasterBootRecord\PartitionTableEntry.cs" />
     <Compile Include="Disks\MasterBootRecord\PartitionTypeName.cs" />
+    <Compile Include="Disks\RAMDisk.cs" />
     <Compile Include="Disks\RawDiskImage\RawDiskImage.cs" />
     <Compile Include="Disks\VHD\BlockAllocationTable.cs" />
     <Compile Include="Disks\VHD\DynamicDiskHeader.cs" />

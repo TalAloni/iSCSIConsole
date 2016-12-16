@@ -54,6 +54,10 @@ namespace DiskAccessLibrary
             }
         }
 
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
         public static DiskImage GetDiskImage(string path)
         {
             if (path.EndsWith(".vhd", StringComparison.InvariantCultureIgnoreCase))
