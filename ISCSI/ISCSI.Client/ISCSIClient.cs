@@ -369,12 +369,10 @@ namespace ISCSI.Client
                 }
                 else
                 {
-                    byte[] pduBytes = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, pduLength);
-                    bytesLeftInBuffer -= pduLength;
                     ISCSIPDU pdu = null;
                     try
                     {
-                        pdu = ISCSIPDU.GetPDU(pduBytes);
+                        pdu = ISCSIPDU.GetPDU(state.ConnectionBuffer, bufferOffset);
                     }
                     catch (UnsupportedSCSICommandException)
                     {
@@ -384,6 +382,8 @@ namespace ISCSI.Client
                     {
                         throw;
                     }
+
+                    bytesLeftInBuffer -= pduLength;
 
                     if (pdu.GetType() == typeof(ISCSIPDU))
                     {

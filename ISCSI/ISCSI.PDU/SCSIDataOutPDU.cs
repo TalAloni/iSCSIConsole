@@ -26,7 +26,7 @@ namespace ISCSI
             OpCode = ISCSIOpCodeName.SCSIDataOut;
         }
 
-        public SCSIDataOutPDU(byte[] buffer) : base(buffer)
+        public SCSIDataOutPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
 

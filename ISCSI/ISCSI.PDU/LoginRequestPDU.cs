@@ -35,7 +35,7 @@ namespace ISCSI
             ImmediateDelivery = true;
         }
 
-        public LoginRequestPDU(byte[] buffer) : base(buffer)
+        public LoginRequestPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Transit = Final; // the Transit bit replaces the Final bit
             Continue = (OpCodeSpecificHeader[0] & 0x40) != 0;

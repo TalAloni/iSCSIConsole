@@ -27,7 +27,7 @@ namespace ISCSI
             Final = true;
         }
 
-        public LogoutResponsePDU(byte[] buffer) : base(buffer)
+        public LogoutResponsePDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Response = (LogoutResponse)OpCodeSpecificHeader[1];
             StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);

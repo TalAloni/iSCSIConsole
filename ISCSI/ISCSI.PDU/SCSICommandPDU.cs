@@ -28,7 +28,7 @@ namespace ISCSI
             OpCode = ISCSIOpCodeName.SCSICommand;
         }
 
-        public SCSICommandPDU(byte[] buffer) : base(buffer)
+        public SCSICommandPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Read = (OpCodeSpecificHeader[0] & 0x40) != 0;
             Write = (OpCodeSpecificHeader[0] & 0x20) != 0;

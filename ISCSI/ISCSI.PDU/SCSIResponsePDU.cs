@@ -34,7 +34,7 @@ namespace ISCSI
             Final = true;
         }
 
-        public SCSIResponsePDU(byte[] buffer) : base(buffer)
+        public SCSIResponsePDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             BidirectionalReadResidualOverflow = (OpCodeSpecificHeader[0] & 0x10) != 0;
             BidirectionalReadResidualUnderflow = (OpCodeSpecificHeader[0] & 0x08) != 0;

@@ -25,7 +25,7 @@ namespace ISCSI
             Final = true;
         }
 
-        public LogoutRequestPDU(byte[] buffer) : base(buffer)
+        public LogoutRequestPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             ReasonCode = (LogoutReasonCode)(OpCodeSpecificHeader[0] & 0x7F);
             CID = BigEndianConverter.ToUInt16(OpCodeSpecific, 0);

@@ -29,7 +29,7 @@ namespace ISCSI
             Final = true;
         }
 
-        public ReadyToTransferPDU(byte[] buffer) : base(buffer)
+        public ReadyToTransferPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
             TargetTransferTag = BigEndianConverter.ToUInt32(OpCodeSpecific, 0);

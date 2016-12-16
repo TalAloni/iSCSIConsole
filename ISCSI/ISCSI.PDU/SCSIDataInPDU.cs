@@ -34,7 +34,7 @@ namespace ISCSI
             OpCode = ISCSIOpCodeName.SCSIDataIn;
         }
 
-        public SCSIDataInPDU(byte[] buffer) : base(buffer)
+        public SCSIDataInPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Acknowledge = (OpCodeSpecificHeader[0] & 0x40) != 0;
             ResidualOverflow = (OpCodeSpecificHeader[0] & 0x04) != 0;

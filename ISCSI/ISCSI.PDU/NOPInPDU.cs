@@ -27,7 +27,7 @@ namespace ISCSI
             Final = true;
         }
 
-        public NOPInPDU(byte[] buffer) : base(buffer)
+        public NOPInPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             LUN = new LUNStructure(LUNOrOpCodeSpecific, 0);
 

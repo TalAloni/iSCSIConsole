@@ -28,22 +28,22 @@ namespace ISCSI
         { 
         }
 
-        protected ISCSIPDU(byte[] buffer)
+        protected ISCSIPDU(byte[] buffer, int offset)
         {
-            ImmediateDelivery = (buffer[0] & 0x40) != 0;
-            OpCode = (ISCSIOpCodeName)(buffer[0] & 0x3F);
-            Final = (buffer[1] & 0x80) != 0;
-            Array.Copy(buffer, 1, OpCodeSpecificHeader, 0, 3);
+            ImmediateDelivery = (buffer[offset + 0] & 0x40) != 0;
+            OpCode = (ISCSIOpCodeName)(buffer[offset + 0] & 0x3F);
+            Final = (buffer[offset + 1] & 0x80) != 0;
+            Array.Copy(buffer, offset + 1, OpCodeSpecificHeader, 0, 3);
             OpCodeSpecificHeader[0] &= 0x7F; // remove the final bit
 
-            TotalAHSLength = buffer[4];
-            DataSegmentLength = (uint)(buffer[5] << 16 | buffer[6] << 8 | buffer[7]);
-            Array.Copy(buffer, 8, LUNOrOpCodeSpecific, 0, 8);
-            InitiatorTaskTag = BigEndianConverter.ToUInt32(buffer, 16);
-            Array.Copy(buffer, 20, OpCodeSpecific, 0, 28);
+            TotalAHSLength = buffer[offset + 4];
+            DataSegmentLength = (uint)(buffer[offset + 5] << 16 | buffer[offset + 6] << 8 | buffer[offset + 7]);
+            Array.Copy(buffer, offset + 8, LUNOrOpCodeSpecific, 0, 8);
+            InitiatorTaskTag = BigEndianConverter.ToUInt32(buffer, offset + 16);
+            Array.Copy(buffer, offset + 20, OpCodeSpecific, 0, 28);
 
             Data = new byte[DataSegmentLength];
-            Array.Copy(buffer, 48, Data, 0, DataSegmentLength);
+            Array.Copy(buffer, offset + 48, Data, 0, DataSegmentLength);
         }
 
         virtual public byte[] GetBytes()
@@ -83,39 +83,39 @@ namespace ISCSI
             }
         }
 
-        public static ISCSIPDU GetPDU(byte[] buffer)
+        public static ISCSIPDU GetPDU(byte[] buffer, int offset)
         {
-            byte opCode = (byte)(buffer[0x00] & 0x3F);
+            byte opCode = (byte)(buffer[offset + 0x00] & 0x3F);
             switch ((ISCSIOpCodeName)opCode)
             {
                 case ISCSIOpCodeName.NOPOut:
-                    return new NOPOutPDU(buffer);
+                    return new NOPOutPDU(buffer, offset);
                 case ISCSIOpCodeName.SCSICommand:
-                    return new SCSICommandPDU(buffer);
+                    return new SCSICommandPDU(buffer, offset);
                 case ISCSIOpCodeName.LoginRequest:
-                    return new LoginRequestPDU(buffer);
+                    return new LoginRequestPDU(buffer, offset);
                 case ISCSIOpCodeName.TextRequest:
-                    return new TextRequestPDU(buffer);
+                    return new TextRequestPDU(buffer, offset);
                 case ISCSIOpCodeName.SCSIDataOut:
-                    return new SCSIDataOutPDU(buffer);
+                    return new SCSIDataOutPDU(buffer, offset);
                 case ISCSIOpCodeName.LogoutRequest:
-                    return new LogoutRequestPDU(buffer);
+                    return new LogoutRequestPDU(buffer, offset);
                 case ISCSIOpCodeName.NOPIn:
-                    return new NOPInPDU(buffer);
+                    return new NOPInPDU(buffer, offset);
                 case ISCSIOpCodeName.SCSIResponse:
-                    return new SCSIResponsePDU(buffer);
+                    return new SCSIResponsePDU(buffer, offset);
                 case ISCSIOpCodeName.LoginResponse:
-                    return new LoginResponsePDU(buffer);
+                    return new LoginResponsePDU(buffer, offset);
                 case ISCSIOpCodeName.TextResponse:
-                    return new TextResponsePDU(buffer);
+                    return new TextResponsePDU(buffer, offset);
                 case ISCSIOpCodeName.SCSIDataIn:
-                    return new SCSIDataInPDU(buffer);
+                    return new SCSIDataInPDU(buffer, offset);
                 case ISCSIOpCodeName.LogoutResponse:
-                    return new LogoutResponsePDU(buffer);
+                    return new LogoutResponsePDU(buffer, offset);
                 case ISCSIOpCodeName.ReadyToTransfer:
-                    return new ReadyToTransferPDU(buffer);
+                    return new ReadyToTransferPDU(buffer, offset);
                 default:
-                    return new ISCSIPDU(buffer);
+                    return new ISCSIPDU(buffer, offset);
             }
         }
 

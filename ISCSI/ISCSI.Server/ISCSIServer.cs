@@ -312,22 +312,22 @@ namespace ISCSI.Server
                 }
                 else
                 {
-                    byte[] pduBytes = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, pduLength);
-                    bytesLeftInBuffer -= pduLength;
                     ISCSIPDU pdu = null;
                     try
                     {
-                        pdu = ISCSIPDU.GetPDU(pduBytes);
+                        pdu = ISCSIPDU.GetPDU(state.ConnectionBuffer, bufferOffset);
                     }
                     catch (Exception ex)
                     {
                         Log(Severity.Error, "[{0}] Failed to read PDU (Exception: {1})", state.ConnectionIdentifier, ex.Message);
                         RejectPDU reject = new RejectPDU();
                         reject.Reason = RejectReason.InvalidPDUField;
-                        reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
+                        reject.Data = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, 48);
 
                         state.SendQueue.Enqueue(reject);
                     }
+
+                    bytesLeftInBuffer -= pduLength;
 
                     if (pdu != null)
                     {
@@ -338,7 +338,7 @@ namespace ISCSI.Server
                             RejectPDU reject = new RejectPDU();
                             reject.InitiatorTaskTag = pdu.InitiatorTaskTag;
                             reject.Reason = RejectReason.CommandNotSupported;
-                            reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
+                            reject.Data = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, 48);
                             state.SendQueue.Enqueue(reject);
                         }
                         else

@@ -28,7 +28,7 @@ namespace ISCSI
             OpCode = ISCSIOpCodeName.TextResponse;
         }
 
-        public TextResponsePDU(byte[] buffer) : base(buffer)
+        public TextResponsePDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Continue = (OpCodeSpecificHeader[0] & 0x40) != 0;
 

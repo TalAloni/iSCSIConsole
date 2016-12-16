@@ -26,7 +26,7 @@ namespace ISCSI
             InitiatorTaskTag = 0xFFFFFFFF;
         }
 
-        public RejectPDU(byte[] buffer) : base(buffer)
+        public RejectPDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Reason = (RejectReason)OpCodeSpecificHeader[1];
             StatSN = BigEndianConverter.ToUInt32(OpCodeSpecific, 4);

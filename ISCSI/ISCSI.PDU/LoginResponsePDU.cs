@@ -34,7 +34,7 @@ namespace ISCSI
             OpCode = ISCSIOpCodeName.LoginResponse;
         }
 
-        public LoginResponsePDU(byte[] buffer) : base(buffer)
+        public LoginResponsePDU(byte[] buffer, int offset) : base(buffer, offset)
         {
             Transit = Final; // the Transit bit replaces the Final bit
             Continue = (OpCodeSpecificHeader[0] & 0x40) != 0;
