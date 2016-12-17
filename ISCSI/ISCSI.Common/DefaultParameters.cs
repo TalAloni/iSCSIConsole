@@ -5,7 +5,7 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 
-namespace ISCSI.Server
+namespace ISCSI
 {
     /// <summary>
     /// Default operational parameters for iSCSI session / connection, as specified in RFC 3720.
