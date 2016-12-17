@@ -352,7 +352,7 @@ namespace ISCSI.Server
         {
             while (true)
             {
-                Log(Severity.Trace, "Entering ProcessSendQueue");
+                LogTrace("Entering ProcessSendQueue");
                 ISCSIPDU response;
                 bool stopped = !state.SendQueue.TryDequeue(out response);
                 if (stopped)
@@ -380,7 +380,7 @@ namespace ISCSI.Server
                     if (response is LogoutResponsePDU)
                     {
                         clientSocket.Close(); // We can close the connection now
-                        Log(Severity.Trace, "Leaving ProcessSendQueue");
+                        LogTrace("Leaving ProcessSendQueue");
                         return;
                     }
                     else if (response is LoginResponsePDU)
@@ -389,7 +389,7 @@ namespace ISCSI.Server
                         {
                             // Login Response: If the Status Class is not 0, the initiator and target MUST close the TCP connection.
                             clientSocket.Close(); // We can close the connection now
-                            Log(Severity.Trace, "Leaving ProcessSendQueue");
+                            LogTrace("Leaving ProcessSendQueue");
                             return;                            
                         }
                     }
@@ -397,13 +397,13 @@ namespace ISCSI.Server
                 catch (SocketException ex)
                 {
                     Log(Severity.Verbose, "[{0}] Failed to send response to initator. Operation: {1}, Size: {2}, SocketException: {3}", state.ConnectionIdentifier, response.OpCode, response.Length, ex.Message);
-                    Log(Severity.Trace, "Leaving ProcessSendQueue");
+                    LogTrace("Leaving ProcessSendQueue");
                     return;
                 }
                 catch (ObjectDisposedException)
                 {
                     Log(Severity.Verbose, "[{0}] Failed to send response to initator. Operation: {1}, Size: {2}. ObjectDisposedException", state.ConnectionIdentifier, response.OpCode, response.Length);
-                    Log(Severity.Trace, "Leaving ProcessSendQueue");
+                    LogTrace("Leaving ProcessSendQueue");
                     return;
                 }
             }
@@ -422,6 +422,12 @@ namespace ISCSI.Server
         public void Log(Severity severity, string message, params object[] args)
         {
             Log(severity, String.Format(message, args));
+        }
+
+        [System.Diagnostics.Conditional("TRACE")]
+        public void LogTrace(string message)
+        {
+            Log(Severity.Trace, message);
         }
     }
 }

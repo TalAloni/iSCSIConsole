@@ -54,7 +54,7 @@ namespace ISCSI.Server
 
         private void ProcessPDU(ISCSIPDU pdu, ConnectionState state)
         {
-            Log(Severity.Trace, "Entering ProcessPDU");
+            LogTrace("Entering ProcessPDU");
             
             if (state.Session == null || !state.Session.IsFullFeaturePhase)
             {
@@ -192,7 +192,7 @@ namespace ISCSI.Server
                     state.SendQueue.Enqueue(reject);
                 }
             }
-            Log(Severity.Trace, "Leaving ProcessPDU");
+            LogTrace("Leaving ProcessPDU");
         }
 
         private static string FormatNullDelimitedText(string text)
