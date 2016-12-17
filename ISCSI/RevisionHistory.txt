@@ -114,7 +114,10 @@ Revision History:
         API: Added ResetTarget method to disconnect any connected initators.
 
 1.4.1 - Bugfix: iSCSI Server did not start (when calling Start) after a SocketException.
-        Write performance have been improved by avoiding unnecessary memory copy operation when reading iSCSI PDU.
+        Write performance has been improved by avoiding unnecessary memory copy operation when reading iSCSI PDU.
         API: Added ISCSITarget.OnTextRequest event to handle vendor specific text requests.
         API: Added SCSITarget.OnUnitSerialNumberInquiry event.
         API: Added SCSITargetInterface to improve extensibility.
+
+1.4.2 - Write performance has been improved (due to improved connection buffer implementation).
+        Trace logging is now disabled in Release build.

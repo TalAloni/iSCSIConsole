@@ -88,3 +88,5 @@ Revision History:
         Added author information to the status bar.
         Added (hidden) option to create a RAM Disk.
         Bugfix: iSCSI Server did not start (when calling Start) after a SocketException.
+
+1.4.2 - Updates to the ISCSI library.
