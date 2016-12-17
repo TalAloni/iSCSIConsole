@@ -19,12 +19,8 @@ namespace ISCSI.Server
     internal class ConnectionState
     {
         public Socket ClientSocket = null;
-        /// <summary>
-        /// DataSegmentLength MUST not exceed MaxRecvDataSegmentLength for the direction it is sent and the total of all the DataSegmentLength of all PDUs in a sequence MUST not exceed MaxBurstLength (or FirstBurstLength for unsolicited data).
-        /// </summary>
-        public const int ReceiveBufferSize = 131072; // Note: FirstBurstLength, MaxBurstLength and MaxRecvDataSegmentLength put a cap on DataSegmentLength, NOT on the PDU length.
-        public byte[] ReceiveBuffer = new byte[ReceiveBufferSize]; // immediate receive buffer
-        public byte[] ConnectionBuffer = new byte[0]; // we append the receive buffer here until we have a complete PDU
+        public static int ReceiveBufferSize = ISCSIPDU.BasicHeaderSegmentLength + ISCSIServer.DeclaredParameters.MaxRecvDataSegmentLength;
+        public ISCSIConnectionReceiveBuffer ReceiveBuffer = new ISCSIConnectionReceiveBuffer(ReceiveBufferSize);
 
         public ConnectionParameters ConnectionParameters = new ConnectionParameters();
 

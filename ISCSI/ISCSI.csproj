@@ -42,6 +42,7 @@
     <Compile Include="ISCSI.Client\ISCSISession.cs" />
     <Compile Include="ISCSI.Client\PDUHelper.cs" />
     <Compile Include="ISCSI.Common\DefaultParameters.cs" />
+    <Compile Include="ISCSI.Common\ISCSIConnectionBuffer.cs" />
     <Compile Include="ISCSI.PDU\Enums\ISCSIOpCodeName.cs" />
     <Compile Include="ISCSI.PDU\Enums\ISCSIResponseName.cs" />
     <Compile Include="ISCSI.PDU\Enums\LoginResponseStatusClassName.cs" />

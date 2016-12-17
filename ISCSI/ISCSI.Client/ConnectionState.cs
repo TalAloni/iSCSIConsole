@@ -12,8 +12,7 @@ namespace ISCSI.Client
 {
     internal class ConnectionState
     {
-        public const int ReceiveBufferSize = 131072; // Note: FirstBurstLength, MaxBurstLength and MaxRecvDataSegmentLength put a cap on DataSegmentLength, NOT on the PDU length.
-        public byte[] ReceiveBuffer = new byte[ReceiveBufferSize]; // immediate receive buffer
-        public byte[] ConnectionBuffer = new byte[0]; // we append the receive buffer here until we have a complete PDU
+        public static int ReceiveBufferSize = ISCSIPDU.BasicHeaderSegmentLength + ISCSIClient.DeclaredParameters.MaxRecvDataSegmentLength;
+        public ISCSIConnectionReceiveBuffer ReceiveBuffer = new ISCSIConnectionReceiveBuffer(ReceiveBufferSize);
     }
 }

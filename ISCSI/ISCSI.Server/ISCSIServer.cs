@@ -137,7 +137,6 @@ namespace ISCSI.Server
 
             ConnectionState state = new ConnectionState();
             state.ConnectionParameters.InitiatorEndPoint = clientSocket.RemoteEndPoint as IPEndPoint;
-            state.ReceiveBuffer = new byte[ConnectionState.ReceiveBufferSize];
             // Disable the Nagle Algorithm for this tcp socket:
             clientSocket.NoDelay = true;
             state.ClientSocket = clientSocket;
@@ -148,9 +147,10 @@ namespace ISCSI.Server
             senderThread.IsBackground = true;
             senderThread.Start();
 
+            ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
             try
             {
-                clientSocket.BeginReceive(state.ReceiveBuffer, 0, ConnectionState.ReceiveBufferSize, 0, ReceiveCallback, state);
+                clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, 0, ReceiveCallback, state);
             }
             catch (ObjectDisposedException)
             {
@@ -240,12 +240,13 @@ namespace ISCSI.Server
                 return;
             }
 
-            byte[] currentBuffer = ByteReader.ReadBytes(state.ReceiveBuffer, 0, numberOfBytesReceived);
-            ProcessCurrentBuffer(currentBuffer, state);
+            ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
+            buffer.SetNumberOfBytesReceived(numberOfBytesReceived);
+            ProcessConnectionBuffer(state);
 
             try
             {
-                clientSocket.BeginReceive(state.ReceiveBuffer, 0, ConnectionState.ReceiveBufferSize, 0, ReceiveCallback, state);
+                clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, 0, ReceiveCallback, state);
             }
             catch (ObjectDisposedException)
             {
@@ -285,96 +286,65 @@ namespace ISCSI.Server
             }
         }
 
-        private void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
+        private void ProcessConnectionBuffer(ConnectionState state)
         {
             Socket clientSocket = state.ClientSocket;
 
-            if (state.ConnectionBuffer.Length == 0)
+            ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
+            while (buffer.HasCompletePDU())
             {
-                state.ConnectionBuffer = currentBuffer;
-            }
-            else
-            {
-                state.ConnectionBuffer = ByteUtils.Concatenate(state.ConnectionBuffer, currentBuffer);
-            }
-
-            // we now have all PDU bytes received so far in state.ConnectionBuffer
-            int bytesLeftInBuffer = state.ConnectionBuffer.Length;
-
-            while (bytesLeftInBuffer >= 8)
-            {
-                int bufferOffset = state.ConnectionBuffer.Length - bytesLeftInBuffer;
-                int pduLength = ISCSIPDU.GetPDULength(state.ConnectionBuffer, bufferOffset);
-                if (pduLength > bytesLeftInBuffer)
+                ISCSIPDU pdu = null;
+                try
                 {
-                    Log(Severity.Debug, "[{0}][ProcessCurrentBuffer] Bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
-                    break;
+                    pdu = buffer.DequeuePDU();
                 }
-                else
+                catch (Exception ex)
                 {
-                    ISCSIPDU pdu = null;
-                    try
-                    {
-                        pdu = ISCSIPDU.GetPDU(state.ConnectionBuffer, bufferOffset);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(Severity.Error, "[{0}] Failed to read PDU (Exception: {1})", state.ConnectionIdentifier, ex.Message);
-                        RejectPDU reject = new RejectPDU();
-                        reject.Reason = RejectReason.InvalidPDUField;
-                        reject.Data = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, 48);
+                    byte[] pduBytes = buffer.DequeuePDUBytes();
+                    Log(Severity.Error, "[{0}] Failed to read PDU (Exception: {1})", state.ConnectionIdentifier, ex.Message);
+                    RejectPDU reject = new RejectPDU();
+                    reject.Reason = RejectReason.InvalidPDUField;
+                    reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
 
+                    state.SendQueue.Enqueue(reject);
+                }
+
+                if (pdu != null)
+                {
+                    if (pdu.GetType() == typeof(ISCSIPDU))
+                    {
+                        Log(Severity.Error, "[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.ConnectionIdentifier, pdu.OpCode.ToString("X"));
+                        // Unsupported PDU
+                        RejectPDU reject = new RejectPDU();
+                        reject.InitiatorTaskTag = pdu.InitiatorTaskTag;
+                        reject.Reason = RejectReason.CommandNotSupported;
+                        reject.Data = ByteReader.ReadBytes(pdu.GetBytes(), 0, 48);
                         state.SendQueue.Enqueue(reject);
                     }
-
-                    bytesLeftInBuffer -= pduLength;
-
-                    if (pdu != null)
+                    else
                     {
-                        if (pdu.GetType() == typeof(ISCSIPDU))
+                        bool valid = ValidateCommandNumbering(pdu, state);
+                        if (valid)
                         {
-                            Log(Severity.Error, "[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.ConnectionIdentifier, pdu.OpCode.ToString("X"));
-                            // Unsupported PDU
-                            RejectPDU reject = new RejectPDU();
-                            reject.InitiatorTaskTag = pdu.InitiatorTaskTag;
-                            reject.Reason = RejectReason.CommandNotSupported;
-                            reject.Data = ByteReader.ReadBytes(state.ConnectionBuffer, bufferOffset, 48);
-                            state.SendQueue.Enqueue(reject);
+                            ProcessPDU(pdu, state);
                         }
                         else
                         {
-                            bool valid = ValidateCommandNumbering(pdu, state);
-                            if (valid)
-                            {
-                                ProcessPDU(pdu, state);
-                            }
-                            else
-                            {
-                                // We ignore this PDU
-                                Log(Severity.Warning, "[{0}] Ignoring PDU with CmdSN outside of expected range", state.ConnectionIdentifier);
-                            }
+                            // We ignore this PDU
+                            Log(Severity.Warning, "[{0}] Ignoring PDU with CmdSN outside of expected range", state.ConnectionIdentifier);
                         }
-                    }
-                    
-                    if (!clientSocket.Connected)
-                    {
-                        // Do not continue to process the buffer if the other side closed the connection
-                        if (bytesLeftInBuffer > 0)
-                        {
-                            Log(Severity.Debug, "[{0}] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, bytesLeftInBuffer);
-                        }
-                        return;
                     }
                 }
-            }
 
-            if (bytesLeftInBuffer > 0)
-            {
-                state.ConnectionBuffer = ByteReader.ReadBytes(state.ConnectionBuffer, state.ConnectionBuffer.Length - bytesLeftInBuffer, bytesLeftInBuffer);
-            }
-            else
-            {
-                state.ConnectionBuffer = new byte[0];
+                if (!clientSocket.Connected)
+                {
+                    // Do not continue to process the buffer if the other side closed the connection
+                    if (buffer.BytesInBuffer > 0)
+                    {
+                        Log(Severity.Debug, "[{0}] Buffer processing aborted, bytes left in receive buffer: {1}", state.ConnectionIdentifier, buffer.BytesInBuffer);
+                    }
+                    return;
+                }
             }
         }
 

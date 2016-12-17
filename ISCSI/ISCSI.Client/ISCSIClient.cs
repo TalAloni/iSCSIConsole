@@ -56,7 +56,8 @@ namespace ISCSI.Client
                     return false;
                 }
                 ConnectionState state = new ConnectionState();
-                m_currentAsyncResult = m_clientSocket.BeginReceive(state.ReceiveBuffer, 0, state.ReceiveBuffer.Length, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
+                ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
+                m_currentAsyncResult = m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
                 m_isConnected = true;
             }
             return m_isConnected;
@@ -325,12 +326,13 @@ namespace ISCSI.Client
             }
             else
             {
-                byte[] currentBuffer = ByteReader.ReadBytes(state.ReceiveBuffer, 0, numberOfBytesReceived);
-                ProcessCurrentBuffer(currentBuffer, state);
+                ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
+                buffer.SetNumberOfBytesReceived(numberOfBytesReceived);
+                ProcessConnectionBuffer(state);
 
                 try
                 {
-                    m_currentAsyncResult = m_clientSocket.BeginReceive(state.ReceiveBuffer, 0, state.ReceiveBuffer.Length, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
+                    m_currentAsyncResult = m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -345,78 +347,29 @@ namespace ISCSI.Client
             }
         }
 
-        private void ProcessCurrentBuffer(byte[] currentBuffer, ConnectionState state)
+        private void ProcessConnectionBuffer(ConnectionState state)
         {
-            if (state.ConnectionBuffer.Length == 0)
+            ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
+            while (buffer.HasCompletePDU())
             {
-                state.ConnectionBuffer = currentBuffer;
-            }
-            else
-            {
-                state.ConnectionBuffer = ByteUtils.Concatenate(state.ConnectionBuffer, currentBuffer);
-            }
-
-            // we now have all PDU bytes received so far in state.ConnectionBuffer
-            int bytesLeftInBuffer = state.ConnectionBuffer.Length;
-
-            while (bytesLeftInBuffer >= 8)
-            {
-                int bufferOffset = state.ConnectionBuffer.Length - bytesLeftInBuffer;
-                int pduLength = ISCSIPDU.GetPDULength(state.ConnectionBuffer, bufferOffset);
-                if (pduLength > bytesLeftInBuffer)
+                ISCSIPDU pdu = null;
+                try
                 {
-                    break;
+                    pdu = buffer.DequeuePDU();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+
+                if (pdu.GetType() == typeof(ISCSIPDU))
+                {
+                    throw new Exception("Unsupported");
                 }
                 else
                 {
-                    ISCSIPDU pdu = null;
-                    try
-                    {
-                        pdu = ISCSIPDU.GetPDU(state.ConnectionBuffer, bufferOffset);
-                    }
-                    catch (UnsupportedSCSICommandException)
-                    {
-                        throw;
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-
-                    bytesLeftInBuffer -= pduLength;
-
-                    if (pdu.GetType() == typeof(ISCSIPDU))
-                    {
-                        /*
-                        Log("[{0}][ProcessCurrentBuffer] Unsupported PDU (0x{1})", state.Connection.Identifier, pdu.OpCode.ToString("X"));
-                        // Unsupported PDU
-                        RejectPDU reject = new RejectPDU();
-                        reject.Reason = RejectReason.CommandNotSupported;
-                        reject.StatSN = state.Connection.StatSN;
-                        reject.ExpCmdSN = state.Connection.ExpCmdSN;
-                        reject.MaxCmdSN = state.Connection.ExpCmdSN + ISCSIServer.CommandQueueSize;
-                        reject.Data = ByteReader.ReadBytes(pduBytes, 0, 48);
-
-                        // StatSN is advanced after a Reject
-                        state.Connection.StatSN++;
-
-                        TrySendPDU(state, reject);*/
-                        throw new Exception("Unsupported");
-                    }
-                    else
-                    {
-                        ProcessPDU(pdu, state);
-                    }
+                    ProcessPDU(pdu, state);
                 }
-            }
-
-            if (bytesLeftInBuffer > 0)
-            {
-                state.ConnectionBuffer = ByteReader.ReadBytes(state.ConnectionBuffer, state.ConnectionBuffer.Length - bytesLeftInBuffer, bytesLeftInBuffer);
-            }
-            else
-            {
-                state.ConnectionBuffer = new byte[0];
             }
         }
 
