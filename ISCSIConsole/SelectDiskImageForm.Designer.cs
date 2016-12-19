@@ -97,9 +97,7 @@ namespace ISCSIConsole
             // 
             // openDiskImageDialog
             // 
-            this.openDiskImageDialog.Filter = "All Supported Disk Images (*.vhd,*.vmdk,*.img)|*.vhd;*.vmdk;*.img|Virtual Hard Di" +
-                "sk (*.vhd)|*.vhd|Virtual Machine Disk (*.vmdk)|*.vmdk|Raw Disk Image (*.img)|*.i" +
-                "mg|All Files (*.*)|*.*";
+            this.openDiskImageDialog.Filter = resources.GetString("openDiskImageDialog.Filter");
             // 
             // SelectDiskImageForm
             // 

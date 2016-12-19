@@ -120,6 +120,9 @@
   <metadata name="openDiskImageDialog.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
   </metadata>
+  <data name="openDiskImageDialog.Filter" xml:space="preserve">
+    <value>All Supported Disk Images (*.vhd,*.vmdk,*.img,*.bin)|*.vhd;*.vmdk;*.img;*.bin|Virtual Hard Disk (*.vhd)|*.vhd|Virtual Machine Disk (*.vmdk)|*.vmdk|Raw Disk Image (*.img,*.bin)|*.img;*.bin|All Files (*.*)|*.*</value>
+  </data>
   <assembly alias="System.Drawing" name="System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
