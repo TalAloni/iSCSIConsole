@@ -56,7 +56,7 @@ namespace ISCSI.Server
             EventHandler<StandardInquiryEventArgs> handler = OnStandardInquiry;
             if (handler != null)
             {
-                handler(sender, args);
+                handler(this, args);
             }
         }
 
@@ -66,7 +66,7 @@ namespace ISCSI.Server
             EventHandler<UnitSerialNumberInquiryEventArgs> handler = OnUnitSerialNumberInquiry;
             if (handler != null)
             {
-                handler(sender, args);
+                handler(this, args);
             }
         }
 
@@ -78,7 +78,7 @@ namespace ISCSI.Server
             EventHandler<DeviceIdentificationInquiryEventArgs> handler = OnDeviceIdentificationInquiry;
             if (handler != null)
             {
-                handler(sender, args);
+                handler(this, args);
             }
         }
 
