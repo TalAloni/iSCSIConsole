@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -21,7 +21,7 @@ namespace DiskAccessLibrary.VMDK
 
         public SparseExtent(string path) : base(path)
         {
-            m_file = new RawDiskImage(path);
+            m_file = new RawDiskImage(path, VirtualMachineDisk.BytesPerDiskSector);
             byte[] headerBytes = m_file.ReadSector(0);
             m_header = new SparseExtentHeader(headerBytes);
 
@@ -121,9 +121,17 @@ namespace DiskAccessLibrary.VMDK
             throw new NotImplementedException("The method or operation is not implemented.");
         }
 
-        public override void Extend(long additionalNumberOfBytes)
+        public override void Extend(long numberOfAdditionalBytes)
         {
             throw new NotImplementedException("The method or operation is not implemented.");
+        }
+
+        public override int BytesPerSector
+        {
+            get
+            {
+                return VirtualMachineDisk.BytesPerDiskSector;
+            }
         }
 
         public override long Size

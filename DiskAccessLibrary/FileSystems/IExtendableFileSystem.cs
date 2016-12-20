@@ -15,6 +15,6 @@ namespace DiskAccessLibrary.FileSystems
     {
         /// <returns>In bytes</returns>
         long GetMaximumSizeToExtend();
-        void Extend(long additionalNumberOfSectors);
+        void Extend(long numberOfAdditionalSectors);
     }
 }

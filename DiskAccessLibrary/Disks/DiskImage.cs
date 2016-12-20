@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,9 +14,6 @@ namespace DiskAccessLibrary
 {
     public abstract partial class DiskImage : Disk
     {
-        // There is no way to specify sector size for IMG/VHD/VMDK.
-        public const int BytesPerDiskImageSector = 512;
-
         private string m_path;
 
         public DiskImage(string diskImagePath)
@@ -32,19 +29,11 @@ namespace DiskAccessLibrary
             }
         }
 
-        public abstract void Extend(long additionalNumberOfBytes);
+        public abstract void Extend(long numberOfAdditionalBytes);
 
         public abstract bool ExclusiveLock();
 
         public abstract bool ReleaseLock();
-
-        public override int BytesPerSector
-        {
-            get
-            {
-                return BytesPerDiskImageSector;
-            }
-        }
 
         public string Path
         {

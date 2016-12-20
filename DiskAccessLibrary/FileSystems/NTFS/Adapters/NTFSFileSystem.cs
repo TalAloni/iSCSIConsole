@@ -162,9 +162,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return m_volume.GetMaximumSizeToExtend();
         }
 
-        public void Extend(long additionalNumberOfSectors)
+        public void Extend(long numberOfAdditionalSectors)
         {
-            m_volume.Extend(additionalNumberOfSectors);
+            m_volume.Extend(numberOfAdditionalSectors);
         }
 
         public override string Name

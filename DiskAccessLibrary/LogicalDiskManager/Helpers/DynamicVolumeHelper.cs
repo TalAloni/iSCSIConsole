@@ -185,8 +185,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private static Raid5Volume GetRAID5Volume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
             List<DynamicColumn> columns = GetDynamicVolumeColumns(disks, database, componentRecord, volumeRecord);
-
-            Raid5Volume volume = new Raid5Volume(columns, (int)componentRecord.StripeSizeLBA, volumeRecord.VolumeGuid, database.DiskGroupGuid);
+            int bytesPerSector = DynamicVolume.GetBytesPerSector(columns, DynamicColumn.DefaultBytesPerSector);
+            int sectorsPerStripe = (int)PublicRegionHelper.TranslateFromPublicRegionSizeLBA((int)componentRecord.StripeSizeLBA, bytesPerSector);
+            Raid5Volume volume = new Raid5Volume(columns, sectorsPerStripe, volumeRecord.VolumeGuid, database.DiskGroupGuid);
             volume.VolumeID = volumeRecord.VolumeId;
             volume.Name = volumeRecord.Name;
             volume.DiskGroupName = database.DiskGroupName;
@@ -196,8 +197,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private static StripedVolume GetStripedVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
             List<DynamicColumn> columns = GetDynamicVolumeColumns(disks, database, componentRecord, volumeRecord);
-
-            StripedVolume volume = new StripedVolume(columns, (int)componentRecord.StripeSizeLBA, volumeRecord.VolumeGuid, database.DiskGroupGuid);
+            int bytesPerSector = DynamicVolume.GetBytesPerSector(columns, DynamicColumn.DefaultBytesPerSector);
+            int sectorsPerStripe = (int)PublicRegionHelper.TranslateFromPublicRegionSizeLBA((int)componentRecord.StripeSizeLBA, bytesPerSector);
+            StripedVolume volume = new StripedVolume(columns, sectorsPerStripe, volumeRecord.VolumeGuid, database.DiskGroupGuid);
             volume.VolumeID = volumeRecord.VolumeId;
             volume.Name = volumeRecord.Name;
             volume.DiskGroupName = database.DiskGroupName;

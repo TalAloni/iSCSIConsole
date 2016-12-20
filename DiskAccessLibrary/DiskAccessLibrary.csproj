@@ -35,16 +35,7 @@
     <Compile Include="BaseClasses\DiskExtent.cs" />
     <Compile Include="BaseClasses\IDiskGeometry.cs" />
     <Compile Include="BaseClasses\Volume.cs" />
-    <Compile Include="DiskExtent\DynamicDiskExtent.cs" />
     <Compile Include="Disks\DiskImage.cs" />
-    <Compile Include="Disks\GuidPartitionTable\GuidPartitionEntry.cs" />
-    <Compile Include="Disks\GuidPartitionTable\GuidPartitionEntryCollection.cs" />
-    <Compile Include="Disks\GuidPartitionTable\GuidPartitionTable.cs" />
-    <Compile Include="Disks\GuidPartitionTable\GuidPartitionTableHeader.cs" />
-    <Compile Include="Disks\MasterBootRecord\CHSAddress.cs" />
-    <Compile Include="Disks\MasterBootRecord\MasterBootRecord.cs" />
-    <Compile Include="Disks\MasterBootRecord\PartitionTableEntry.cs" />
-    <Compile Include="Disks\MasterBootRecord\PartitionTypeName.cs" />
     <Compile Include="Disks\RAMDisk.cs" />
     <Compile Include="Disks\RawDiskImage\RawDiskImage.cs" />
     <Compile Include="Disks\VHD\BlockAllocationTable.cs" />
@@ -101,6 +92,7 @@
     <Compile Include="FileSystems\NTFS\Structures\MftSegmentReference.cs" />
     <Compile Include="Helpers\BasicDiskHelper.cs" />
     <Compile Include="Helpers\DiskExtentHelper.cs" />
+    <Compile Include="Helpers\DiskExtentsHelper.cs" />
     <Compile Include="Helpers\ExtendHelper.Volume.cs" />
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Helpers\VolumeHelper.cs" />
@@ -113,6 +105,7 @@
     <Compile Include="LogicalDiskManager\DatabaseRecords\VolumeRecord.cs" />
     <Compile Include="LogicalDiskManager\DiskGroupDatabase.cs" />
     <Compile Include="LogicalDiskManager\DynamicDisk.cs" />
+    <Compile Include="LogicalDiskManager\DynamicDiskExtent.cs" />
     <Compile Include="LogicalDiskManager\Enums\DatabaseHeaderUpdateStatus.cs" />
     <Compile Include="LogicalDiskManager\Enums\DatabaseRecordUpdateStatus.cs" />
     <Compile Include="LogicalDiskManager\Enums\ExtentLayoutName.cs" />
@@ -123,8 +116,12 @@
     <Compile Include="LogicalDiskManager\Exceptions\DatabaseNotFoundException.cs" />
     <Compile Include="LogicalDiskManager\Exceptions\MissingDatabaseRecordException.cs" />
     <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentsHelper.cs" />
     <Compile Include="LogicalDiskManager\Helpers\DynamicDiskHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskHelper.Extents.cs" />
     <Compile Include="LogicalDiskManager\Helpers\DynamicVolumeHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\PublicRegionHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\PrivateRegionHelper.cs" />
     <Compile Include="LogicalDiskManager\Helpers\RetainHelper.cs" />
     <Compile Include="LogicalDiskManager\Helpers\VolumeManagerDatabaseHelper.cs" />
     <Compile Include="LogicalDiskManager\KernelUpdateLog\KernalUpdateLog.cs" />
@@ -141,6 +138,14 @@
     <Compile Include="LogicalDiskManager\Volumes\SimpleVolume.cs" />
     <Compile Include="LogicalDiskManager\Volumes\SpannedVolume.cs" />
     <Compile Include="LogicalDiskManager\Volumes\StripedVolume.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionEntry.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionEntryCollection.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionTable.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionTableHeader.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\CHSAddress.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\MasterBootRecord.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\PartitionTableEntry.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\PartitionTypeName.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Volumes\GPTPartition.cs" />
     <Compile Include="Volumes\MBRPartition.cs" />
@@ -148,13 +153,8 @@
     <Compile Include="Volumes\RemovableVolume.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Win32\Disks\DiskImage.Win32.cs" />
     <Compile Include="Win32\Disks\PhysicalDisk.cs" />
     <Compile Include="Win32\Disks\PhysicalDiskHandlePool.cs" />
-    <Compile Include="Win32\Disks\RawDiskImage\RawDiskImage.Win32.cs" />
-    <Compile Include="Win32\Disks\VHD\VirtualHardDisk.Win32.cs" />
-    <Compile Include="Win32\Disks\VMDK\SparseExtent.Win32.cs" />
-    <Compile Include="Win32\Disks\VMDK\VirtualMachineDisk.Win32.cs" />
     <Compile Include="Win32\Enums\Win32Error.cs" />
     <Compile Include="Win32\Helpers\DiskOfflineHelper.cs" />
     <Compile Include="Win32\Helpers\LockHelper.cs" />

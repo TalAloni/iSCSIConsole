@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -40,7 +40,7 @@ namespace DiskAccessLibrary.VHD
         public byte[] GetBytes()
         {
             // The BAT is always extended to a sector boundary
-            int bufferLength = (int)Math.Ceiling((double)Entries.Length * 4 / VirtualHardDisk.BytesPerDiskImageSector) * VirtualHardDisk.BytesPerDiskImageSector;
+            int bufferLength = (int)Math.Ceiling((double)Entries.Length * 4 / VirtualHardDisk.BytesPerDiskSector) * VirtualHardDisk.BytesPerDiskSector;
             byte[] buffer = new byte[bufferLength];
             for (int index = 0; index < Entries.Length; index++)
             {
@@ -58,9 +58,9 @@ namespace DiskAccessLibrary.VHD
         public static BlockAllocationTable ReadBlockAllocationTable(string path, DynamicDiskHeader dynamicHeader)
         {
             uint maxTableEntries = dynamicHeader.MaxTableEntries;
-            long sectorIndex = (long)(dynamicHeader.TableOffset / VirtualHardDisk.BytesPerDiskImageSector);
-            int sectorCount = (int)Math.Ceiling((double)maxTableEntries * 4 / VirtualHardDisk.BytesPerDiskImageSector);
-            byte[] buffer = new RawDiskImage(path).ReadSectors(sectorIndex, sectorCount);
+            long sectorIndex = (long)(dynamicHeader.TableOffset / VirtualHardDisk.BytesPerDiskSector);
+            int sectorCount = (int)Math.Ceiling((double)maxTableEntries * 4 / VirtualHardDisk.BytesPerDiskSector);
+            byte[] buffer = new RawDiskImage(path, VirtualHardDisk.BytesPerDiskSector).ReadSectors(sectorIndex, sectorCount);
             return new BlockAllocationTable(buffer, maxTableEntries);
         }
     }

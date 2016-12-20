@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -70,6 +70,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public PrivateHeader(byte[] buffer)
         {
+            if (buffer.Length > Length)
+            {
+                // Checksum only applies to the first 512 bytes (even when the sector size > 512 bytes)
+                buffer = ByteReader.ReadBytes(buffer, 0, 512);
+            }
             Signature = ByteReader.ReadAnsiString(buffer, 0x00, 8);
             uint checksum = BigEndianConverter.ToUInt32(buffer, 0x08);
             MajorVersion = BigEndianConverter.ToUInt16(buffer, 0x0C);
@@ -106,6 +111,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             m_isChecksumValid = (checksum == CalculateChecksum(buffer));
         }
 
+        /// <summary>
+        /// Private header may need to be padded with zeros in order to fill an entire sector
+        /// </summary>
         public byte[] GetBytes()
         {
             byte[] buffer = new byte[Length];
@@ -236,8 +244,12 @@ namespace DiskAccessLibrary.LogicalDiskManager
         }
 
         public static void WriteToDisk(Disk disk, PrivateHeader privateHeader)
-        { 
+        {
             byte[] bytes = privateHeader.GetBytes();
+            if (disk.BytesPerSector > Length)
+            {
+                bytes = ByteUtils.Concatenate(bytes, new byte[disk.BytesPerSector - PrivateHeader.Length]);
+            }
 
             disk.WriteSectors((long)(privateHeader.PrivateRegionStartLBA +  privateHeader.PrimaryPrivateHeaderLBA), bytes);
             disk.WriteSectors((long)(privateHeader.PrivateRegionStartLBA + privateHeader.SecondaryPrivateHeaderLBA), bytes);
@@ -272,40 +284,6 @@ namespace DiskAccessLibrary.LogicalDiskManager
             set
             {
                 this.DiskGroupGuidString = value.ToString();
-            }
-        }
-
-        
-        // I'm not aware of any parameter that will tell us where the previous TOCs are,
-        // I'm assuming it is given that there will be TOCs (in the private region) at Sectors 1,2, PrivateRegionSizeLBA - 2 and PrivateRegionSizeLBA - 1,
-        // And so PrimaryTocLBA, SecondaryTocLBA simply point to the ones being used
-        public ulong PreviousPrimaryTocLBA
-        {
-            get
-            {
-                if (PrimaryTocLBA == 1)
-                {
-                    return PrimaryTocLBA + 1;
-                }
-                else
-                {
-                    return PrimaryTocLBA - 1;
-                }
-            }
-        }
-
-        public ulong PreviousSecondaryTocLBA
-        {
-            get
-            {
-                if (PrimaryTocLBA == 1)
-                {
-                    return SecondaryTocLBA - 1;
-                }
-                else
-                {
-                    return SecondaryTocLBA + 1;
-                }
             }
         }
 

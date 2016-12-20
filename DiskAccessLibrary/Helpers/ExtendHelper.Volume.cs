@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -133,7 +133,7 @@ namespace DiskAccessLibrary
         {
             DynamicDisk disk = DynamicDisk.ReadFromDisk(targetExtent.Disk);
             PrivateHeader privateHeader = disk.PrivateHeader;
-            List<DynamicDiskExtent> extents = DynamicDiskExtentHelper.GetDiskExtents(disk);
+            List<DynamicDiskExtent> extents = DynamicDiskHelper.GetDiskExtents(disk);
             if (extents == null)
             {
                 throw new InvalidDataException("Cannot read extents information from disk");
@@ -153,52 +153,52 @@ namespace DiskAccessLibrary
             return max;
         }
 
-        public static void ExtendVolume(Volume volume, long additionalNumberOfExtentSectors, DiskGroupDatabase database)
+        public static void ExtendVolume(Volume volume, long numberOfAdditionalExtentSectors, DiskGroupDatabase database)
         {
             if (volume is Partition)
             {
-                ExtendPartition((Partition)volume, additionalNumberOfExtentSectors);
+                ExtendPartition((Partition)volume, numberOfAdditionalExtentSectors);
             }
             else if (volume is DynamicVolume)
             {
-                ExtendDynamicVolume((DynamicVolume)volume, additionalNumberOfExtentSectors, database);
+                ExtendDynamicVolume((DynamicVolume)volume, numberOfAdditionalExtentSectors, database);
             }
         }
 
-        public static void ExtendPartition(Partition volume, long additionalNumberOfExtentSectors)
+        public static void ExtendPartition(Partition volume, long numberOfAdditionalExtentSectors)
         {
             if (volume is MBRPartition)
             {
                 MBRPartition partition = (MBRPartition)volume;
-                ExtendMBRPartition(partition, additionalNumberOfExtentSectors);
+                ExtendMBRPartition(partition, numberOfAdditionalExtentSectors);
             }
             else if (volume is GPTPartition)
             {
                 GPTPartition partition = (GPTPartition)volume;
-                ExtendGPTPartition(partition, additionalNumberOfExtentSectors);
+                ExtendGPTPartition(partition, numberOfAdditionalExtentSectors);
             }
         }
 
-        public static void ExtendDynamicVolume(DynamicVolume volume, long additionalNumberOfExtentSectors, DiskGroupDatabase database)
+        public static void ExtendDynamicVolume(DynamicVolume volume, long numberOfAdditionalExtentSectors, DiskGroupDatabase database)
         {
             if (volume is SimpleVolume)
             {
                 SimpleVolume simpleVolume = (SimpleVolume)volume;
-                VolumeManagerDatabaseHelper.ExtendSimpleVolume(database, simpleVolume, additionalNumberOfExtentSectors);
+                VolumeManagerDatabaseHelper.ExtendSimpleVolume(database, simpleVolume, numberOfAdditionalExtentSectors);
             }
             else if (volume is StripedVolume)
             {
                 StripedVolume stripedVolume = (StripedVolume)volume;
-                VolumeManagerDatabaseHelper.ExtendStripedVolume(database, stripedVolume, additionalNumberOfExtentSectors);
+                VolumeManagerDatabaseHelper.ExtendStripedVolume(database, stripedVolume, numberOfAdditionalExtentSectors);
             }
             else if (volume is Raid5Volume)
             {
                 Raid5Volume raid5Volume = (Raid5Volume)volume;
-                VolumeManagerDatabaseHelper.ExtendRAID5Volume(database, raid5Volume, additionalNumberOfExtentSectors);
+                VolumeManagerDatabaseHelper.ExtendRAID5Volume(database, raid5Volume, numberOfAdditionalExtentSectors);
             }
         }
 
-        public static void ExtendMBRPartition(MBRPartition partition, long additionalNumberOfSectors)
+        public static void ExtendMBRPartition(MBRPartition partition, long numberOfAdditionalExtentSectors)
         {
             Disk disk = partition.Disk;
             MasterBootRecord mbr = MasterBootRecord.ReadFromDisk(disk);
@@ -206,7 +206,7 @@ namespace DiskAccessLibrary
             {
                 if (mbr.PartitionTable[index].FirstSectorLBA == partition.FirstSector)
                 {
-                    mbr.PartitionTable[index].SectorCountLBA += (uint)additionalNumberOfSectors;
+                    mbr.PartitionTable[index].SectorCountLBA += (uint)numberOfAdditionalExtentSectors;
                     ulong lastSectorLBA = mbr.PartitionTable[index].LastSectorLBA;
                     mbr.PartitionTable[index].LastSectorCHS = CHSAddress.FromLBA(lastSectorLBA, disk);
                     break;
@@ -215,7 +215,7 @@ namespace DiskAccessLibrary
             MasterBootRecord.WriteToDisk(disk, mbr);
         }
 
-        public static void ExtendGPTPartition(GPTPartition partition, long additionalNumberOfSectors)
+        public static void ExtendGPTPartition(GPTPartition partition, long numberOfAdditionalExtentSectors)
         {
             Disk disk = partition.Disk;
             GuidPartitionTableHeader primaryHeader = GuidPartitionTableHeader.ReadPrimaryFromDisk(disk);
@@ -236,7 +236,7 @@ namespace DiskAccessLibrary
             {
                 if ((long)entry.FirstLBA == partition.FirstSector)
                 {
-                    entry.LastLBA += (ulong)additionalNumberOfSectors;
+                    entry.LastLBA += (ulong)numberOfAdditionalExtentSectors;
                     GuidPartitionEntry.WriteToDisk(disk, primaryHeader, entry);
                     GuidPartitionEntry.WriteToDisk(disk, secondaryHeader, entry);
                     break;

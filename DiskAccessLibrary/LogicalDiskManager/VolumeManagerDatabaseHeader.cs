@@ -74,6 +74,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             LastModificationDT = DateTime.FromFileTimeUtc(BigEndianConverter.ToInt64(buffer, 0xBD));
         }
 
+        /// <summary>
+        /// VBLKs may reside in the same sector as the VMDB header.
+        /// </summary>
         public byte[] GetBytes()
         {
             byte[] buffer = new byte[Length];
@@ -142,8 +145,17 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static void WriteToDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock, VolumeManagerDatabaseHeader header)
         {
             ulong sectorIndex = privateHeader.PrivateRegionStartLBA + tocBlock.ConfigStart;
-            byte[] bytes = header.GetBytes();
-            disk.WriteSectors((long)sectorIndex, bytes);
+            byte[] headerBytes = header.GetBytes();
+            if (disk.BytesPerSector > Length)
+            {
+                byte[] sectorBytes = disk.ReadSector((long)sectorIndex);
+                ByteWriter.WriteBytes(sectorBytes, 0, headerBytes);
+                disk.WriteSectors((long)sectorIndex, sectorBytes);
+            }
+            else
+            {
+                disk.WriteSectors((long)sectorIndex, headerBytes);
+            }
         }
     }
 }

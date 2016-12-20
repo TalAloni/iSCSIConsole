@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -15,16 +15,12 @@ namespace DiskAccessLibrary.LogicalDiskManager
 {
     public abstract class DynamicVolume : Volume
     {
-        // dynamic disks will only work with 512-byte sectors
-        // http://msdn.microsoft.com/en-us/windows/hardware/gg463528
-        // Note: Simple volumes will somewhat work on > 512-byte sectors
-        public const int BytesPerDynamicDiskSector = 512;
-
         private Guid m_volumeGuid;
         private Guid m_diskGroupGuid;
         public ulong VolumeID;
         public string Name;
         public string DiskGroupName;
+        private int? m_bytesPerSector;
 
         public DynamicVolume(Guid volumeGuid, Guid diskGroupGuid)
         {
@@ -46,11 +42,18 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return this.VolumeGuid.GetHashCode();
         }
 
+        /// <summary>
+        /// "All disks holding extents for a given volume must have the same sector size"
+        /// </summary>
         public override int BytesPerSector
         {
             get
             {
-                return BytesPerDynamicDiskSector;
+                if (!m_bytesPerSector.HasValue)
+                {
+                    m_bytesPerSector = GetBytesPerSector(this.Columns, DynamicColumn.DefaultBytesPerSector);
+                }
+                return m_bytesPerSector.Value;
             }
         }
 
@@ -122,6 +125,28 @@ namespace DiskAccessLibrary.LogicalDiskManager
             {
                 return IsHealthy;
             }
+        }
+
+        public static int GetBytesPerSector(List<DynamicColumn> columns, int defaultValue)
+        {
+            int? bytesPerSector = GetBytesPerSector(columns);
+            return bytesPerSector.HasValue ? bytesPerSector.Value : defaultValue;
+        }
+
+        /// <summary>
+        /// "All disks holding extents for a given volume must have the same sector size"
+        /// </summary>
+        public static int? GetBytesPerSector(List<DynamicColumn> columns)
+        {
+            foreach (DynamicColumn column in columns)
+            {
+                int? bytesPerSector = DynamicColumn.GetBytesPerSector(column.Extents);
+                if (bytesPerSector.HasValue)
+                {
+                    return bytesPerSector.Value;
+                }
+            }
+            return null;
         }
     }
 }

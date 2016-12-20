@@ -76,3 +76,11 @@ Revision History:
 1.4.0 - API improvements.
 
 1.4.1 - Improved volume locking mechanism.
+
+1.4.2 - Support for disks with 4KB sectors.
+        Minor improvements and bugfixes to DiskImage and inheriting classes.
+        Bugfix: RawDiskImage.Extend had issue with closing the filestream.
+        Bugfix: allocation within the private region of a dynamic disk did not function properly.
+        API: Added RAM-Disk implementation.
+        API: Added RawDiskImage.Create method.
+        API: Added BasicDiskHelper.GetUnallocatedExtents method.

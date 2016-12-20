@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -19,7 +19,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public uint RecoverySequenceNumber; // DMDiag calls this: recover_seqno
     }
 
-    public class KernelUpdateLogPage // KLOG sector
+    /// <summary>
+    /// Each KLOG page is 512 bytes.
+    /// Note: a sector can contain more than one KLOG page.
+    /// </summary>
+    public class KernelUpdateLogPage
     {
         public const int Length = 512;
 
@@ -116,19 +120,34 @@ namespace DiskAccessLibrary.LogicalDiskManager
             m_logEntries.Add(entry);
         }
 
-        public static KernelUpdateLogPage ReadFromDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock, int kLogIndex)
+        public static KernelUpdateLogPage ReadFromDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock, int pageIndex)
         {
-            ulong sectorIndex = privateHeader.PrivateRegionStartLBA + tocBlock.LogStart + (uint)kLogIndex;
+            ulong sectorIndex = privateHeader.PrivateRegionStartLBA + tocBlock.LogStart + (uint)(pageIndex * Length / disk.BytesPerSector);
+            int pageOffset = (pageIndex * Length) % disk.BytesPerSector;
             byte[] sector = disk.ReadSector((long)sectorIndex);
+            if (pageOffset > 0)
+            {
+                sector = ByteReader.ReadBytes(sector, pageOffset, Length);
+            }
             KernelUpdateLogPage result = new KernelUpdateLogPage(sector);
             return result;
         }
 
-        public static void WriteToDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock, KernelUpdateLogPage record)
+        public static void WriteToDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock, KernelUpdateLogPage page)
         {
-            ulong sectorIndex = privateHeader.PrivateRegionStartLBA + tocBlock.LogStart + record.PageIndex;
-            byte[] sector = record.GetBytes();
-            disk.WriteSectors((long)sectorIndex, sector);
+            ulong sectorIndex = privateHeader.PrivateRegionStartLBA + tocBlock.LogStart + (uint)(page.PageIndex * Length / disk.BytesPerSector);
+            int pageOffset = ((int)page.PageIndex * Length) % disk.BytesPerSector;
+            byte[] pageBytes = page.GetBytes();
+            if (disk.BytesPerSector > Length)
+            {
+                byte[] sectorBytes = disk.ReadSector((long)sectorIndex);
+                ByteWriter.WriteBytes(sectorBytes, pageOffset, pageBytes);
+                disk.WriteSectors((long)sectorIndex, sectorBytes);
+            }
+            else
+            {
+                disk.WriteSectors((long)sectorIndex, pageBytes);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -92,7 +92,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
                 else
                 {
-                    stripeBytes = new byte[readPosition.SectorCount * BytesPerDynamicDiskSector];
+                    stripeBytes = new byte[readPosition.SectorCount * BytesPerSector];
                     for (int index = 0; index < m_columns.Count; index++)
                     {
                         if (index != readPosition.DiskIndex)
@@ -196,14 +196,6 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public void WriteStripes(long stripeIndex, byte[] data)
         {
             WriteSectors(stripeIndex * m_sectorsPerStripe, data);
-        }
-
-        public override int BytesPerSector
-        {
-            get 
-            {
-                return BytesPerDynamicDiskSector;
-            }
         }
 
         public override long Size

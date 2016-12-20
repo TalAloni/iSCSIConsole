@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -19,16 +19,21 @@ namespace DiskAccessLibrary.LogicalDiskManager
     /// </summary>
     public class DynamicColumn
     {
+        public const int DefaultBytesPerSector = 512; // for missing disks
+
+        private int m_bytesPerSector;
         List<DynamicDiskExtent> m_extents = new List<DynamicDiskExtent>();
 
         public DynamicColumn(DynamicDiskExtent extent)
         {
             m_extents.Add(extent);
+            m_bytesPerSector = GetBytesPerSector(m_extents, DefaultBytesPerSector);
         }
 
         public DynamicColumn(List<DynamicDiskExtent> extents)
         {
             m_extents = extents;
+            m_bytesPerSector = GetBytesPerSector(m_extents, DefaultBytesPerSector);
         }
 
         private List<ArrayPosition> TranslateSectors(long startSectorIndex, int sectorCount)
@@ -67,7 +72,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
         {
             List<ArrayPosition> readPositions = TranslateSectors(sectorIndex, sectorCount);
 
-            byte[] result = new byte[sectorCount * DynamicVolume.BytesPerDynamicDiskSector];
+            byte[] result = new byte[sectorCount * BytesPerSector];
             int bytesRead = 0;
             foreach (ArrayPosition readPosition in readPositions)
             {
@@ -83,14 +88,14 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public void WriteSectors(long sectorIndex, byte[] data)
         {
-            int sectorCount = data.Length / DynamicVolume.BytesPerDynamicDiskSector;
+            int sectorCount = data.Length / BytesPerSector;
             List<ArrayPosition> writePositions = TranslateSectors(sectorIndex, sectorCount);
 
             int bytesWritten = 0;
             foreach (ArrayPosition writePosition in writePositions)
             {
                 DynamicDiskExtent extent = m_extents[writePosition.DiskIndex];
-                byte[] extentBytes = new byte[writePosition.SectorCount * DynamicVolume.BytesPerDynamicDiskSector];
+                byte[] extentBytes = new byte[writePosition.SectorCount * BytesPerSector];
                 Array.Copy(data, bytesWritten, extentBytes, 0, extentBytes.Length);
                 extent.WriteSectors(writePosition.SectorIndex, extentBytes);
                 
@@ -119,6 +124,17 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
+        /// <summary>
+        /// "All disks holding extents for a given volume must have the same sector size"
+        /// </summary>
+        public int BytesPerSector
+        {
+            get
+            {
+                return m_bytesPerSector;
+            }
+        }
+
         public bool IsOperational
         {
             get
@@ -132,6 +148,27 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
                 return true;
             }
+        }
+
+        public static int GetBytesPerSector(List<DynamicDiskExtent> extents, int defaultValue)
+        {
+            int? bytesPerSector = GetBytesPerSector(extents);
+            return bytesPerSector.HasValue ? bytesPerSector.Value : defaultValue;
+        }
+
+        /// <summary>
+        /// "All disks holding extents for a given volume must have the same sector size"
+        /// </summary>
+        public static int? GetBytesPerSector(List<DynamicDiskExtent> extents)
+        {
+            foreach (DynamicDiskExtent extent in extents)
+            {
+                if (extent.Disk != null)
+                {
+                    return extent.BytesPerSector;
+                }
+            }
+            return null;
         }
     }
 }

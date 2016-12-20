@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -590,9 +590,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
             List<DatabaseRecord> databaseRecords = new List<DatabaseRecord>();
 
-            // The first VBLK entry is the subsequent entry to the VMDB, which located at (ConfigurationStartLBA + Item1Start)
-            ulong firstSector = privateHeader.PrivateRegionStartLBA + tocBlock.ConfigStart + 1;  // we skip the VMDB
-            int sectorCount = (int)Math.Ceiling(databaseHeader.NumberOfVBlks * databaseHeader.BlockSize / (double)disk.BytesPerSector);
+            // The first VBLK entry is the subsequent entry to the VMDB header.
+            // Note: On a disk with 4KB sectors, VBLKs will reside in the same sector as the VMDB header.
+            ulong firstSector = privateHeader.PrivateRegionStartLBA + tocBlock.ConfigStart;  // we skip the VMDB
+            int databaseLength = (int)(databaseHeader.HeaderSize + databaseHeader.NumberOfVBlks * databaseHeader.BlockSize);
+            int sectorCount = (int)Math.Ceiling(databaseLength / (double)disk.BytesPerSector);
             byte[] databaseBytes = disk.ReadSectors((long)firstSector, sectorCount);
 
             // read all VBLK blocks:
@@ -601,7 +603,8 @@ namespace DiskAccessLibrary.LogicalDiskManager
             for (uint index = 0; index < databaseHeader.NumberOfVBlks - 4; index++)
             {
                 byte[] fragmentBytes = new byte[databaseHeader.BlockSize];
-                Array.Copy(databaseBytes, (long)index * databaseHeader.BlockSize, fragmentBytes, 0, databaseHeader.BlockSize);
+                int fragmentOffset = (int)(databaseHeader.HeaderSize + index * databaseHeader.BlockSize);
+                Array.Copy(databaseBytes, fragmentOffset, fragmentBytes, 0, databaseHeader.BlockSize);
                 DatabaseRecordFragment fragment = DatabaseRecordFragment.GetDatabaseRecordFragment(fragmentBytes);
 
                 if (fragment != null) // null fragment means VBLK is empty
@@ -622,9 +625,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             // We have all the fragments and we can now assemble the records:
             // We assume that fragments with lower FragmentNumber appear in the database before fragments
             // of the same group with higher FragmentNumber.
-            foreach (List<DatabaseRecordFragment> recorFragments in fragments.Values)
+            foreach (List<DatabaseRecordFragment> recordFragments in fragments.Values)
             {
-                DatabaseRecord databaseRecord = DatabaseRecord.GetDatabaseRecord(recorFragments);
+                DatabaseRecord databaseRecord = DatabaseRecord.GetDatabaseRecord(recordFragments);
                 databaseRecords.Add(databaseRecord);
             }
 

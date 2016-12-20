@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,12 +14,28 @@ namespace DiskAccessLibrary
 {
     public partial class RawDiskImage : DiskImage
     {
+        public const int DefaultBytesPerSector = 512;
+
         const FileOptions FILE_FLAG_NO_BUFFERING = (FileOptions)0x20000000;
         private bool m_isExclusiveLock;
         private FileStream m_stream;
+        private int m_bytesPerSector;
+        private long m_size;
 
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
         public RawDiskImage(string rawDiskImagePath) : base(rawDiskImagePath)
         {
+            m_bytesPerSector = DetectBytesPerSector(rawDiskImagePath);
+            m_size = new FileInfo(rawDiskImagePath).Length;
+        }
+
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public RawDiskImage(string rawDiskImagePath, int bytesPerSector) : base(rawDiskImagePath)
+        {
+            m_bytesPerSector = bytesPerSector;
+            m_size = new FileInfo(rawDiskImagePath).Length;
         }
 
         /// <exception cref="System.IO.IOException"></exception>
@@ -102,19 +118,42 @@ namespace DiskAccessLibrary
         }
 
         /// <exception cref="System.IO.IOException"></exception>
-        public override void Extend(long additionalNumberOfBytes)
+        public override void Extend(long numberOfAdditionalBytes)
         {
-            if (additionalNumberOfBytes % this.BytesPerSector > 0)
+            if (numberOfAdditionalBytes % this.BytesPerSector > 0)
             {
-                throw new ArgumentException("additionalNumberOfBytes must be a multiple of BytesPerSector");
+                throw new ArgumentException("numberOfAdditionalBytes must be a multiple of BytesPerSector");
             }
-
-            long length = this.Size;
+#if Win32
+            // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
+            // We can work around the issue by obtaining the privilege before obtaining the handle.
+            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
+#endif
             if (!m_isExclusiveLock)
             {
                 m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
             }
-            m_stream.SetLength(length + additionalNumberOfBytes);
+            else
+            {
+                // Workaround for AdjustTokenPrivileges issue
+                ReleaseLock();
+                ExclusiveLock();
+            }
+
+            m_stream.SetLength(m_size + numberOfAdditionalBytes);
+            m_size += numberOfAdditionalBytes;
+#if Win32
+            if (hasManageVolumePrivilege)
+            {
+                try
+                {
+                    FileStreamUtils.SetValidLength(m_stream, m_size);
+                }
+                catch (IOException)
+                {
+                }
+            }
+#endif
             if (!m_isExclusiveLock)
             {
                 m_stream.Close();
@@ -125,18 +164,7 @@ namespace DiskAccessLibrary
         {
             get
             {
-                FileInfo info = new FileInfo(this.Path);
-                string[] components = info.Name.Split('.');
-                if (components.Length >= 3) // file.512.img
-                {
-                    string bytesPerSectorString = components[components.Length - 2];
-                    int bytesPerSector = Conversion.ToInt32(bytesPerSectorString, BytesPerDiskImageSector);
-                    return bytesPerSector;
-                }
-                else
-                {
-                    return BytesPerDiskImageSector;
-                }
+                return m_bytesPerSector;
             }
         }
 
@@ -144,8 +172,80 @@ namespace DiskAccessLibrary
         {
             get
             {
-                FileInfo info = new FileInfo(this.Path);
-                return info.Length;
+                return m_size;
+            }
+        }
+
+        /// <param name="size">In bytes</param>
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public static RawDiskImage Create(string path, long size)
+        {
+            int bytesPerSector = DetectBytesPerSector(path);
+            return Create(path, size, bytesPerSector);
+        }
+
+        /// <param name="size">In bytes</param>
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        internal static RawDiskImage Create(string path, long size, int bytesPerSector)
+        {
+            if (size % bytesPerSector > 0)
+            {
+                throw new ArgumentException("size must be a multiple of bytesPerSector");
+            }
+#if Win32
+            // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
+            // We can work around the issue by obtaining the privilege before obtaining the handle.
+            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
+#endif
+            FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            try
+            {
+                stream.SetLength(size);
+            }
+            catch (IOException)
+            {
+                stream.Close();
+                try
+                {
+                    // Delete the incomplete file
+                    File.Delete(path);
+                }
+                catch (IOException)
+                {
+                }
+                throw;
+            }
+#if Win32
+            if (hasManageVolumePrivilege)
+            {
+                try
+                {
+                    FileStreamUtils.SetValidLength(stream, size);
+                }
+                catch (IOException)
+                {
+                }
+            }
+#endif
+            stream.Close();
+            return new RawDiskImage(path, bytesPerSector);
+        }
+
+        public static int DetectBytesPerSector(string path)
+        {
+            FileInfo info = new FileInfo(path);
+            string[] components = info.Name.Split('.');
+            if (components.Length >= 3) // file.512.img
+            {
+                string bytesPerSectorString = components[components.Length - 2];
+                int bytesPerSector = Conversion.ToInt32(bytesPerSectorString, DefaultBytesPerSector);
+                return bytesPerSector;
+            }
+            else
+            {
+                return DefaultBytesPerSector;
             }
         }
     }

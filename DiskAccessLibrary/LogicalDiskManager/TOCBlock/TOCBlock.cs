@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -27,6 +27,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public TOCBlock(byte[] buffer)
         {
+            if (buffer.Length > Length)
+            {
+                // Checksum only applies to the first 512 bytes (even when the sector size > 512 bytes)
+                buffer = ByteReader.ReadBytes(buffer, 0, 512);
+            }
             Signature = ByteReader.ReadAnsiString(buffer, 0x00, 8);
             uint checksum = BigEndianConverter.ToUInt32(buffer, 0x08);
             UpdateSequenceNumber = BigEndianConverter.ToUInt64(buffer, 0x0C);
@@ -45,6 +50,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             m_isChecksumValid = (checksum == PrivateHeader.CalculateChecksum(buffer));
         }
 
+        /// <summary>
+        /// TOC Block may need to be padded with zeros in order to fill an entire sector
+        /// </summary>
         public byte[] GetBytes()
         {
             byte[] buffer = new byte[Length];
@@ -106,11 +114,17 @@ namespace DiskAccessLibrary.LogicalDiskManager
         {
             privateHeader.UpdateSequenceNumber++;
             tocBlock.UpdateSequenceNumber++;
-            byte[] bytes = tocBlock.GetBytes();
-            disk.WriteSectors((long)(privateHeader.PrivateRegionStartLBA + privateHeader.PreviousPrimaryTocLBA), bytes);
-            disk.WriteSectors((long)(privateHeader.PrivateRegionStartLBA + privateHeader.PreviousSecondaryTocLBA), bytes);
-            privateHeader.PrimaryTocLBA = privateHeader.PreviousPrimaryTocLBA;
-            privateHeader.SecondaryTocLBA = privateHeader.PreviousSecondaryTocLBA;
+            byte[] tocBytes = tocBlock.GetBytes();
+            if (disk.BytesPerSector > Length)
+            {
+                tocBytes = ByteUtils.Concatenate(tocBytes, new byte[disk.BytesPerSector - TOCBlock.Length]);
+            }
+            long alternatePrimaryTOCLBA = PrivateRegionHelper.FindUnusedLBAForPrimaryToc(privateHeader, tocBlock);
+            long alternateSecondaryTOCLBA = PrivateRegionHelper.FindUnusedLBAForSecondaryToc(privateHeader, tocBlock);
+            disk.WriteSectors(alternatePrimaryTOCLBA, tocBytes);
+            disk.WriteSectors(alternateSecondaryTOCLBA, tocBytes);
+            privateHeader.PrimaryTocLBA = (ulong)alternatePrimaryTOCLBA;
+            privateHeader.SecondaryTocLBA = (ulong)alternateSecondaryTOCLBA;
             PrivateHeader.WriteToDisk(disk, privateHeader);
         }
 
