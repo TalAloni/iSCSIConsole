@@ -121,3 +121,5 @@ Revision History:
 
 1.4.2 - Write performance has been improved (due to improved connection buffer implementation).
         Trace logging is now disabled in Release build.
+
+1.4.3 - Bugfix: Wrong sender parameter was dispatched to ISCSITarget inquiry event handlers.
