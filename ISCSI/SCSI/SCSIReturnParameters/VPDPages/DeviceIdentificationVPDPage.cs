@@ -51,7 +51,7 @@ namespace SCSI
             buffer[0] |= (byte)(PeripheralQualifier << 5);
             buffer[0] |= (byte)(PeripheralQualifier & 0x1F);
             buffer[1] = (byte)PageCode;
-            Array.Copy(BigEndianConverter.GetBytes(PageLength), 0, buffer, 2, 2);
+            BigEndianWriter.WriteUInt16(buffer, 2, PageLength);
 
             int offset = 4;
             foreach (IdentificationDescriptor descriptor in IdentificationDescriptorList)

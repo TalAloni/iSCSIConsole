@@ -42,12 +42,11 @@ namespace ISCSI
         {
             OpCodeSpecificHeader[1] = (byte)Response;
 
-            Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);
-            Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
-
-            Array.Copy(BigEndianConverter.GetBytes(TimeToWait), 0, OpCodeSpecific, 20, 2);
-            Array.Copy(BigEndianConverter.GetBytes(TimeToRetain), 0, OpCodeSpecific, 22, 2);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, StatSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 12, MaxCmdSN);
+            BigEndianWriter.WriteUInt16(OpCodeSpecific, 20, TimeToWait);
+            BigEndianWriter.WriteUInt16(OpCodeSpecific, 22, TimeToRetain);
 
             return base.GetBytes();
         }

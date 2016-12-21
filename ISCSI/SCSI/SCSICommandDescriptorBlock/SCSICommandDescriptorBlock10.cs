@@ -39,9 +39,9 @@ namespace SCSI
             buffer[0] = (byte)OpCode;
             buffer[1] |= (byte)(MiscellaneousCDBInformationHeader << 5);
             buffer[1] |= (byte)((byte)ServiceAction & 0x1F);
-            Array.Copy(BigEndianConverter.GetBytes(LogicalBlockAddress), 0, buffer, 2, 4);
+            BigEndianWriter.WriteUInt32(buffer, 2, LogicalBlockAddress);
             buffer[6] = MiscellaneousCDBinformation;
-            Array.Copy(BigEndianConverter.GetBytes((ushort)TransferLength), 0, buffer, 7, 2);
+            BigEndianWriter.WriteUInt16(buffer, 7, (ushort)TransferLength);
             buffer[9] = Control;
             return buffer;
         }

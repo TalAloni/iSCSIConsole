@@ -481,8 +481,8 @@ namespace SCSI
         {
             byte[] senseDataBytes = senseData.GetBytes();
             byte[] result = new byte[senseDataBytes.Length + 2];
-            Array.Copy(BigEndianConverter.GetBytes((ushort)senseDataBytes.Length), 0, result, 0, 2);
-            Array.Copy(senseDataBytes, 0, result, 2, senseDataBytes.Length);
+            BigEndianWriter.WriteUInt16(result, 0, (ushort)senseDataBytes.Length);
+            ByteWriter.WriteBytes(result, 2, senseDataBytes);
             return result;
         }
     }

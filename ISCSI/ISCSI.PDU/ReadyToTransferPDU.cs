@@ -45,13 +45,13 @@ namespace ISCSI
         {
             LUNOrOpCodeSpecific = LUN.GetBytes();
 
-            Array.Copy(BigEndianConverter.GetBytes(TargetTransferTag), 0, OpCodeSpecific, 0, 4);
-            Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);
-            Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
-            Array.Copy(BigEndianConverter.GetBytes(R2TSN), 0, OpCodeSpecific, 16, 4);
-            Array.Copy(BigEndianConverter.GetBytes(BufferOffset), 0, OpCodeSpecific, 20, 4);
-            Array.Copy(BigEndianConverter.GetBytes(DesiredDataTransferLength), 0, OpCodeSpecific, 24, 4);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 0, TargetTransferTag);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, StatSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 12, MaxCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 16, R2TSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 20, BufferOffset);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 24, DesiredDataTransferLength);
 
             return base.GetBytes();
         }

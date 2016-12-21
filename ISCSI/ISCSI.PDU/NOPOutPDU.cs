@@ -39,9 +39,9 @@ namespace ISCSI
         {
             LUNOrOpCodeSpecific = LUN.GetBytes();
 
-            Array.Copy(BigEndianConverter.GetBytes(TargetTransferTag), 0, OpCodeSpecific, 0, 4);
-            Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpStatSN), 0, OpCodeSpecific, 8, 4);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 0, TargetTransferTag);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, CmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpStatSN);
 
             return base.GetBytes();
         }

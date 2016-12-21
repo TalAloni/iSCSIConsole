@@ -194,10 +194,10 @@ namespace SCSI
                 buffer[7] |= 0x01;
             }
 
-            Array.Copy(ASCIIEncoding.ASCII.GetBytes(VendorIdentification), 0, buffer, 8, Math.Min(VendorIdentification.Length, 8));
-            Array.Copy(ASCIIEncoding.ASCII.GetBytes(ProductIdentification), 0, buffer, 16, Math.Min(ProductIdentification.Length, 16));
-            Array.Copy(ASCIIEncoding.ASCII.GetBytes(ProductRevisionLevel), 0, buffer, 32, 4);
-            Array.Copy(BigEndianConverter.GetBytes(DriveSerialNumber), 0, buffer, 36, 8);
+            ByteWriter.WriteAnsiString(buffer, 8, VendorIdentification, 8);
+            ByteWriter.WriteAnsiString(buffer, 16, ProductIdentification, 16);
+            ByteWriter.WriteAnsiString(buffer, 32, ProductRevisionLevel, 4);
+            BigEndianWriter.WriteUInt64(buffer, 36, DriveSerialNumber);
 
 
             buffer[56] |= (byte)((Clocking & 0x03) << 2);

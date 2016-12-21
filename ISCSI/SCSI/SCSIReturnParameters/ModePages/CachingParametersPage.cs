@@ -106,10 +106,10 @@ namespace SCSI
             buffer[3] = (byte)((DemandReadRetentionPriority & 0x0F) << 4);
             buffer[3] = (byte)(WriteRetentionPriority & 0x0F);
 
-            Array.Copy(BigEndianConverter.GetBytes(DisablePrefetchTransferLength), 0, buffer, 4, 2);
-            Array.Copy(BigEndianConverter.GetBytes(MinimumPrefetch), 0, buffer, 6, 2);
-            Array.Copy(BigEndianConverter.GetBytes(MaximumPrefetch), 0, buffer, 8, 2);
-            Array.Copy(BigEndianConverter.GetBytes(MaximumPrefetchCeiling), 0, buffer, 10, 2);
+            BigEndianWriter.WriteUInt16(buffer, 4, DisablePrefetchTransferLength);
+            BigEndianWriter.WriteUInt16(buffer, 6, MinimumPrefetch);
+            BigEndianWriter.WriteUInt16(buffer, 8, MaximumPrefetch);
+            BigEndianWriter.WriteUInt16(buffer, 10, MaximumPrefetchCeiling);
 
             if (FSW)
             {
@@ -129,7 +129,7 @@ namespace SCSI
             }
 
             buffer[13] = NumberOfCacheSegments;
-            Array.Copy(BigEndianConverter.GetBytes(CacheSegmentSize), 0, buffer, 14, 2);
+            BigEndianWriter.WriteUInt16(buffer, 14, CacheSegmentSize);
 
             return buffer;
         }

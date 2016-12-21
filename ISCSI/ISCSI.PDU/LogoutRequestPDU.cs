@@ -37,9 +37,9 @@ namespace ISCSI
         {
             OpCodeSpecificHeader[0] = (byte)ReasonCode; // Final bit will be added by base.GetBytes()
 
-            Array.Copy(BigEndianConverter.GetBytes(CID), 0, OpCodeSpecific, 0, 2);
-            Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpStatSN), 0, OpCodeSpecific, 8, 4);
+            BigEndianWriter.WriteUInt16(OpCodeSpecific, 0, CID);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, CmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpStatSN);
 
             return base.GetBytes();
         }

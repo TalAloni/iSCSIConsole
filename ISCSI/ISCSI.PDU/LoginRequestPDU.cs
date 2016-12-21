@@ -71,12 +71,11 @@ namespace ISCSI
             OpCodeSpecificHeader[1] = VersionMax;
             OpCodeSpecificHeader[2] = VersionMin;
 
-            Array.Copy(BigEndianConverter.GetBytes(ISID), 2, LUNOrOpCodeSpecific, 0, 6);
-            Array.Copy(BigEndianConverter.GetBytes(TSIH), 0, LUNOrOpCodeSpecific, 6, 2);
+            BigEndianWriter.WriteUInt64(LUNOrOpCodeSpecific, 0, ISID << 16 | TSIH);
 
-            Array.Copy(BigEndianConverter.GetBytes(CID), 0, OpCodeSpecific, 0, 2);
-            Array.Copy(BigEndianConverter.GetBytes(CmdSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpStatSN), 0, OpCodeSpecific, 8, 4);
+            BigEndianWriter.WriteUInt16(OpCodeSpecific, 0, CID);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, CmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpStatSN);
 
             Data = ASCIIEncoding.ASCII.GetBytes(LoginParametersText);
 

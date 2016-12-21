@@ -39,7 +39,7 @@ namespace SCSI
                 buffer[1] |= 0x01;
             }
             buffer[2] = (byte)PageCode;
-            Array.Copy(BigEndianConverter.GetBytes(AllocationLength), 0, buffer, 3, 2);
+            BigEndianWriter.WriteUInt16(buffer, 3, AllocationLength);
             buffer[5] = Control;
             return buffer;
         }

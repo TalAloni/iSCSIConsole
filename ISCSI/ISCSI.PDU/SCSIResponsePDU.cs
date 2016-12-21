@@ -73,13 +73,13 @@ namespace ISCSI
             OpCodeSpecificHeader[1] = (byte)Response;
             OpCodeSpecificHeader[2] = (byte)Status;
 
-            Array.Copy(BigEndianConverter.GetBytes(SNACKTag), 0, OpCodeSpecific, 0, 4);
-            Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);
-            Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpDataSN), 0, OpCodeSpecific, 16, 4);
-            Array.Copy(BigEndianConverter.GetBytes(BidirectionalReadResidualCount), 0, OpCodeSpecific, 20, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ResidualCount), 0, OpCodeSpecific, 24, 4);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 0, SNACKTag);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, StatSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 12, MaxCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 16, ExpDataSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 20, BidirectionalReadResidualCount);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 24, ResidualCount);
 
             return base.GetBytes();
         }

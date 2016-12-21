@@ -39,10 +39,10 @@ namespace ISCSI
         {
             OpCodeSpecificHeader[1] = (byte)Reason;
 
-            Array.Copy(BigEndianConverter.GetBytes(StatSN), 0, OpCodeSpecific, 4, 4);
-            Array.Copy(BigEndianConverter.GetBytes(ExpCmdSN), 0, OpCodeSpecific, 8, 4);
-            Array.Copy(BigEndianConverter.GetBytes(MaxCmdSN), 0, OpCodeSpecific, 12, 4);
-            Array.Copy(BigEndianConverter.GetBytes(DataSN_R2TSN), 0, OpCodeSpecific, 16, 4);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 4, StatSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 8, ExpCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 12, MaxCmdSN);
+            BigEndianWriter.WriteUInt32(OpCodeSpecific, 16, DataSN_R2TSN);
 
             return base.GetBytes();
         }
