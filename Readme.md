@@ -6,10 +6,10 @@ iSCSI Console can serve serve physical and virtual disks to multiple clients.
 
 About the iSCSI library:
 ========================
-The iSCSI library utilized by iSCSI Console was designed to give developers an easy way to serve block storage via iSCSI,
-Any storage object you wish to share needs to implement the abstract Disk class, and the library will take care of the rest.
-The library was written with extensibility in mind, and was designed to fit multitude of projects.
-iSCSI Console is merely a demo project that exposes some of the capabilities of this library.
+The iSCSI library utilized by iSCSI Console was designed to give developers an easy way to serve block storage via iSCSI.  
+Any storage object you wish to share needs to implement the abstract Disk class, and the library will take care of the rest.  
+The library was written with extensibility in mind, and was designed to fit multitude of projects.  
+iSCSI Console is merely a demo project that exposes some of the capabilities of this library.  
 
 p.s. a very basic iSCSI initiator implementation is included with the library.
 
