@@ -11,7 +11,9 @@ Any storage object you wish to share needs to implement the abstract Disk class,
 The library was written with extensibility in mind, and was designed to fit multitude of projects.  
 iSCSI Console is merely a demo project that exposes some of the capabilities of this library.  
 
-p.s. a very basic iSCSI initiator implementation is included with the library.
+Notes:
+------
+In addition to a full fledged iSCSI Target server implementation, the iSCSI library also contain a very basic iSCSI initiator implementation.
 
 What this program can do:
 ===================================
@@ -22,6 +24,8 @@ What this program can do:
 5. Create VHDs.
 6. Could run from Windows PE using Mono.
 7. Could run from Linux / OSX using Mono (Download the Cross Platform Edition) 
+
+![alt tag](http://vm1.duckdns.org/Public/ISCSIConsole/ISCSIConsole_UI.png)
 
 Contact:
 ========
