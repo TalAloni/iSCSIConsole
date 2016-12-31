@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -40,13 +40,13 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static List<DynamicVolume> GetDynamicVolumes(List<DynamicDisk> disks)
         {
             List<DynamicVolume> result = new List<DynamicVolume>();
-            
+
             List<DiskGroupDatabase> diskGroupDatabases = DiskGroupDatabase.ReadFromDisks(disks);
             foreach (DiskGroupDatabase database in diskGroupDatabases)
             {
                 foreach (VolumeRecord volumeRecord in database.VolumeRecords)
                 {
-                    DynamicVolume volume = GetVolume(disks, database, volumeRecord);
+                    DynamicVolume volume = GetVolume(database, volumeRecord);
                     result.Add(volume);
                 }
             }
@@ -54,20 +54,19 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return result;
         }
 
-        public static DynamicVolume GetVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, VolumeRecord volumeRecord)
+        public static DynamicVolume GetVolume(DiskGroupDatabase database, VolumeRecord volumeRecord)
         {
             List<ComponentRecord> componentRecords = database.FindComponentsByVolumeID(volumeRecord.VolumeId);
             if (volumeRecord.NumberOfComponents != (ulong)componentRecords.Count || componentRecords.Count == 0)
-            { 
+            {
                 // database record is invalid
                 throw new InvalidDataException("Number of components in volume record does not match actual number of component records");
             }
-            
+
             if (componentRecords.Count == 1)
             {
                 ComponentRecord componentRecord = componentRecords[0];
-                return GetVolume(disks, database, volumeRecord, componentRecord);
-                
+                return GetVolume(database, volumeRecord, componentRecord);
             }
             else // Mirrored volume
             {
@@ -76,7 +75,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 List<DynamicVolume> volumes = new List<DynamicVolume>();
                 foreach (ComponentRecord componentRecord in componentRecords)
                 {
-                    DynamicVolume volume = GetVolume(disks, database, volumeRecord, componentRecord);
+                    DynamicVolume volume = GetVolume(database, volumeRecord, componentRecord);
                     volumes.Add(volume);
                 }
 
@@ -87,31 +86,31 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        private static DynamicVolume GetVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, VolumeRecord volumeRecord, ComponentRecord componentRecord)
+        private static DynamicVolume GetVolume(DiskGroupDatabase database, VolumeRecord volumeRecord, ComponentRecord componentRecord)
         {
             if (componentRecord.ExtentLayout == ExtentLayoutName.Concatenated)
             {
                 if (componentRecord.NumberOfExtents == 1)
                 {
                     // Simple volume
-                    return GetSimpleVolume(disks, database, componentRecord, volumeRecord); ;
+                    return GetSimpleVolume(database, componentRecord, volumeRecord); ;
                 }
                 else
                 {
                     // spanned volume
-                    SpannedVolume volume = GetSpannedVolume(disks, database, componentRecord, volumeRecord);
+                    SpannedVolume volume = GetSpannedVolume(database, componentRecord, volumeRecord);
                     return volume;
                 }
             }
             else if (componentRecord.ExtentLayout == ExtentLayoutName.Stripe)
             {
                 // striped volume
-                StripedVolume volume = GetStripedVolume(disks, database, componentRecord, volumeRecord);
+                StripedVolume volume = GetStripedVolume(database, componentRecord, volumeRecord);
                 return volume;
             }
             else if (componentRecord.ExtentLayout == ExtentLayoutName.RAID5)
             {
-                Raid5Volume volume = GetRAID5Volume(disks, database, componentRecord, volumeRecord);
+                Raid5Volume volume = GetRAID5Volume(database, componentRecord, volumeRecord);
                 return volume;
             }
             else
@@ -120,7 +119,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        private static List<DynamicColumn> GetDynamicVolumeColumns(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
+        private static List<DynamicColumn> GetDynamicVolumeColumns(DiskGroupDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
             // extentRecords are sorted by offset in column
             List<ExtentRecord> extentRecords = database.FindExtentsByComponentID(componentRecord.ComponentId);
@@ -130,12 +129,12 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 throw new InvalidDataException("Number of extents in component record does not match actual number of extent records");
             }
 
-            SortedList<uint, List<DynamicDiskExtent>> columns = new SortedList<uint,List<DynamicDiskExtent>>();
+            SortedList<uint, List<DynamicDiskExtent>> columns = new SortedList<uint, List<DynamicDiskExtent>>();
 
             foreach (ExtentRecord extentRecord in extentRecords)
             {
                 DiskRecord diskRecord = database.FindDiskByDiskID(extentRecord.DiskId);
-                DynamicDisk disk = DynamicDiskHelper.FindDisk(disks, diskRecord.DiskGuid); // we add nulls as well
+                DynamicDisk disk = DynamicDiskHelper.FindDisk(database.Disks, diskRecord.DiskGuid); // we add nulls as well
                 DynamicDiskExtent extent = DynamicDiskExtentHelper.GetDiskExtent(disk, extentRecord);
 
                 if (columns.ContainsKey(extentRecord.ColumnIndex))
@@ -143,7 +142,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     columns[extentRecord.ColumnIndex].Add(extent);
                 }
                 else
-                { 
+                {
                     List<DynamicDiskExtent> list = new List<DynamicDiskExtent>();
                     list.Add(extent);
                     columns.Add(extentRecord.ColumnIndex, list);
@@ -158,7 +157,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return result;
         }
 
-        private static SimpleVolume GetSimpleVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
+        private static SimpleVolume GetSimpleVolume(DiskGroupDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
             List<ExtentRecord> extentRecords = database.FindExtentsByComponentID(componentRecord.ComponentId);
             if (extentRecords.Count == 1)
@@ -166,7 +165,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 ExtentRecord extentRecord = extentRecords[0];
 
                 DiskRecord diskRecord = database.FindDiskByDiskID(extentRecord.DiskId);
-                DynamicDisk disk = DynamicDiskHelper.FindDisk(disks, diskRecord.DiskGuid); // we add nulls as well
+                DynamicDisk disk = DynamicDiskHelper.FindDisk(database.Disks, diskRecord.DiskGuid); // we add nulls as well
                 DynamicDiskExtent extent = DynamicDiskExtentHelper.GetDiskExtent(disk, extentRecord);
 
                 SimpleVolume volume = new SimpleVolume(extent, volumeRecord.VolumeGuid, database.DiskGroupGuid);
@@ -182,9 +181,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        private static Raid5Volume GetRAID5Volume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
+        private static Raid5Volume GetRAID5Volume(DiskGroupDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
-            List<DynamicColumn> columns = GetDynamicVolumeColumns(disks, database, componentRecord, volumeRecord);
+            List<DynamicColumn> columns = GetDynamicVolumeColumns(database, componentRecord, volumeRecord);
             int bytesPerSector = DynamicVolume.GetBytesPerSector(columns, DynamicColumn.DefaultBytesPerSector);
             int sectorsPerStripe = (int)PublicRegionHelper.TranslateFromPublicRegionSizeLBA((int)componentRecord.StripeSizeLBA, bytesPerSector);
             Raid5Volume volume = new Raid5Volume(columns, sectorsPerStripe, volumeRecord.VolumeGuid, database.DiskGroupGuid);
@@ -194,9 +193,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return volume;
         }
 
-        private static StripedVolume GetStripedVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
+        private static StripedVolume GetStripedVolume(DiskGroupDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
-            List<DynamicColumn> columns = GetDynamicVolumeColumns(disks, database, componentRecord, volumeRecord);
+            List<DynamicColumn> columns = GetDynamicVolumeColumns(database, componentRecord, volumeRecord);
             int bytesPerSector = DynamicVolume.GetBytesPerSector(columns, DynamicColumn.DefaultBytesPerSector);
             int sectorsPerStripe = (int)PublicRegionHelper.TranslateFromPublicRegionSizeLBA((int)componentRecord.StripeSizeLBA, bytesPerSector);
             StripedVolume volume = new StripedVolume(columns, sectorsPerStripe, volumeRecord.VolumeGuid, database.DiskGroupGuid);
@@ -206,9 +205,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return volume;
         }
 
-        private static SpannedVolume GetSpannedVolume(List<DynamicDisk> disks, VolumeManagerDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
+        private static SpannedVolume GetSpannedVolume(DiskGroupDatabase database, ComponentRecord componentRecord, VolumeRecord volumeRecord)
         {
-            List<DynamicColumn> columns = GetDynamicVolumeColumns(disks, database, componentRecord, volumeRecord);
+            List<DynamicColumn> columns = GetDynamicVolumeColumns(database, componentRecord, volumeRecord);
 
             SpannedVolume volume = new SpannedVolume(columns[0], volumeRecord.VolumeGuid, database.DiskGroupGuid);
             volume.VolumeID = volumeRecord.VolumeId;

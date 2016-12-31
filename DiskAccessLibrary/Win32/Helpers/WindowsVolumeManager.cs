@@ -85,6 +85,7 @@ namespace DiskAccessLibrary
         /// If Windows Automount is turned off, then partitions on new disks are not mounted. (but can be locked).
         /// Failed dynamic volumes are not mounted as well. (and can't be locked).
         /// Note: A volume can have 0 mount points and still be mounted and access by Windows.
+        /// Note: The NTFS file system treats a locked volume as a dismounted volume.
         /// </summary>
         public static bool IsMounted(Guid windowsVolumeGuid)
         {

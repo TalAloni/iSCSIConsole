@@ -20,6 +20,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static LockStatus LockDynamicDiskGroup(Guid diskGroupGuid, bool lockAllDynamicVolumes)
         {
             List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
+            return LockDynamicDiskGroup(disksToLock, lockAllDynamicVolumes);
+        }
+
+        public static LockStatus LockDynamicDiskGroup(List<DynamicDisk> disksToLock, bool lockAllDynamicVolumes)
+        {
             List<DynamicVolume> volumesToLock = new List<DynamicVolume>();
 
             if (lockAllDynamicVolumes)

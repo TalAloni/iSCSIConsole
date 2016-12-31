@@ -69,24 +69,36 @@ namespace DiskAccessLibrary
             return new List<string>();
         }
 
+        /// <summary>
+        /// Note: The NTFS file system treats a locked volume as a dismounted volume.
+        /// </summary>
         public static bool IsVolumeMounted(char driveLetter)
         {
             SafeFileHandle handle = HandleUtils.GetVolumeHandle(driveLetter, FileAccess.Read, ShareMode.ReadWrite);
             return IsVolumeMounted(handle);
         }
 
+        /// <summary>
+        /// Note: The NTFS file system treats a locked volume as a dismounted volume.
+        /// </summary>
         public static bool IsVolumeMounted(string path)
         {
             SafeFileHandle handle = HandleUtils.GetVolumeHandle(path, FileAccess.Read, ShareMode.ReadWrite);
             return IsVolumeMounted(handle);
         }
 
+        /// <summary>
+        /// Note: The NTFS file system treats a locked volume as a dismounted volume.
+        /// </summary>
         public static bool IsVolumeMounted(Guid volumeGuid)
         {
             SafeFileHandle handle = HandleUtils.GetVolumeHandle(volumeGuid, FileAccess.Read, ShareMode.ReadWrite);
             return IsVolumeMounted(handle);
         }
 
+        /// <summary>
+        /// Note: The NTFS file system treats a locked volume as a dismounted volume.
+        /// </summary>
         /// <param name="handle">When opening a volume, the dwShareMode parameter must have the FILE_SHARE_WRITE flag.</param>
         public static bool IsVolumeMounted(SafeFileHandle handle)
         {

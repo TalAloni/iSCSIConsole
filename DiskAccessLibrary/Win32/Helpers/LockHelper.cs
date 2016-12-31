@@ -76,10 +76,14 @@ namespace DiskAccessLibrary
             int lockIndex;
             for (lockIndex = 0; lockIndex < volumeGuids.Count; lockIndex++)
             {
-                success = WindowsVolumeManager.ExclusiveLock(volumeGuids[lockIndex]);
-                if (!success)
+                Guid volumeGuid = volumeGuids[lockIndex];
+                if (WindowsVolumeManager.IsMounted(volumeGuid))
                 {
-                    break;
+                    success = WindowsVolumeManager.ExclusiveLock(volumeGuid);
+                    if (!success)
+                    {
+                        break;
+                    }
                 }
             }
 

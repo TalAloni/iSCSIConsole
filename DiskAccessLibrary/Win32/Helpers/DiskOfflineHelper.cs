@@ -14,9 +14,14 @@ namespace DiskAccessLibrary.LogicalDiskManager
     {
         public static bool IsDiskGroupOnlineAndWritable(Guid diskGroupGuid)
         {
-            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
+            List<DynamicDisk> diskGroup = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
+            return IsDiskGroupOnlineAndWritable(diskGroup);
+        }
+
+        public static bool IsDiskGroupOnlineAndWritable(List<DynamicDisk> diskGroup)
+        {
             List<PhysicalDisk> physicalDisks = new List<PhysicalDisk>();
-            foreach (DynamicDisk dynamicDisk in disksToLock)
+            foreach (DynamicDisk dynamicDisk in diskGroup)
             {
                 if (dynamicDisk.Disk is PhysicalDisk)
                 {
@@ -48,19 +53,16 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static void OnlineDiskGroup(Guid diskGroupGuid)
         {
             List<DynamicDisk> disksToOnline = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
-            foreach (DynamicDisk disk in disksToOnline)
-            {
-                ((PhysicalDisk)disk.Disk).SetOnlineStatus(true);
-            }
+            OnlineAll(disksToOnline);
         }
 
         /// <summary>
         /// Will not persist across reboots
         /// </summary>
-        public static bool OfflineAllOrNone(List<DynamicDisk> disksToLock)
+        public static bool OfflineAllOrNone(List<DynamicDisk> disksToOffline)
         {
             List<PhysicalDisk> physicalDisks = new List<PhysicalDisk>();
-            foreach (DynamicDisk dynamicDisk in disksToLock)
+            foreach (DynamicDisk dynamicDisk in disksToOffline)
             {
                 if (dynamicDisk.Disk is PhysicalDisk)
                 {
@@ -68,6 +70,14 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
             }
             return PhysicalDiskHelper.OfflineAllOrNone(physicalDisks);
+        }
+
+        public static void OnlineAll(List<DynamicDisk> disksToOnline)
+        {
+            foreach (DynamicDisk disk in disksToOnline)
+            {
+                ((PhysicalDisk)disk.Disk).SetOnlineStatus(true);
+            }
         }
     }
 }

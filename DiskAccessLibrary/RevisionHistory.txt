@@ -88,3 +88,10 @@ Revision History:
 1.4.3 - Bugfix: MirroredVolume.BytesPerSector reported wrong number of bytes per sector when the first volume was not operational.
         Bugfix: DynamicDiskHelper.IsMoveLocationValid ignored allocated extents.
         API: Added DiskGroupGuid property to DynamicDisk.
+
+1.4.4 - Bugfix: DynamicVolumeHelper looked for volume extents outside of the disk group.
+        Bugfix: RetainHelper.IsVolumeRetained did not properly iterate components of mirrored volume.
+        NTFS: Properly trim result array when caller tries to read more bytes than the record contains.
+        NTFS: Return empty byte array when trying to read from offset larger than file length.
+        LockHelper.LockAllVolumesOrNone will attempt to lock only mounted volumes.
+        API improvements.

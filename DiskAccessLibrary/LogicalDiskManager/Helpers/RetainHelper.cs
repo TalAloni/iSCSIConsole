@@ -22,10 +22,15 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
             else if (volume is MirroredVolume)
             {
-                DynamicVolume component = ((MirroredVolume)volume).Components[0];
-                if (component is SimpleVolume)
+                foreach (DynamicVolume component in ((MirroredVolume)volume).Components)
                 {
-                    return IsVolumeRetained((SimpleVolume)component, out isBootVolume);
+                    if (component.IsOperational && component is SimpleVolume)
+                    {
+                        if (IsVolumeRetained((SimpleVolume)component, out isBootVolume))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
 

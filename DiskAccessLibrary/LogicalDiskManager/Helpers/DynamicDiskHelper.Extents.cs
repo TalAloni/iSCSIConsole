@@ -83,7 +83,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public static long GetMaxNewExtentLength(DynamicDisk disk)
         {
-            return GetMaxNewExtentLength(disk, 0);
+            return GetMaxNewExtentLength(disk, 1);
         }
 
         /// <returns>In bytes</returns>

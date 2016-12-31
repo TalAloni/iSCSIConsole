@@ -365,8 +365,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 }
             }
 
-            result.Sort(CompareByOffsetInColumn);
-            //result.Sort(CompareByColumnIndex);
+            result.Sort(CompareOffsetInColumn);
             return result;
         }
 
@@ -508,12 +507,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        private static int CompareByColumnIndex(ExtentRecord x, ExtentRecord y)
-        {
-            return x.ColumnIndex.CompareTo(y.ColumnIndex);
-        }
-
-        private static int CompareByOffsetInColumn(ExtentRecord x, ExtentRecord y)
+        private static int CompareOffsetInColumn(ExtentRecord x, ExtentRecord y)
         {
             return x.OffsetInColumnLBA.CompareTo(y.OffsetInColumnLBA);
         }

@@ -142,11 +142,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 bytesRead += clusters.Length;
             }
 
-            // If we have just read the last cluster, and it is only partially used, we must trim it
+            // If the last cluster is only partially used or we have been asked to read clusters beyond the last cluster, trim result.
+            // (Either of those cases could only be true if we have just read the last cluster).
             if (lastClusterVcnToRead == (long)HighestVCN)
             {
                 long bytesToUse = (long)(FileSize - (ulong)firstClusterVCN * (uint)volume.BytesPerCluster);
-                if (bytesToUse < bytesRead)
+                if (bytesToUse < result.Length)
                 {
                     byte[] resultTrimmed = new byte[bytesToUse];
                     Array.Copy(result, resultTrimmed, bytesToUse);

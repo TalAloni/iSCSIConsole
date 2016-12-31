@@ -30,6 +30,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public byte[] ReadFromFile(ulong offset, int length)
         {
+            if (offset >= this.Length)
+            {
+                return new byte[0];
+            }
             long clusterVCN = (long)offset / m_volume.BytesPerCluster;
             int offsetInCluster = (int)(offset % (uint)m_volume.BytesPerCluster);
             int clusterCount = (int)Math.Ceiling((double)(offsetInCluster + length) / m_volume.BytesPerCluster);
