@@ -78,24 +78,24 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             byte[] buffer = new byte[BytesPerSector];
             Array.Copy(Jump, 0, buffer, 0x00, 3);
-            Array.Copy(ASCIIEncoding.ASCII.GetBytes(OEMID), 0, buffer, 0x03, Math.Min(8, OEMID.Length));
+            ByteWriter.WriteAnsiString(buffer, 0x03, OEMID, 8);
 
-            Array.Copy(LittleEndianConverter.GetBytes(BytesPerSector), 0, buffer, 0x0B, 2);
+            LittleEndianWriter.WriteUInt16(buffer, 0x0B, BytesPerSector);
             buffer[0x0D] = SectorsPerCluster;
             buffer[0x15] = MediaDescriptor;
-            Array.Copy(LittleEndianConverter.GetBytes(SectorsPerTrack), 0, buffer, 0x18, 2);
-            Array.Copy(LittleEndianConverter.GetBytes(NumberOfHeads), 0, buffer, 0x1A, 2);
-            Array.Copy(LittleEndianConverter.GetBytes(NumberOfHiddenSectors), 0, buffer, 0x1C, 4);
+            LittleEndianWriter.WriteUInt16(buffer, 0x18, SectorsPerTrack);
+            LittleEndianWriter.WriteUInt16(buffer, 0x1A, NumberOfHeads);
+            LittleEndianWriter.WriteUInt32(buffer, 0x1C, NumberOfHiddenSectors);
 
             buffer[0x24] = PhysicalDriveNumber;
             buffer[0x26] = ExtendedBootSignature;
-            Array.Copy(LittleEndianConverter.GetBytes(TotalSectors), 0, buffer, 0x28, 8);
-            Array.Copy(LittleEndianConverter.GetBytes(MftStartLCN), 0, buffer, 0x30, 8);
-            Array.Copy(LittleEndianConverter.GetBytes(MftMirrorStartLCN), 0, buffer, 0x38, 8);
+            LittleEndianWriter.WriteUInt64(buffer, 0x28, TotalSectors);
+            LittleEndianWriter.WriteUInt64(buffer, 0x30, MftStartLCN);
+            LittleEndianWriter.WriteUInt64(buffer, 0x38, MftMirrorStartLCN);
             buffer[0x40] = (byte)RawClustersPerFileRecordSegment;
             buffer[0x44] = (byte)RawClustersPerIndexBlock;
-            Array.Copy(LittleEndianConverter.GetBytes(VolumeSerialNumber), 0, buffer, 0x48, 8);
-            Array.Copy(LittleEndianConverter.GetBytes(Checksum), 0, buffer, 0x50, 4);
+            LittleEndianWriter.WriteUInt64(buffer, 0x48, VolumeSerialNumber);
+            LittleEndianWriter.WriteUInt32(buffer, 0x50, Checksum);
 
             Array.Copy(Code, 0, buffer, 0x54, Code.Length);
             return buffer;

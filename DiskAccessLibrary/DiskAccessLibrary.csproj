@@ -113,7 +113,6 @@
     <Compile Include="LogicalDiskManager\Enums\ReadPolicyName.cs" />
     <Compile Include="LogicalDiskManager\Enums\RecordType.cs" />
     <Compile Include="LogicalDiskManager\Enums\VolumeFlags.cs" />
-    <Compile Include="LogicalDiskManager\Exceptions\DatabaseNotFoundException.cs" />
     <Compile Include="LogicalDiskManager\Exceptions\MissingDatabaseRecordException.cs" />
     <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentHelper.cs" />
     <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentsHelper.cs" />
@@ -130,6 +129,7 @@
     <Compile Include="LogicalDiskManager\TOCBlock\TOCBlock.cs" />
     <Compile Include="LogicalDiskManager\TOCBlock\TOCRegion.cs" />
     <Compile Include="LogicalDiskManager\VolumeManagerDatabase.cs" />
+    <Compile Include="LogicalDiskManager\VolumeManagerDatabaseCopy.cs" />
     <Compile Include="LogicalDiskManager\VolumeManagerDatabaseHeader.cs" />
     <Compile Include="LogicalDiskManager\Volumes\DynamicColumn.cs" />
     <Compile Include="LogicalDiskManager\Volumes\DynamicVolume.cs" />

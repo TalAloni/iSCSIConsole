@@ -49,6 +49,21 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
+        public override int BytesPerSector
+        {
+            get
+            {
+                foreach (DynamicVolume volume in m_volumes)
+                {
+                    if (volume.IsOperational)
+                    {
+                        return volume.BytesPerSector;
+                    }
+                }
+                return DynamicColumn.DefaultBytesPerSector;
+            }
+        }
+
         public override long Size
         {
             get 

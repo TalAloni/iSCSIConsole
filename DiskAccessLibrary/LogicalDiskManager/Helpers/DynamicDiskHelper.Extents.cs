@@ -143,35 +143,41 @@ namespace DiskAccessLibrary.LogicalDiskManager
         }
 
         /// <param name="targetOffset">in bytes</param>
-        public static bool IsMoveLocationValid(DynamicDisk disk, DynamicDiskExtent sourceExtent, long targetOffset)
+        public static bool IsMoveLocationValid(DynamicDiskExtent sourceExtent, DynamicDisk targetDisk, long targetOffset)
         {
-            List<DynamicDiskExtent> extents = GetDiskExtents(disk);
+            bool isSameDisk = (sourceExtent.Disk == targetDisk.Disk);
+            List<DynamicDiskExtent> extents = GetDiskExtents(targetDisk);
             // extents are sorted by first sector
             if (extents == null)
             {
                 return false;
             }
 
-            PrivateHeader privateHeader = disk.PrivateHeader;
+            PrivateHeader privateHeader = targetDisk.PrivateHeader;
+            if (sourceExtent.BytesPerSector != targetDisk.BytesPerSector)
+            {
+                // We must not move an extent to another disk that has different sector size
+                return false;
+            }
             if (targetOffset % privateHeader.BytesPerSector > 0)
             {
                 return false;
             }
-            long targetSector = targetOffset / disk.BytesPerSector;
-            DiskExtent targetExtent = new DiskExtent(disk.Disk, targetSector, sourceExtent.Size);
+            long targetSector = targetOffset / targetDisk.BytesPerSector;
+            DiskExtent targetExtent = new DiskExtent(targetDisk.Disk, targetSector, sourceExtent.Size);
 
             List<DiskExtent> usedExtents = new List<DiskExtent>();
-            foreach (DynamicDiskExtent usedExtent in usedExtents)
+            foreach (DynamicDiskExtent extent in extents)
             {
-                if (usedExtent.FirstSector != sourceExtent.FirstSector)
+                if (!isSameDisk || extent.FirstSector != sourceExtent.FirstSector)
                 {
-                    usedExtents.Add(usedExtent);
+                    usedExtents.Add(extent);
                 }
             }
 
             long publicRegionStartSector = (long)privateHeader.PublicRegionStartLBA;
-            long publicRegionSize = (long)privateHeader.PublicRegionSizeLBA * disk.BytesPerSector;
-            List<DiskExtent> unallocatedExtents = DiskExtentsHelper.GetUnallocatedExtents(disk.Disk, publicRegionStartSector, publicRegionSize, usedExtents);
+            long publicRegionSize = (long)privateHeader.PublicRegionSizeLBA * targetDisk.BytesPerSector;
+            List<DiskExtent> unallocatedExtents = DiskExtentsHelper.GetUnallocatedExtents(targetDisk.Disk, publicRegionStartSector, publicRegionSize, usedExtents);
             foreach (DiskExtent extent in unallocatedExtents)
             {
                 if (extent.FirstSector <= targetExtent.FirstSector && targetExtent.LastSector <= extent.LastSector)

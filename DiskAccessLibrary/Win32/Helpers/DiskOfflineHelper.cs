@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -12,9 +12,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
 {
     public class DiskOfflineHelper
     {
-        public static bool AreDynamicDisksOnlineAndWriteable()
+        public static bool IsDiskGroupOnlineAndWritable(Guid diskGroupGuid)
         {
-            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks();
+            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
             List<PhysicalDisk> physicalDisks = new List<PhysicalDisk>();
             foreach (DynamicDisk dynamicDisk in disksToLock)
             {
@@ -39,15 +39,15 @@ namespace DiskAccessLibrary.LogicalDiskManager
         /// <summary>
         /// Will not persist across reboots
         /// </summary>
-        public static bool OfflineAllDynamicDisks()
+        public static bool OfflineDiskGroup(Guid diskGroupGuid)
         {
-            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks();
-            return OfflineAllOrNone(disksToLock);
+            List<DynamicDisk> disksToOffline = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
+            return OfflineAllOrNone(disksToOffline);
         }
 
-        public static void OnlineAllDynamicDisks()
+        public static void OnlineDiskGroup(Guid diskGroupGuid)
         {
-            List<DynamicDisk> disksToOnline = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks();
+            List<DynamicDisk> disksToOnline = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
             foreach (DynamicDisk disk in disksToOnline)
             {
                 ((PhysicalDisk)disk.Disk).SetOnlineStatus(true);

@@ -287,7 +287,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public static byte[] GetEndMarker()
         {
             byte[] buffer = new byte[4];
-            Array.Copy(LittleEndianConverter.GetBytes(0xFFFFFFFF), buffer, 4);
+            LittleEndianWriter.WriteUInt32(buffer, 0, 0xFFFFFFFF);
             return buffer;
         }
 

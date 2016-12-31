@@ -6,25 +6,20 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Utilities;
 
 namespace DiskAccessLibrary.LogicalDiskManager
 {
-    public class VolumeManagerDatabase
+    public abstract class VolumeManagerDatabase
     {
         public const uint FirstSequenceNumber = 4; // SequenceNumber starts from 4 (0-3 are taken by the VMDB)
 
-        private DynamicDisk m_disk;
         private VolumeManagerDatabaseHeader m_databaseHeader;
         private List<DatabaseRecord> m_databaseRecords;
         private KernelUpdateLog m_kernelUpdateLog;
-        
         private ulong m_nextRecordID;
 
-        public VolumeManagerDatabase(DynamicDisk disk, VolumeManagerDatabaseHeader databaseHeader, List<DatabaseRecord> databaseRecords, KernelUpdateLog kernelUpdateLog)
+        public VolumeManagerDatabase(VolumeManagerDatabaseHeader databaseHeader, List<DatabaseRecord> databaseRecords, KernelUpdateLog kernelUpdateLog)
         {
-            m_disk = disk;
             m_databaseHeader = databaseHeader;
             m_databaseRecords = databaseRecords;
             m_kernelUpdateLog = kernelUpdateLog;
@@ -38,6 +33,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return m_nextRecordID - 1;
         }
 
+        public abstract void WriteDatabaseHeader();
+        public abstract void WriteDatabaseRecordFragment(DatabaseRecordFragment fragment);
+        public abstract void SetKernelUpdateLogLastEntry(ulong committedTransactionID, ulong pendingTransactionID);
+
         // Steps to update the database (as performed by Windows):
         // -------------------------------------------------------
         // 1. We create all the new records as 'pending activation', and mark old records as 'pending deletion'.
@@ -46,17 +45,17 @@ namespace DiskAccessLibrary.LogicalDiskManager
         // 4. We mark the database header update status as 'Commit'.
         // 5. We delete all the 'pending deletion' records, and activate all the 'pending activation' records
         // 6. We mark the database header as 'Clean', and update CommitTransactionID (set it to PendingTransactionID) and the number of committed VBlks.
-        
+
         // Notes:
         // ------
         // 1. The volume manager database and kernel update log ('config' and 'log' regions) are identical across all disks (not including the PRIVHEAD
         //    and TOCBLOCKs of course), and should be kept identical (each step should be performed across all disks before proceeding to the next step).
-        // 2.  I've always encountered steps 1 and 2 within the same write operation, so the order may be the other way around.
+        // 2. I've always encountered steps 1 and 2 within the same write operation, so the order may be the other way around.
         // 3. If an update operation has been terminated (power failure) before step 4 has been reach, Windows will roll back the changes made,
         //    Once step 4 has been performed, Windows will commit the changes made.
         // 4. When a disk is being modified (volume is being added / deleted etc.), Windows / Veritas Storage Foundation updates the disk record,
         //    and a new CommitTransactionID is applied.
-        
+
         /// <param name="records">New or modified records (.e.g. new volume, volume with modified size etc.)</param>
         public void UpdateDatabase(List<DatabaseRecord> records)
         {
@@ -71,7 +70,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     }
                 }
             }
-            VerifyDatabaseConsistency();
+            if (this.IsDirty)
+            {
+                throw new Exception("Database is in inconsistent state");
+            }
 
             // step 1:
             MarkOldRecordsAsPendingDeletion(records);
@@ -97,11 +99,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
             // step 3:
             SetKernelUpdateLogLastEntry(m_databaseHeader.CommitTransactionID, pendingTransactionID);
-            
+
             // step 4:
             m_databaseHeader.UpdateStatus = DatabaseHeaderUpdateStatus.Commit;
             WriteDatabaseHeader();
-            
+
             // step 5:
             DeletePendingDeletionRecords();
             ActivatePendingActivationRecords();
@@ -118,27 +120,13 @@ namespace DiskAccessLibrary.LogicalDiskManager
             m_nextRecordID = m_databaseHeader.CommitTransactionID + 1;
         }
 
-        virtual public void VerifyDatabaseConsistency()
-        {
-            if (m_databaseHeader.PendingTransactionID != m_databaseHeader.CommitTransactionID ||
-                m_databaseHeader.UpdateStatus != DatabaseHeaderUpdateStatus.Clean)
-            {
-                throw new Exception("Database is in inconsistent state");
-            }
-
-            if (m_databaseHeader.MajorVersion != 4 || m_databaseHeader.MinorVersion != 10)
-            {
-                throw new NotImplementedException("Database version is not supported");
-            }
-        }
-
         /// <summary>
         /// mark old records as pending deletion and return them
         /// </summary>
         private void MarkOldRecordsAsPendingDeletion(List<DatabaseRecord> newRecords)
         {
             foreach (DatabaseRecord newRecord in newRecords)
-            { 
+            {
                 int index = m_databaseRecords.IndexOf(newRecord);
                 if (index >= 0) // same record ID exist
                 {
@@ -262,72 +250,30 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        virtual protected void WriteDatabaseHeader()
+        /// <param name="startFromSequenceNumber">We use startSequenceNumber to avoid using the same SequenceNumber twice</param>
+        private uint GetAvailableFragmentSequenceNumber(uint startFromSequenceNumber)
         {
-            VolumeManagerDatabaseHeader.WriteToDisk(m_disk, m_databaseHeader);
-        }
-
-        virtual protected void WriteDatabaseRecordFragment(DatabaseRecordFragment fragment)
-        {
-            WriteDatabaseRecordFragment(m_disk, fragment, (int)m_databaseHeader.BlockSize);
-        }
-
-        virtual protected void SetKernelUpdateLogLastEntry(ulong committedTransactionID, ulong pendingTransactionID)
-        {
-            m_kernelUpdateLog.SetLastEntry(m_disk, committedTransactionID, pendingTransactionID);
-        }
-        
-        /// <param name="searchFrom">We use startSequenceNumber to avoid using the same SequenceNumber twice</param>
-        public uint GetAvailableFragmentSequenceNumber(uint startFromSequenceNumber)
-        {
-            List<uint> sequenceNumbers = new List<uint>();
-            foreach (DatabaseRecord record in m_databaseRecords)
+            uint? sequenceNumber = GetAvailableFragmentSequenceNumber(m_databaseRecords, startFromSequenceNumber, m_databaseHeader.NumberOfVBlks);
+            if (!sequenceNumber.HasValue)
             {
-                foreach (DatabaseRecordFragment fragment in record.Fragments)
-                { 
-                    sequenceNumbers.Add(fragment.SequenceNumber);
-                }
+                throw new Exception("VMDB is full");
             }
-            sequenceNumbers.Sort();
-
-            for (uint sequenceNumber = startFromSequenceNumber; sequenceNumber < m_databaseHeader.NumberOfVBlks; sequenceNumber++)
-            {
-                if (!sequenceNumbers.Contains(sequenceNumber))
-                {
-                    return sequenceNumber;
-                }
-            }
-
-            throw new Exception("VMDB is full");
+            return sequenceNumber.Value;
         }
 
-        /// <param name="searchFrom">We use startFromGroupNumber to avoid using the same GroupNumber twice</param>
-        public uint GetAvailableFragmentGroupNumber(uint startFromGroupNumber)
+        /// <param name="startFromGroupNumber">We use startFromGroupNumber to avoid using the same GroupNumber twice</param>
+        private uint GetAvailableFragmentGroupNumber(uint startFromGroupNumber)
         {
-            List<uint> groupNumbers = new List<uint>();
-            foreach (DatabaseRecord record in m_databaseRecords)
+            uint? groupNumber = GetAvailableFragmentGroupNumber(m_databaseRecords, startFromGroupNumber, m_databaseHeader.NumberOfVBlks);
+            if (!groupNumber.HasValue)
             {
-                foreach (DatabaseRecordFragment fragment in record.Fragments)
-                {
-                    groupNumbers.Add(fragment.GroupNumber);
-                }
+                throw new Exception("VMDB is full");
             }
-            groupNumbers.Sort();
-
-            // number of groups can't be bigger than the number of fragments
-            for (uint groupNumber = startFromGroupNumber; groupNumber < m_databaseHeader.NumberOfVBlks; groupNumber++)
-            {
-                if (!groupNumbers.Contains(groupNumber))
-                {
-                    return groupNumber;
-                }
-            }
-
-            throw new Exception("VMDB is full, can't find available GroupNumber");
+            return groupNumber.Value;
         }
 
-        public List<T> GetRecords<T>() where T:DatabaseRecord
-        { 
+        private List<T> GetRecords<T>() where T : DatabaseRecord
+        {
             List<T> result = new List<T>();
             foreach (DatabaseRecord record in m_databaseRecords)
             {
@@ -339,7 +285,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return result;
         }
 
-        public List<T> GetActiveRecords<T>() where T : DatabaseRecord
+        private List<T> GetActiveRecords<T>() where T : DatabaseRecord
         {
             List<T> result = new List<T>();
             foreach (DatabaseRecord record in m_databaseRecords)
@@ -352,7 +298,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             return result;
         }
 
-        public uint GetPendingTotalNumberOfRecords<T>() where T : DatabaseRecord
+        private uint GetPendingTotalNumberOfRecords<T>() where T : DatabaseRecord
         {
             uint result = 0;
             foreach (DatabaseRecord record in m_databaseRecords)
@@ -418,12 +364,12 @@ namespace DiskAccessLibrary.LogicalDiskManager
                     result.Add(record);
                 }
             }
-            
+
             result.Sort(CompareByOffsetInColumn);
             //result.Sort(CompareByColumnIndex);
             return result;
         }
-        
+
         public List<ExtentRecord> FindExtentsByDiskID(ulong diskID)
         {
             List<ExtentRecord> result = new List<ExtentRecord>();
@@ -496,7 +442,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
                 return m_kernelUpdateLog;
             }
         }
-        
+
         public List<DiskRecord> DiskRecords
         {
             get
@@ -537,6 +483,15 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
+        public virtual bool IsDirty
+        {
+            get
+            {
+                return (m_databaseHeader.PendingTransactionID != m_databaseHeader.CommitTransactionID ||
+                        m_databaseHeader.UpdateStatus != DatabaseHeaderUpdateStatus.Clean);
+            }
+        }
+
         public Guid DiskGroupGuid
         {
             get
@@ -551,6 +506,107 @@ namespace DiskAccessLibrary.LogicalDiskManager
             {
                 return m_databaseHeader.DiskGroupName;
             }
+        }
+
+        private static int CompareByColumnIndex(ExtentRecord x, ExtentRecord y)
+        {
+            return x.ColumnIndex.CompareTo(y.ColumnIndex);
+        }
+
+        private static int CompareByOffsetInColumn(ExtentRecord x, ExtentRecord y)
+        {
+            return x.OffsetInColumnLBA.CompareTo(y.OffsetInColumnLBA);
+        }
+        
+        /// <param name="startFromSequenceNumber">We use startSequenceNumber to avoid using the same SequenceNumber twice</param>
+        private static uint? GetAvailableFragmentSequenceNumber(List<DatabaseRecord> databaseRecords, uint startFromSequenceNumber, uint maxNumberOfFragments)
+        {
+            List<uint> sequenceNumbers = new List<uint>();
+            foreach (DatabaseRecord record in databaseRecords)
+            {
+                foreach (DatabaseRecordFragment fragment in record.Fragments)
+                {
+                    sequenceNumbers.Add(fragment.SequenceNumber);
+                }
+            }
+            sequenceNumbers.Sort();
+
+            for (uint sequenceNumber = startFromSequenceNumber; sequenceNumber < maxNumberOfFragments; sequenceNumber++)
+            {
+                if (!sequenceNumbers.Contains(sequenceNumber))
+                {
+                    return sequenceNumber;
+                }
+            }
+
+            return null;
+        }
+
+        /// <param name="startFromGroupNumber">We use startFromGroupNumber to avoid using the same GroupNumber twice</param>
+        private static uint? GetAvailableFragmentGroupNumber(List<DatabaseRecord> databaseRecords, uint startFromGroupNumber, uint maxNumberOfFragments)
+        {
+            List<uint> groupNumbers = new List<uint>();
+            foreach (DatabaseRecord record in databaseRecords)
+            {
+                foreach (DatabaseRecordFragment fragment in record.Fragments)
+                {
+                    groupNumbers.Add(fragment.GroupNumber);
+                }
+            }
+            groupNumbers.Sort();
+
+            // number of groups can't be bigger than the number of fragments
+            for (uint groupNumber = startFromGroupNumber; groupNumber < maxNumberOfFragments; groupNumber++)
+            {
+                if (!groupNumbers.Contains(groupNumber))
+                {
+                    return groupNumber;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Will read all VBLK blocks and assemble the database records
+        /// </summary>
+        /// <param name="numberOfFragments">number of fragments excluding the database header</param>
+        private static List<DatabaseRecord> ReadDatabaseRecords(byte[] databaseBytes, int headerSize, int fragmentSize, int numberOfFragments)
+        {
+            // Note: fragments are not necessarily contiguous!
+            Dictionary<uint, List<DatabaseRecordFragment>> fragments = new Dictionary<uint, List<DatabaseRecordFragment>>();
+            for (uint index = 0; index < numberOfFragments; index++)
+            {
+                byte[] fragmentBytes = new byte[fragmentSize];
+                int fragmentOffset = (int)(headerSize + index * fragmentSize);
+                Array.Copy(databaseBytes, fragmentOffset, fragmentBytes, 0, fragmentSize);
+                DatabaseRecordFragment fragment = DatabaseRecordFragment.GetDatabaseRecordFragment(fragmentBytes);
+
+                if (fragment != null) // null fragment means VBLK is empty
+                {
+                    if (fragments.ContainsKey(fragment.GroupNumber))
+                    {
+                        fragments[fragment.GroupNumber].Add(fragment);
+                    }
+                    else
+                    {
+                        List<DatabaseRecordFragment> recordFragments = new List<DatabaseRecordFragment>();
+                        recordFragments.Add(fragment);
+                        fragments.Add(fragment.GroupNumber, recordFragments);
+                    }
+                }
+            }
+
+            // We have all the fragments and we can now assemble the records:
+            // We assume that fragments with lower FragmentNumber appear in the database before fragments
+            // of the same group with higher FragmentNumber.
+            List<DatabaseRecord> databaseRecords = new List<DatabaseRecord>();
+            foreach (List<DatabaseRecordFragment> recordFragments in fragments.Values)
+            {
+                DatabaseRecord databaseRecord = DatabaseRecord.GetDatabaseRecord(recordFragments);
+                databaseRecords.Add(databaseRecord);
+            }
+            return databaseRecords;
         }
 
         public static VolumeManagerDatabase ReadFromDisk(DynamicDisk disk)
@@ -584,11 +640,10 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public static VolumeManagerDatabase ReadFromDisk(Disk disk, PrivateHeader privateHeader, TOCBlock tocBlock)
         {
             VolumeManagerDatabaseHeader databaseHeader = VolumeManagerDatabaseHeader.ReadFromDisk(disk, privateHeader, tocBlock);
-            if (databaseHeader == null)
+            if (databaseHeader == null || !databaseHeader.IsVersionSupported)
             {
                 return null;
             }
-            List<DatabaseRecord> databaseRecords = new List<DatabaseRecord>();
 
             // The first VBLK entry is the subsequent entry to the VMDB header.
             // Note: On a disk with 4KB sectors, VBLKs will reside in the same sector as the VMDB header.
@@ -596,50 +651,18 @@ namespace DiskAccessLibrary.LogicalDiskManager
             int databaseLength = (int)(databaseHeader.HeaderSize + databaseHeader.NumberOfVBlks * databaseHeader.BlockSize);
             int sectorCount = (int)Math.Ceiling(databaseLength / (double)disk.BytesPerSector);
             byte[] databaseBytes = disk.ReadSectors((long)firstSector, sectorCount);
-
-            // read all VBLK blocks:
-            // Note: fragments are not necessarily contiguous!
-            Dictionary<uint, List<DatabaseRecordFragment>> fragments = new Dictionary<uint, List<DatabaseRecordFragment>>();
-            for (uint index = 0; index < databaseHeader.NumberOfVBlks - 4; index++)
-            {
-                byte[] fragmentBytes = new byte[databaseHeader.BlockSize];
-                int fragmentOffset = (int)(databaseHeader.HeaderSize + index * databaseHeader.BlockSize);
-                Array.Copy(databaseBytes, fragmentOffset, fragmentBytes, 0, databaseHeader.BlockSize);
-                DatabaseRecordFragment fragment = DatabaseRecordFragment.GetDatabaseRecordFragment(fragmentBytes);
-
-                if (fragment != null) // null fragment means VBLK is empty
-                {
-                    if (fragments.ContainsKey(fragment.GroupNumber))
-                    {
-                        fragments[fragment.GroupNumber].Add(fragment);
-                    }
-                    else
-                    {
-                        List<DatabaseRecordFragment> recordFragments = new List<DatabaseRecordFragment>();
-                        recordFragments.Add(fragment);
-                        fragments.Add(fragment.GroupNumber, recordFragments);
-                    }
-                }
-            }
-
-            // We have all the fragments and we can now assemble the records:
-            // We assume that fragments with lower FragmentNumber appear in the database before fragments
-            // of the same group with higher FragmentNumber.
-            foreach (List<DatabaseRecordFragment> recordFragments in fragments.Values)
-            {
-                DatabaseRecord databaseRecord = DatabaseRecord.GetDatabaseRecord(recordFragments);
-                databaseRecords.Add(databaseRecord);
-            }
+            int numberOfFragments = (int)(databaseHeader.NumberOfVBlks - FirstSequenceNumber);
+            List<DatabaseRecord> databaseRecords = ReadDatabaseRecords(databaseBytes, (int)databaseHeader.HeaderSize, (int)databaseHeader.BlockSize, numberOfFragments);
 
             // read all KLog blocks
             KernelUpdateLog kernelUpdateLog = KernelUpdateLog.ReadFromDisk(disk, privateHeader, tocBlock);
             DynamicDisk dynamicDisk = new DynamicDisk(disk, privateHeader, tocBlock);
-            return new VolumeManagerDatabase(dynamicDisk, databaseHeader, databaseRecords, kernelUpdateLog);
+            return new VolumeManagerDatabaseCopy(dynamicDisk, databaseHeader, databaseRecords, kernelUpdateLog);
         }
 
         public static void WriteDatabaseRecordFragment(DynamicDisk disk, DatabaseRecordFragment fragment, int blockSize)
         {
-            if (fragment.SequenceNumber < 4)
+            if (fragment.SequenceNumber < FirstSequenceNumber)
             {
                 throw new ArgumentException("VBLK SequenceNumber must start from 4");
             }
@@ -654,16 +677,6 @@ namespace DiskAccessLibrary.LogicalDiskManager
             int indexInSector = (int)(fragment.SequenceNumber % fragmentsPerSector);
             Array.Copy(fragmentBytes, 0, sectorBytes, indexInSector * blockSize, blockSize);
             disk.Disk.WriteSectors((long)sectorIndex, sectorBytes);
-        }
-
-        private static int CompareByColumnIndex(ExtentRecord x, ExtentRecord y)
-        {
-            return x.ColumnIndex.CompareTo(y.ColumnIndex);
-        }
-
-        private static int CompareByOffsetInColumn(ExtentRecord x, ExtentRecord y)
-        {
-            return x.OffsetInColumnLBA.CompareTo(y.OffsetInColumnLBA);
         }
     }
 }

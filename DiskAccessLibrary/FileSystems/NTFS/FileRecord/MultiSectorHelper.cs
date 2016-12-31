@@ -54,7 +54,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             // Overwrite the bytes that are replaced with the USN
             for (int i = 0; i < updateSequenceReplacementData.Count; i++)
             {
-                Array.Copy(LittleEndianConverter.GetBytes(updateSequenceNumber), 0, buffer, offset + (BytesPerStride * (i + 1)) - 2, 2);
+                LittleEndianWriter.WriteUInt16(buffer, offset + (BytesPerStride * (i + 1)) - 2, updateSequenceNumber);
             }
 
             return updateSequenceReplacementData;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -18,12 +18,12 @@ namespace DiskAccessLibrary.LogicalDiskManager
 
         public string Signature = VolumeManagerDatabaseSignature;
         public uint NumberOfVBlks;              // Number of VBLK blocks in the database (This number includes the VMDB, which counts as 4 blocks)
-        public uint BlockSize;             // VBLK block size
+        public uint BlockSize;                  // VBLK block size
         public uint HeaderSize;
         public DatabaseHeaderUpdateStatus UpdateStatus;
         // Versions: 4.10 for Windows XP \ Server 2003 \ Windows 7 \ Server 2008
-        //           4.10 for Veritas Storage Foundation 4.0 (Windows Disk Management compatible group checked)
-        //           4.12 for Veritas Storage Foundation 4.0 (Windows Disk Management compatible group unchecked)
+        //           4.10 for Veritas Storage Foundation 4.0 ('Windows Disk Management compatible group' checked)
+        //           4.12 for Veritas Storage Foundation 4.0 ('Windows Disk Management compatible group' unchecked)
         public ushort MajorVersion;
         public ushort MinorVersion;
         public string DiskGroupName = String.Empty;
@@ -119,6 +119,14 @@ namespace DiskAccessLibrary.LogicalDiskManager
             set
             {
                 DiskGroupGuidString = value.ToString();
+            }
+        }
+
+        public bool IsVersionSupported
+        {
+            get
+            {
+                return (MajorVersion == 4 && (MinorVersion == 10 || MinorVersion == 12));
             }
         }
 

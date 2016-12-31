@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -17,9 +17,9 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private static List<DynamicDisk> m_lockedDisks = new List<DynamicDisk>();
         private static List<DynamicVolume> m_lockedVolumes = new List<DynamicVolume>();
 
-        public static LockStatus LockAllDynamicDisks(bool lockAllDynamicVolumes)
+        public static LockStatus LockDynamicDiskGroup(Guid diskGroupGuid, bool lockAllDynamicVolumes)
         {
-            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks();
+            List<DynamicDisk> disksToLock = WindowsDynamicDiskHelper.GetPhysicalDynamicDisks(diskGroupGuid);
             List<DynamicVolume> volumesToLock = new List<DynamicVolume>();
 
             if (lockAllDynamicVolumes)

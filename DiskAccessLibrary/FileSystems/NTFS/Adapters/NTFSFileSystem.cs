@@ -167,6 +167,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_volume.Extend(numberOfAdditionalSectors);
         }
 
+        public override string ToString()
+        {
+            return m_volume.ToString();
+        }
+
         public override string Name
         {
             get

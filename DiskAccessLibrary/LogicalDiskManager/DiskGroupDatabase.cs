@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,38 +14,15 @@ namespace DiskAccessLibrary.LogicalDiskManager
 {
     public partial class DiskGroupDatabase : VolumeManagerDatabase
     {
-        List<DynamicDisk> m_disks = new List<DynamicDisk>(); // when updating the database, all dynamic disks in the system should be added
+        List<DynamicDisk> m_disks = new List<DynamicDisk>(); // when updating the database, all dynamic disks in the group should be added
 
         public DiskGroupDatabase(List<DynamicDisk> disks, VolumeManagerDatabaseHeader databaseHeader, List<DatabaseRecord> databaseRecords, KernelUpdateLog kernelUpdateLog)
-            : base(disks[0], databaseHeader, databaseRecords, kernelUpdateLog)
+            : base(databaseHeader, databaseRecords, kernelUpdateLog)
         {
             m_disks = disks;
         }
 
-        public override void VerifyDatabaseConsistency()
-        {
-            base.VerifyDatabaseConsistency();
-            
-            // Make sure database is identical across disks
-            for (int index = 1; index < m_disks.Count; index++)
-            {
-                VolumeManagerDatabase seconary = VolumeManagerDatabase.ReadFromDisk(m_disks[index]);
-                seconary.VerifyDatabaseConsistency();
-
-                if (this.DatabaseHeader.DiskGroupGuidString != seconary.DatabaseHeader.DiskGroupGuidString ||
-                    this.DatabaseHeader.DiskGroupName != seconary.DatabaseHeader.DiskGroupName)
-                {
-                    throw new NotImplementedException("More than one disk group detected");
-                }
-
-                if (this.DatabaseHeader.CommitTransactionID != seconary.DatabaseHeader.CommitTransactionID)
-                {
-                    throw new NotImplementedException("Inconsistent disk group state");
-                }
-            }
-        }
-
-        protected override void WriteDatabaseHeader()
+        public override void WriteDatabaseHeader()
         {
             foreach (DynamicDisk disk in m_disks)
             {
@@ -53,7 +30,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        protected override void WriteDatabaseRecordFragment(DatabaseRecordFragment fragment)
+        public override void WriteDatabaseRecordFragment(DatabaseRecordFragment fragment)
         {
             foreach (DynamicDisk disk in m_disks)
             {
@@ -61,7 +38,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
-        protected override void SetKernelUpdateLogLastEntry(ulong committedTransactionID, ulong pendingTransactionID)
+        public override void SetKernelUpdateLogLastEntry(ulong committedTransactionID, ulong pendingTransactionID)
         {
             foreach (DynamicDisk disk in m_disks)
             {
@@ -104,14 +81,70 @@ namespace DiskAccessLibrary.LogicalDiskManager
             foreach (List<DynamicDisk> groupDisks in groups.Values)
             {
                 VolumeManagerDatabase database = VolumeManagerDatabase.ReadFromDisk(groupDisks[0]);
-                if (database != null) // if there is issue with one disk (such as unsupported version) we skip the group entirely
+                if (database != null && !database.IsDirty)
                 {
                     DiskGroupDatabase groupDatabase = new DiskGroupDatabase(groupDisks, database.DatabaseHeader, database.DatabaseRecords, database.KernelUpdateLog);
-                    result.Add(groupDatabase);
+                    // if there is issue with one disk we skip the group entirely
+                    if (!groupDatabase.IsDirty)
+                    {
+                        result.Add(groupDatabase);
+                    }
                 }
             }
 
             return result;
+        }
+
+        public override bool IsDirty
+        {
+            get
+            {
+                return !this.IsIdenticalAcrossAllDisks || base.IsDirty;
+            }
+        }
+
+        public bool IsIdenticalAcrossAllDisks
+        {
+            get
+            {
+                // Make sure database is identical across disks
+                for (int index = 1; index < m_disks.Count; index++)
+                {
+                    VolumeManagerDatabase seconary = VolumeManagerDatabase.ReadFromDisk(m_disks[index]);
+                    if (seconary.IsDirty)
+                    {
+                        return false;
+                    }
+
+                    if (this.DatabaseHeader.DiskGroupGuidString != seconary.DatabaseHeader.DiskGroupGuidString ||
+                        this.DatabaseHeader.DiskGroupName != seconary.DatabaseHeader.DiskGroupName)
+                    {
+                        return false;
+                    }
+
+                    if (this.DatabaseHeader.CommitTransactionID != seconary.DatabaseHeader.CommitTransactionID)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        public bool AreDisksMissing
+        {
+            get
+            {
+                List<DiskRecord> diskRecords = this.DiskRecords;
+                foreach (DiskRecord diskRecord in diskRecords)
+                {
+                    if (DynamicDiskHelper.FindDisk(m_disks, diskRecord.DiskGuid) == null)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
         public List<DynamicDisk> Disks

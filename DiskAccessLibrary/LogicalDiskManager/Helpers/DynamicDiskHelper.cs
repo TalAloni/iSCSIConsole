@@ -18,15 +18,25 @@ namespace DiskAccessLibrary.LogicalDiskManager
         {
             foreach (DynamicDisk dynamicDisk in disks)
             {
-                if (dynamicDisk != null)
+                if (dynamicDisk.DiskGuid == diskGuid)
                 {
-                    if (dynamicDisk.DiskGuid == diskGuid)
-                    {
-                        return dynamicDisk;
-                    }
+                    return dynamicDisk;
                 }
             }
             return null;
+        }
+
+        public static List<DynamicDisk> FindDiskGroup(List<DynamicDisk> disks, Guid diskGroupGuid)
+        {
+            List<DynamicDisk> result = new List<DynamicDisk>();
+            foreach (DynamicDisk dynamicDisk in disks)
+            {
+                if (dynamicDisk.DiskGroupGuid == diskGroupGuid)
+                {
+                    result.Add(dynamicDisk);
+                }
+            }
+            return result;
         }
     }
 }

@@ -57,6 +57,14 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
         }
 
+        public Guid DiskGroupGuid
+        {
+            get
+            {
+                return PrivateHeader.DiskGroupGuid;
+            }
+        }
+
         public int BytesPerSector
         {
             get
