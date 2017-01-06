@@ -12,7 +12,7 @@ using Utilities;
 namespace ISCSI
 {
     /// <summary>
-    /// iSCSO Connection Receive Buffer
+    /// iSCSI Connection Receive Buffer
     /// </summary>
     public class ISCSIConnectionReceiveBuffer
     {
