@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -89,7 +89,7 @@ namespace ISCSI.Server
             if (handler != null)
             {
                 AuthorizationRequestArgs args = new AuthorizationRequestArgs(initiatorName, isid, initiatorEndPoint);
-                OnAuthorizationRequest(this, args);
+                handler(this, args);
                 return args.Accept;
             }
             return true;
@@ -101,6 +101,7 @@ namespace ISCSI.Server
             if (handler != null)
             {
                 TextRequestArgs args = new TextRequestArgs(requestParameters);
+                handler(this, args);
                 return args.ResponseParaemeters;
             }
             return new KeyValuePairList<string, string>();
@@ -112,7 +113,7 @@ namespace ISCSI.Server
             if (handler != null)
             {
                 SessionTerminationArgs args = new SessionTerminationArgs(initiatorName, isid, reason);
-                OnSessionTermination(this, args);
+                handler(this, args);
             }
         }
 
