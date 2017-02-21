@@ -92,3 +92,6 @@ Revision History:
 1.4.2 - Updates to the ISCSI library.
 
 1.4.3 - .bin files will now be listed when opening a virtual disk image.
+
+1.4.4 - Updates to the ISCSI library.
+

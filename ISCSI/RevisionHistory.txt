@@ -123,3 +123,6 @@ Revision History:
         Trace logging is now disabled in Release build.
 
 1.4.3 - Bugfix: Wrong sender parameter was dispatched to ISCSITarget inquiry event handlers.
+
+1.4.4 - ISCSITarget: Event notification related bugfixes.
+
