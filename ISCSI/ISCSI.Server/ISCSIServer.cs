@@ -350,9 +350,9 @@ namespace ISCSI.Server
 
         private void ProcessSendQueue(ConnectionState state)
         {
+            LogTrace("Entering ProcessSendQueue");
             while (true)
             {
-                LogTrace("Entering ProcessSendQueue");
                 ISCSIPDU response;
                 bool stopped = !state.SendQueue.TryDequeue(out response);
                 if (stopped)
