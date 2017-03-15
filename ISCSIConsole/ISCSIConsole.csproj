@@ -96,6 +96,12 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SelectSPTIForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectSPTIForm.Designer.cs">
+      <DependentUpon>SelectSPTIForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Win32\SecurityHelper.cs" />
     <Compile Include="Win32\SelectPhysicalDiskForm.cs">
       <SubType>Form</SubType>
@@ -112,6 +118,9 @@
     <Compile Include="Win32\VolumeInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="SelectSPTIForm.resx">
+      <DependentUpon>SelectSPTIForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Win32\SelectPhysicalDiskForm.resx">
       <DependentUpon>SelectPhysicalDiskForm.cs</DependentUpon>
       <SubType>Designer</SubType>

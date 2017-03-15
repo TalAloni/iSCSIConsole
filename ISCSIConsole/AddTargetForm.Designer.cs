@@ -42,6 +42,8 @@ namespace ISCSIConsole
             this.btnAddVolume = new System.Windows.Forms.Button();
             this.btnCreateDiskImage = new System.Windows.Forms.Button();
             this.btnRemove = new System.Windows.Forms.Button();
+            this.btnAddSPTI = new System.Windows.Forms.Button();
+            this.cbSPTI = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // btnAddDiskImage
@@ -92,7 +94,7 @@ namespace ISCSIConsole
             // 
             // btnOK
             // 
-            this.btnOK.Location = new System.Drawing.Point(324, 200);
+            this.btnOK.Location = new System.Drawing.Point(324, 230);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(75, 23);
             this.btnOK.TabIndex = 8;
@@ -103,7 +105,7 @@ namespace ISCSIConsole
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(405, 200);
+            this.btnCancel.Location = new System.Drawing.Point(405, 230);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 23);
             this.btnCancel.TabIndex = 9;
@@ -120,7 +122,7 @@ namespace ISCSIConsole
             this.listDisks.Location = new System.Drawing.Point(57, 44);
             this.listDisks.MultiSelect = false;
             this.listDisks.Name = "listDisks";
-            this.listDisks.Size = new System.Drawing.Size(275, 139);
+            this.listDisks.Size = new System.Drawing.Size(275, 168);
             this.listDisks.TabIndex = 2;
             this.listDisks.UseCompatibleStateImageBehavior = false;
             this.listDisks.View = System.Windows.Forms.View.Details;
@@ -160,7 +162,7 @@ namespace ISCSIConsole
             // btnRemove
             // 
             this.btnRemove.Enabled = false;
-            this.btnRemove.Location = new System.Drawing.Point(340, 160);
+            this.btnRemove.Location = new System.Drawing.Point(340, 189);
             this.btnRemove.Name = "btnRemove";
             this.btnRemove.Size = new System.Drawing.Size(140, 23);
             this.btnRemove.TabIndex = 7;
@@ -168,12 +170,36 @@ namespace ISCSIConsole
             this.btnRemove.UseVisualStyleBackColor = true;
             this.btnRemove.Click += new System.EventHandler(this.btnRemove_Click);
             // 
+            // btnAddSPTI
+            // 
+            this.btnAddSPTI.Enabled = false;
+            this.btnAddSPTI.Location = new System.Drawing.Point(340, 160);
+            this.btnAddSPTI.Name = "btnAddSPTI";
+            this.btnAddSPTI.Size = new System.Drawing.Size(140, 23);
+            this.btnAddSPTI.TabIndex = 10;
+            this.btnAddSPTI.Text = "Add SPTI";
+            this.btnAddSPTI.UseVisualStyleBackColor = true;
+            this.btnAddSPTI.Click += new System.EventHandler(this.btnAddSPTI_Click);
+            // 
+            // cbSPTI
+            // 
+            this.cbSPTI.AutoSize = true;
+            this.cbSPTI.Location = new System.Drawing.Point(57, 230);
+            this.cbSPTI.Name = "cbSPTI";
+            this.cbSPTI.Size = new System.Drawing.Size(72, 17);
+            this.cbSPTI.TabIndex = 11;
+            this.cbSPTI.Text = "Use SPTI";
+            this.cbSPTI.UseVisualStyleBackColor = true;
+            this.cbSPTI.CheckedChanged += new System.EventHandler(this.cbSPTI_CheckedChanged);
+            // 
             // AddTargetForm
             // 
             this.AcceptButton = this.btnOK;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(494, 235);
+            this.ClientSize = new System.Drawing.Size(494, 265);
+            this.Controls.Add(this.cbSPTI);
+            this.Controls.Add(this.btnAddSPTI);
             this.Controls.Add(this.btnRemove);
             this.Controls.Add(this.btnCreateDiskImage);
             this.Controls.Add(this.btnAddVolume);
@@ -189,8 +215,8 @@ namespace ISCSIConsole
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.KeyPreview = true;
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(500, 260);
-            this.MinimumSize = new System.Drawing.Size(500, 260);
+            this.MaximumSize = new System.Drawing.Size(500, 290);
+            this.MinimumSize = new System.Drawing.Size(500, 290);
             this.Name = "AddTargetForm";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.Text = "Add iSCSI Target";
@@ -198,7 +224,9 @@ namespace ISCSIConsole
             this.Load += new System.EventHandler(this.AddTargetForm_Load);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.AddTargetForm_KeyUp);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AddTargetForm_FormClosing);
+            this.Load += new System.EventHandler(this.AddTargetForm_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.AddTargetForm_KeyDown);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.AddTargetForm_KeyUp);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -219,5 +247,7 @@ namespace ISCSIConsole
         private System.Windows.Forms.Button btnAddVolume;
         private System.Windows.Forms.Button btnCreateDiskImage;
         private System.Windows.Forms.Button btnRemove;
+        private System.Windows.Forms.Button btnAddSPTI;
+        private System.Windows.Forms.CheckBox cbSPTI;
     }
 }

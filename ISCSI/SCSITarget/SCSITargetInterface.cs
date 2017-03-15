@@ -22,6 +22,6 @@ namespace SCSI
 
         void QueueCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, OnCommandCompleted OnCommandCompleted);
 
-        SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response);
+        SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, out byte[] response);
     }
 }

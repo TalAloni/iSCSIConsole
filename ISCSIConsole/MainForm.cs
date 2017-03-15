@@ -101,7 +101,8 @@ namespace ISCSIConsole
             if (addTargetResult == DialogResult.OK)
             {
                 ISCSITarget target = addTarget.Target;
-                ((SCSI.VirtualSCSITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                //((SCSI.VirtualSCSITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                ((SCSI.SPTITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
                 target.OnAuthorizationRequest += new EventHandler<AuthorizationRequestArgs>(ISCSITarget_OnAuthorizationRequest);
                 target.OnSessionTermination += new EventHandler<SessionTerminationArgs>(ISCSITarget_OnSessionTermination);
                 m_targets.Add(target);
@@ -130,7 +131,8 @@ namespace ISCSIConsole
                     MessageBox.Show("Could not remove iSCSI target", "Error");
                     return;
                 }
-                List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
+                //List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
+                List<Disk> disks = ((SCSI.SPTITarget)target.SCSITarget).Disks;
                 LockUtils.ReleaseDisks(disks);
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);
