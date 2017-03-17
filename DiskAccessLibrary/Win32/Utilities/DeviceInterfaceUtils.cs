@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -52,26 +52,26 @@ namespace DiskAccessLibrary
     public class DeviceInterfaceUtils // SetupDi functions
     {
         public static readonly Guid DiskClassGuid = new Guid("53F56307-B6BF-11D0-94F2-00A0C91EFB8B");
-        const Int64 INVALID_HANDLE_VALUE = -1;
+        private const Int64 INVALID_HANDLE_VALUE = -1;
 
         [DllImport("setupapi.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr SetupDiGetClassDevs(           // 1st form using a ClassGUID only, with null Enumerator
-           ref Guid ClassGuid,
-           IntPtr Enumerator,
+           ref Guid classGuid,
+           IntPtr enumerator,
            IntPtr hwndParent,
-           uint Flags
+           uint flags
         );
 
         [DllImport("setupapi.dll", SetLastError = true)]
         private static extern bool SetupDiDestroyDeviceInfoList
         (
-             IntPtr DeviceInfoSet
+             IntPtr deviceInfoSet
         );
 
         [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern Boolean SetupDiEnumDeviceInterfaces(
-           IntPtr hDevInfo,
-           ref SP_DEVINFO_DATA devInfo,
+           IntPtr deviceInfoSet,
+           ref SP_DEVINFO_DATA deviceInfoData,
            ref Guid interfaceClassGuid,
            UInt32 memberIndex,
            ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData
@@ -80,8 +80,8 @@ namespace DiskAccessLibrary
         // Alternate signature if you do not care about SP_DEVINFO_DATA and wish to pass NULL (IntPtr.Zero)
         [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern Boolean SetupDiEnumDeviceInterfaces(
-           IntPtr hDevInfo,
-           IntPtr devInfo,
+           IntPtr deviceInfoSet,
+           IntPtr deviceInfoData,
            ref Guid interfaceClassGuid,
            UInt32 memberIndex,
            ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData
@@ -89,7 +89,7 @@ namespace DiskAccessLibrary
 
         [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern Boolean SetupDiGetDeviceInterfaceDetail(
-           IntPtr hDevInfo,
+           IntPtr deviceInfoSet,
            ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData,
            ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData,
            UInt32 deviceInterfaceDetailDataSize,
@@ -100,7 +100,7 @@ namespace DiskAccessLibrary
         // Alternate signature if you do not care about SP_DEVINFO_DATA and wish to pass NULL (IntPtr.Zero)
         [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern Boolean SetupDiGetDeviceInterfaceDetail(
-           IntPtr hDevInfo,
+           IntPtr deviceInfoSet,
            ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData,
            ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData,
            UInt32 deviceInterfaceDetailDataSize,
@@ -111,7 +111,7 @@ namespace DiskAccessLibrary
         // Alternate signature - first call (we wish to pass IntPtr instead of reference to SP_DEVICE_INTERFACE_DETAIL_DATA)
         [DllImport(@"setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern Boolean SetupDiGetDeviceInterfaceDetail(
-           IntPtr hDevInfo,
+           IntPtr deviceInfoSet,
            ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData,
            IntPtr deviceInterfaceDetailData,
            UInt32 deviceInterfaceDetailDataSize,
@@ -129,8 +129,8 @@ namespace DiskAccessLibrary
         public static IntPtr GetClassDevices(Guid classGuid)
         {
             uint flags = (uint)(DiGetClassFlags.DIGCF_PRESENT | DiGetClassFlags.DIGCF_DEVICEINTERFACE); // Only Devices present & Interface class
-            IntPtr hDevInfo = SetupDiGetClassDevs(ref classGuid, IntPtr.Zero, IntPtr.Zero, flags);
-            if (hDevInfo.ToInt64() == INVALID_HANDLE_VALUE)
+            IntPtr deviceInfoSet = SetupDiGetClassDevs(ref classGuid, IntPtr.Zero, IntPtr.Zero, flags);
+            if (deviceInfoSet.ToInt64() == INVALID_HANDLE_VALUE)
             {
                 int errorCode = Marshal.GetLastWin32Error();
                 string message = String.Format("Unable to retrieve class devices, Win32 Error: {0}", errorCode);
@@ -138,13 +138,13 @@ namespace DiskAccessLibrary
             }
             else
             {
-                return hDevInfo;
+                return deviceInfoSet;
             }
         }
 
-        public static void DestroyDeviceInfoList(IntPtr hDevInfo)
+        public static void DestroyDeviceInfoList(IntPtr deviceInfoSet)
         {
-            bool success = DeviceInterfaceUtils.SetupDiDestroyDeviceInfoList(hDevInfo);
+            bool success = SetupDiDestroyDeviceInfoList(deviceInfoSet);
             if (!success)
             {
                 int errorCode = Marshal.GetLastWin32Error();
@@ -154,14 +154,14 @@ namespace DiskAccessLibrary
         }
 
         // http://msdn.microsoft.com/en-us/library/windows/hardware/ff551120%28v=vs.85%29.aspx
-        public static SP_DEVICE_INTERFACE_DETAIL_DATA GetDeviceInterfaceDetail(IntPtr hDevInfo, SP_DEVICE_INTERFACE_DATA deviceInterfaceData)
+        public static SP_DEVICE_INTERFACE_DETAIL_DATA GetDeviceInterfaceDetail(IntPtr deviceInfoSet, SP_DEVICE_INTERFACE_DATA deviceInterfaceData)
         {
             // For ERROR_INVALID_USER_BUFFER error see:
             // http://msdn.microsoft.com/en-us/library/windows/hardware/ff552343%28v=vs.85%29.aspx
             // http://stackoverflow.com/questions/10728644/properly-declare-sp-device-interface-detail-data-for-pinvoke
             uint requiredSize;
             SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData = new SP_DEVICE_INTERFACE_DETAIL_DATA();
-            bool success = SetupDiGetDeviceInterfaceDetail(hDevInfo, ref deviceInterfaceData, IntPtr.Zero, 0, out requiredSize, IntPtr.Zero);
+            bool success = SetupDiGetDeviceInterfaceDetail(deviceInfoSet, ref deviceInterfaceData, IntPtr.Zero, 0, out requiredSize, IntPtr.Zero);
             if (!success)
             {
                 int errorCode = Marshal.GetLastWin32Error();
@@ -183,7 +183,7 @@ namespace DiskAccessLibrary
                     IntPtr lpOutBuffer = Marshal.AllocHGlobal((int)size);
                     Marshal.WriteInt32(lpOutBuffer, cbSize);
 
-                    success = SetupDiGetDeviceInterfaceDetail(hDevInfo, ref deviceInterfaceData, lpOutBuffer, size, out requiredSize, IntPtr.Zero);
+                    success = SetupDiGetDeviceInterfaceDetail(deviceInfoSet, ref deviceInterfaceData, lpOutBuffer, size, out requiredSize, IntPtr.Zero);
                     deviceInterfaceDetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA)Marshal.PtrToStructure(lpOutBuffer, typeof(SP_DEVICE_INTERFACE_DETAIL_DATA));
                     Marshal.FreeHGlobal(lpOutBuffer);
 
@@ -208,7 +208,7 @@ namespace DiskAccessLibrary
         // http://code.msdn.microsoft.com/windowshardware/CppStorageEnum-90ad5fa9
         public static List<string> GetDevicePathList(Guid deviceClassGuid)
         {
-            IntPtr hDevInfo = GetClassDevices(deviceClassGuid);
+            IntPtr deviceInfoSet = GetClassDevices(deviceClassGuid);
             SP_DEVICE_INTERFACE_DATA deviceInterfaceData = new SP_DEVICE_INTERFACE_DATA();
             deviceInterfaceData.cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVICE_INTERFACE_DATA));
             uint index = 0;
@@ -216,7 +216,7 @@ namespace DiskAccessLibrary
             List<string> result = new List<string>();
             while (true)
             {
-                bool success = DeviceInterfaceUtils.SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref deviceClassGuid, index, ref deviceInterfaceData);
+                bool success = SetupDiEnumDeviceInterfaces(deviceInfoSet, IntPtr.Zero, ref deviceClassGuid, index, ref deviceInterfaceData);
                 if (!success)
                 {
                     int errorCode = Marshal.GetLastWin32Error();
@@ -231,12 +231,12 @@ namespace DiskAccessLibrary
                     }
                 }
 
-                SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData = DeviceInterfaceUtils.GetDeviceInterfaceDetail(hDevInfo, deviceInterfaceData);
+                SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData = GetDeviceInterfaceDetail(deviceInfoSet, deviceInterfaceData);
                 result.Add(deviceInterfaceDetailData.DevicePath);
                 index++;
             }
 
-            DestroyDeviceInfoList(hDevInfo);
+            DestroyDeviceInfoList(deviceInfoSet);
 
             return result;
         }
