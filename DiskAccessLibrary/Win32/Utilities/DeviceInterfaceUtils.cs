@@ -54,6 +54,24 @@ namespace DiskAccessLibrary
         public string DevicePath;
         public string DeviceDescription;
         public string FriendlyName;
+
+        /// <summary>
+        /// Device manager shows the friendly name if it exists and the device description otherwise.
+        /// </summary>
+        public string DeviceName
+        {
+            get
+            {
+                if (!String.IsNullOrEmpty(FriendlyName))
+                {
+                    return FriendlyName;
+                }
+                else
+                {
+                    return DeviceDescription;
+                }
+            }
+        }
     }
 
     public class DeviceInterfaceUtils // SetupDi functions
