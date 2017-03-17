@@ -10,6 +10,7 @@ namespace DiskAccessLibrary
         ERROR_INVALID_FUNCTION = 0x01,
         ERROR_FILE_NOT_FOUND = 0x02,
         ERROR_ACCESS_DENIED = 0x05,
+        ERROR_INVALID_DATA = 0x0D,
         ERROR_NOT_READY = 0x15,
         ERROR_SECTOR_NOT_FOUND = 0x1B,
         ERROR_CRC = 0x17, // This is the same error as STATUS_DEVICE_DATA_ERROR, and it means the disk has a bad block
