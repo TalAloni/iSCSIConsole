@@ -50,7 +50,7 @@ namespace SCSI
                 }
 
                 byte[] responseBytes;
-                SCSIStatusCodeName status = ExecuteCommand(command.CommandBytes, command.LUN, command.Data, out responseBytes);
+                SCSIStatusCodeName status = ExecuteCommand(command.CommandBytes, command.LUN, command.Data, command.Task, out responseBytes);
                 command.OnCommandCompleted(status, responseBytes, command.Task);
             }
         }
@@ -66,7 +66,7 @@ namespace SCSI
             m_commandQueue.Enqueue(command);
         }
 
-        public abstract SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response);
+        public abstract SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, out byte[] response);
 
         protected void NotifyStandardInquiry(object sender, StandardInquiryEventArgs args)
         {

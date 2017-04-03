@@ -29,7 +29,7 @@ namespace SCSI
         /// <summary>
         /// This implementation is not thread-safe.
         /// </summary>
-        public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        public override SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, out byte[] response)
         {
             SCSICommandDescriptorBlock command;
             try

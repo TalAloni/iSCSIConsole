@@ -30,6 +30,10 @@ namespace ISCSI.Server
         {
         }
 
+        public ISCSITarget(string targetName, string path) : this(targetName, new SPTITarget(path))
+        {
+        }
+
         public ISCSITarget(string targetName, SCSITargetInterface scsiTarget)
         {
             m_targetName = targetName;
@@ -44,9 +48,9 @@ namespace ISCSI.Server
             m_target.QueueCommand(commandBytes, lun, data, task, OnCommandCompleted);
         }
 
-        public SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, out byte[] response)
+        public SCSIStatusCodeName ExecuteCommand(byte[] commandBytes, LUNStructure lun, byte[] data, object task, out byte[] response)
         {
-            return m_target.ExecuteCommand(commandBytes, lun, data, out response);
+            return m_target.ExecuteCommand(commandBytes, lun, data, task, out response);
         }
 
         public void Target_OnStandardInquiry(object sender, StandardInquiryEventArgs args)

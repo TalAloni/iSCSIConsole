@@ -85,6 +85,7 @@
     <Compile Include="ISCSI.Server\TargetList.cs" />
     <Compile Include="ISCSI.Server\TargetResponseHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Win32\SCSITarget\SPTITarget.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\Enums\ModePageCodeName.cs" />
     <Compile Include="SCSI\Enums\SCSIOpCodeName.cs" />

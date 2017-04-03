@@ -34,6 +34,12 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddSPTITargetForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddSPTITargetForm.Designer.cs">
+      <DependentUpon>AddSPTITargetForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="AddTargetForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -74,6 +80,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="AddSPTITargetForm.resx">
+      <DependentUpon>AddSPTITargetForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="AddTargetForm.resx">
       <SubType>Designer</SubType>
       <DependentUpon>AddTargetForm.cs</DependentUpon>
@@ -96,6 +105,12 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SelectSPTIDeviceForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectSPTIDeviceForm.Designer.cs">
+      <DependentUpon>SelectSPTIDeviceForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Win32\SecurityHelper.cs" />
     <Compile Include="Win32\SelectPhysicalDiskForm.cs">
       <SubType>Form</SubType>
@@ -112,6 +127,9 @@
     <Compile Include="Win32\VolumeInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="SelectSPTIDeviceForm.resx">
+      <DependentUpon>SelectSPTIDeviceForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Win32\SelectPhysicalDiskForm.resx">
       <DependentUpon>SelectPhysicalDiskForm.cs</DependentUpon>
       <SubType>Designer</SubType>
