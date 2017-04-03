@@ -101,7 +101,30 @@ namespace ISCSIConsole
             if (addTargetResult == DialogResult.OK)
             {
                 ISCSITarget target = addTarget.Target;
-                //((SCSI.VirtualSCSITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                ((SCSI.VirtualSCSITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                target.OnAuthorizationRequest += new EventHandler<AuthorizationRequestArgs>(ISCSITarget_OnAuthorizationRequest);
+                target.OnSessionTermination += new EventHandler<SessionTerminationArgs>(ISCSITarget_OnSessionTermination);
+                m_targets.Add(target);
+                try
+                {
+                    m_server.AddTarget(target);
+                }
+                catch (ArgumentException ex)
+                {
+                    MessageBox.Show(ex.Message, "Error");
+                    return;
+                }
+                listTargets.Items.Add(target.TargetName);
+            }
+        }
+
+        private void btnAddPassthoughTarget_Click(object sender, EventArgs e)
+        {
+            AddSPTITargetForm addTarget = new AddSPTITargetForm();
+            DialogResult addTargetResult = addTarget.ShowDialog();
+            if (addTargetResult == DialogResult.OK)
+            {
+                ISCSITarget target = addTarget.Target;
                 ((SCSI.SPTITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
                 target.OnAuthorizationRequest += new EventHandler<AuthorizationRequestArgs>(ISCSITarget_OnAuthorizationRequest);
                 target.OnSessionTermination += new EventHandler<SessionTerminationArgs>(ISCSITarget_OnSessionTermination);
@@ -131,9 +154,15 @@ namespace ISCSIConsole
                     MessageBox.Show("Could not remove iSCSI target", "Error");
                     return;
                 }
-                //List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
-                List<Disk> disks = ((SCSI.SPTITarget)target.SCSITarget).Disks;
-                LockUtils.ReleaseDisks(disks);
+                try
+                {
+                    List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
+                    LockUtils.ReleaseDisks(disks);
+                }
+                finally
+                {
+                    //No idea how to fix the above
+                }
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);
             }

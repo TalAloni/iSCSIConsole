@@ -1,6 +1,6 @@
 ﻿namespace ISCSIConsole
 {
-    partial class SelectSPTIForm
+    partial class SelectSPTIDeviceForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,10 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectSPTIForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectSPTIDeviceForm));
             this.listSPTIDevices = new System.Windows.Forms.ListView();
             this.columnDevice = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnDescription = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnPath = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -40,7 +40,7 @@
             // 
             this.listSPTIDevices.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnDevice,
-            this.columnDescription});
+            this.columnPath});
             this.listSPTIDevices.FullRowSelect = true;
             this.listSPTIDevices.Location = new System.Drawing.Point(11, 12);
             this.listSPTIDevices.Name = "listSPTIDevices";
@@ -54,10 +54,10 @@
             this.columnDevice.Text = "Device";
             this.columnDevice.Width = 200;
             // 
-            // columnDescription
+            // columnPath
             // 
-            this.columnDescription.Text = "Description";
-            this.columnDescription.Width = 250;
+            this.columnPath.Text = "Path";
+            this.columnPath.Width = 264;
             // 
             // btnOK
             // 
@@ -85,7 +85,7 @@
             this.AcceptButton = this.btnOK;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(491, 223);
+            this.ClientSize = new System.Drawing.Size(490, 225);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.listSPTIDevices);
@@ -104,7 +104,7 @@
 
         private System.Windows.Forms.ListView listSPTIDevices;
         private System.Windows.Forms.ColumnHeader columnDevice;
-        private System.Windows.Forms.ColumnHeader columnDescription;
+        private System.Windows.Forms.ColumnHeader columnPath;
         private System.Windows.Forms.Button btnOK;
         private System.Windows.Forms.Button btnCancel;
     }

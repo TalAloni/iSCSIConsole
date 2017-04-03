@@ -29,8 +29,6 @@ namespace ISCSIConsole
             {
                 btnAddPhysicalDisk.Enabled = false;
                 btnAddVolume.Enabled = false;
-                btnAddSPTI.Enabled = false;
-                cbSPTI.Enabled = false;
             }
 #endif
         }
@@ -104,19 +102,6 @@ namespace ISCSIConsole
 #endif
         }
 
-        private void btnAddSPTI_Click(object sender, EventArgs e)
-        {
-#if Win32
-            
-            SelectSPTIForm selectSPTI = new SelectSPTIForm();
-            DialogResult result = selectSPTI.ShowDialog();
-            if (result == DialogResult.OK)
-            {
-                AddDisk(selectSPTI.SelectedDisk);
-            }
-#endif
-        }
-
         private void AddDisk(Disk disk)
         {
             string description = String.Empty;
@@ -137,10 +122,6 @@ namespace ISCSIConsole
             else if (disk is VolumeDisk)
             {
                 description = String.Format("Volume");
-            }
-            else if (disk is SPTIDevice)
-            {
-                description = ((SPTIDevice)disk).Path;
             }
 #endif
             ListViewItem item = new ListViewItem(description);
@@ -167,14 +148,7 @@ namespace ISCSIConsole
                 MessageBox.Show("Target IQN is invalid", "Error");
                 return;
             }
-            if (!cbSPTI.Checked)
-            {
-                m_target = new ISCSITarget(txtTargetIQN.Text, m_disks);
-            }
-            else
-            {
-                m_target = new ISCSITarget(txtTargetIQN.Text, ((SPTIDevice)m_disks[0]).Path);
-            }
+            m_target = new ISCSITarget(txtTargetIQN.Text, m_disks);
             m_targetNumber++;
             this.DialogResult = DialogResult.OK;
             this.Close();
@@ -229,25 +203,6 @@ namespace ISCSIConsole
         private void AddTargetForm_Deactivate(object sender, EventArgs e)
         {
             btnCreateDiskImage.Text = "Create Virtual Disk";
-        }
-
-        private void cbSPTI_CheckedChanged(object sender, EventArgs e)
-        {
-            if (cbSPTI.Checked)
-            {
-                btnAddDiskImage.Enabled = false;
-                btnAddPhysicalDisk.Enabled = false;
-                btnAddVolume.Enabled = false;
-                btnCreateDiskImage.Enabled = false;
-                btnAddSPTI.Enabled = true;
-            } else
-            {
-                btnAddDiskImage.Enabled = true;
-                btnAddPhysicalDisk.Enabled = true;
-                btnAddVolume.Enabled = true;
-                btnCreateDiskImage.Enabled = true;
-                btnAddSPTI.Enabled = false;
-            }
         }
     }
 }

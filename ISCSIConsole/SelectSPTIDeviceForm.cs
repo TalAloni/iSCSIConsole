@@ -5,23 +5,23 @@ using DiskAccessLibrary;
 
 namespace ISCSIConsole
 {
-    public partial class SelectSPTIForm : Form
+    public partial class SelectSPTIDeviceForm : Form
     {
-        private SPTIDevice m_selectedDevice;
+        private DeviceInfo m_selectedDevice;
 
-        public SelectSPTIForm()
+        public SelectSPTIDeviceForm()
         {
             InitializeComponent();
         }
 
         private void SelectSPTIForm_Load(object sender, EventArgs e)
         {
-            List<SPTIDevice> devices = SPTIHelper.GetSPTIDevices();
+            List<DeviceInfo> devices = SPTIHelper.GetSPTIDevices();
             for (int index = 0; index < devices.Count; index++)
             {
-                SPTIDevice device = devices[index];
-                string title = String.Format("Device {0}", index);
-                string description = device.Path;
+                DeviceInfo device = devices[index];
+                string title = devices[index].DeviceName;
+                string description = devices[index].DevicePath;
 
                 ListViewItem item = new ListViewItem(title);
                 item.SubItems.Add(description);
@@ -30,7 +30,7 @@ namespace ISCSIConsole
             }
         }
 
-        public SPTIDevice SelectedDisk
+        public DeviceInfo SelectedDisk
         {
             get
             {
@@ -40,17 +40,15 @@ namespace ISCSIConsole
 
         private void btnOK_Click(object sender, EventArgs e)
         {
-            SPTIDevice selectedDisk;
-            if (listSPTIDevices.SelectedItems.Count > 0)
+            if (listSPTIDevices.SelectedItems.Count == 1)
             {
-                selectedDisk = (SPTIDevice)listSPTIDevices.SelectedItems[0].Tag;
+                m_selectedDevice = (DeviceInfo)listSPTIDevices.SelectedItems[0].Tag;
             }
             else
             {
-                MessageBox.Show("No disk was selected", "Error");
+                MessageBox.Show("Please select a device", "Error");
                 return;
             }
-            m_selectedDevice = selectedDisk;
             this.DialogResult = DialogResult.OK;
             this.Close();
         }

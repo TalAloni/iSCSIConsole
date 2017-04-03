@@ -95,7 +95,6 @@
     <Compile Include="Helpers\DiskExtentsHelper.cs" />
     <Compile Include="Helpers\ExtendHelper.Volume.cs" />
     <Compile Include="Helpers\Settings.cs" />
-    <Compile Include="Helpers\SPTIHelper.cs" />
     <Compile Include="Helpers\VolumeHelper.cs" />
     <Compile Include="LogicalDiskManager\DatabaseRecords\ComponentRecord.cs" />
     <Compile Include="LogicalDiskManager\DatabaseRecords\DatabaseRecord.cs" />
@@ -156,11 +155,11 @@
   <ItemGroup>
     <Compile Include="Win32\Disks\PhysicalDisk.cs" />
     <Compile Include="Win32\Disks\PhysicalDiskHandlePool.cs" />
-    <Compile Include="Win32\Disks\SPTIDisk.cs" />
     <Compile Include="Win32\Enums\Win32Error.cs" />
     <Compile Include="Win32\Helpers\DiskOfflineHelper.cs" />
     <Compile Include="Win32\Helpers\LockHelper.cs" />
     <Compile Include="Win32\Helpers\PhysicalDiskHelper.cs" />
+    <Compile Include="Win32\Helpers\SPTIHelper.cs" />
     <Compile Include="Win32\Helpers\WindowsVolumeHelper.cs" />
     <Compile Include="Win32\Helpers\WindowsVolumeManager.cs" />
     <Compile Include="Win32\LogicalDiskManager\DiskGroupDatabase.Win32.cs" />
