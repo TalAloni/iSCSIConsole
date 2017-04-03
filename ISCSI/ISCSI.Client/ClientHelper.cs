@@ -313,7 +313,7 @@ namespace ISCSI.Client
         internal static SCSICommandPDU GetReadCapacity16Command(ConnectionParameters connection, ushort LUN)
         {
             ISCSISession session = connection.Session;
-            SCSICommandDescriptorBlock serviceActionIn = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ServiceActionIn);
+            SCSICommandDescriptorBlock serviceActionIn = SCSICommandDescriptorBlock.Create(SCSIOpCodeName.ServiceActionIn16);
             serviceActionIn.ServiceAction = ServiceAction.ReadCapacity16;
             serviceActionIn.TransferLength = ReadCapacity16Parameter.Length;
 

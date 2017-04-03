@@ -113,7 +113,7 @@ namespace SCSI
             {
                 return SynchronizeCache10(lun, out response);
             }
-            else if (command.OpCode == SCSIOpCodeName.ServiceActionIn &&
+            else if (command.OpCode == SCSIOpCodeName.ServiceActionIn16 &&
                      command.ServiceAction == ServiceAction.ReadCapacity16)
             {
                 uint allocationLength = command.TransferLength;

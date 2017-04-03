@@ -69,7 +69,7 @@ namespace SCSI
                     return new SCSICommandDescriptorBlock16(buffer, offset);
                 case SCSIOpCodeName.WriteSame16:
                     return new SCSICommandDescriptorBlock16(buffer, offset);
-                case SCSIOpCodeName.ServiceActionIn:
+                case SCSIOpCodeName.ServiceActionIn16:
                     return new SCSICommandDescriptorBlock16(buffer, offset);
                 case SCSIOpCodeName.ReportLUNs:
                     return new SCSICommandDescriptorBlock12(buffer, offset);
@@ -118,7 +118,7 @@ namespace SCSI
                     return new SCSICommandDescriptorBlock16(opCode);
                 case SCSIOpCodeName.WriteSame16:
                     return new SCSICommandDescriptorBlock16(opCode);
-                case SCSIOpCodeName.ServiceActionIn:
+                case SCSIOpCodeName.ServiceActionIn16:
                     return new SCSICommandDescriptorBlock16(opCode);
                 case SCSIOpCodeName.ReportLUNs:
                     return new SCSICommandDescriptorBlock12(opCode);

@@ -28,7 +28,7 @@ namespace SCSI
         Write16 = 0x8A,
         Verify16 = 0x8F,
         WriteSame16 = 0x93,
-        ServiceActionIn = 0x9E,
+        ServiceActionIn16 = 0x9E,
         ReportLUNs = 0xA0,
     }
 }
