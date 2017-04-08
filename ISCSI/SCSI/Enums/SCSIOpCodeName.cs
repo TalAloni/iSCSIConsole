@@ -38,7 +38,7 @@ namespace SCSI
         ReportDensitySupport = 0x44,
         LogSelect10 = 0x4C,
         LogSense10 = 0x4D,
-        ModeSelect10 = 0x15,
+        ModeSelect10 = 0x55,
         ModeSense10 = 0x5A,
         PersistentReserveIn = 0x5E,
         PersistentReserveOut = 0x5F,
