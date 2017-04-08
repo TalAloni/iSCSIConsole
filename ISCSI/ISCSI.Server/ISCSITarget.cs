@@ -30,6 +30,10 @@ namespace ISCSI.Server
         {
         }
 
+        public ISCSITarget(string targetName, string path) : this(targetName, new SPTITarget(path))
+        {
+        }
+
         public ISCSITarget(string targetName, SCSITargetInterface scsiTarget)
         {
             m_targetName = targetName;
