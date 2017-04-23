@@ -118,6 +118,30 @@ namespace ISCSIConsole
             }
         }
 
+        private void btnAddSPTIDevice_Click(object sender, EventArgs e)
+        {
+            AddSPTITargetForm addTarget = new AddSPTITargetForm();
+            DialogResult addTargetResult = addTarget.ShowDialog();
+            if (addTargetResult == DialogResult.OK)
+            {
+                ISCSITarget target = addTarget.Target;
+                ((SCSI.SPTITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                target.OnAuthorizationRequest += new EventHandler<AuthorizationRequestArgs>(ISCSITarget_OnAuthorizationRequest);
+                target.OnSessionTermination += new EventHandler<SessionTerminationArgs>(ISCSITarget_OnSessionTermination);
+                m_targets.Add(target);
+                try
+                {
+                    m_server.AddTarget(target);
+                }
+                catch (ArgumentException ex)
+                {
+                    MessageBox.Show(ex.Message, "Error");
+                    return;
+                }
+                listTargets.Items.Add(target.TargetName);
+            }
+        }
+
         private void btnRemoveTarget_Click(object sender, EventArgs e)
         {
             if (listTargets.SelectedIndices.Count > 0)
@@ -130,8 +154,11 @@ namespace ISCSIConsole
                     MessageBox.Show("Could not remove iSCSI target", "Error");
                     return;
                 }
-                List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
-                LockUtils.ReleaseDisks(disks);
+                if (target.SCSITarget is SCSI.VirtualSCSITarget)
+                {
+                    List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
+                    LockUtils.ReleaseDisks(disks);
+                }
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);
             }

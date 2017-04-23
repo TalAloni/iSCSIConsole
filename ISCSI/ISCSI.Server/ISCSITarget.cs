@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using DiskAccessLibrary;
 using SCSI;
 using Utilities;
 
@@ -27,6 +28,10 @@ namespace ISCSI.Server
         public event EventHandler<SessionTerminationArgs> OnSessionTermination;
 
         public ISCSITarget(string targetName, List<Disk> disks) : this(targetName, new VirtualSCSITarget(disks))
+        {
+        }
+
+        public ISCSITarget(string targetName, DeviceInfo device) : this(targetName, new SPTITarget(device))
         {
         }
 
