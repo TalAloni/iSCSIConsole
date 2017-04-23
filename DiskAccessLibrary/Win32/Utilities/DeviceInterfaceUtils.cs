@@ -54,6 +54,7 @@ namespace DiskAccessLibrary
         public string DevicePath;
         public string DeviceDescription;
         public string FriendlyName;
+        public Guid DeviceGuid;
 
         /// <summary>
         /// Device manager shows the friendly name if it exists and the device description otherwise.
@@ -78,6 +79,7 @@ namespace DiskAccessLibrary
     {
         public static readonly Guid DiskClassGuid = new Guid("53F56307-B6BF-11D0-94F2-00A0C91EFB8B");
         public static readonly Guid MediumChangerClassGuid = new Guid("53F56310-B6BF-11D0-94F2-00A0C91EFB8B");
+        public static readonly Guid StoragePortClassGuid = new Guid("2ACCFE60-C130-11D2-B082-00A0C91EFB8B");
         public static readonly Guid TapeClassGuid = new Guid("53F5630B-B6BF-11D0-94F2-00A0C91EFB8B");
 
         private const Int64 INVALID_HANDLE_VALUE = -1;
@@ -361,6 +363,7 @@ namespace DiskAccessLibrary
                 deviceInfo.DevicePath = deviceInterfaceDetailData.DevicePath;
                 deviceInfo.DeviceDescription = GetDeviceStringProperty(deviceInfoSet, deviceInfoData, SPDRP_DEVICEDESC);
                 deviceInfo.FriendlyName = GetDeviceStringProperty(deviceInfoSet, deviceInfoData, SPDRP_FRIENDLYNAME);
+                deviceInfo.DeviceGuid = deviceClassGuid;
                 result.Add(deviceInfo);
                 index++;
             }

@@ -154,14 +154,10 @@ namespace ISCSIConsole
                     MessageBox.Show("Could not remove iSCSI target", "Error");
                     return;
                 }
-                try
+                if (target.SCSITarget is SCSI.VirtualSCSITarget)
                 {
                     List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
                     LockUtils.ReleaseDisks(disks);
-                }
-                finally
-                {
-                    //No idea how to fix the above
                 }
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);

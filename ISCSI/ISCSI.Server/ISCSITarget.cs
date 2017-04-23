@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using DiskAccessLibrary;
 using SCSI;
 using Utilities;
 
@@ -30,7 +31,7 @@ namespace ISCSI.Server
         {
         }
 
-        public ISCSITarget(string targetName, string path) : this(targetName, new SPTITarget(path))
+        public ISCSITarget(string targetName, DeviceInfo device) : this(targetName, new SPTITarget(device))
         {
         }
 

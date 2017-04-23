@@ -22,12 +22,6 @@ namespace ISCSIConsole
         private void AddSPTITargetForm_Load(object sender, EventArgs e)
         {
             m_targetNumber++;
-            if (m_targetNumber > 1)
-            {
-                MessageBox.Show("Only one passthrough device is supported", "Error");
-                this.DialogResult = DialogResult.Cancel;
-                this.Close();
-            }
             txtTargetIQN.Text = String.Format("{0}:sptitarget{1}", DefaultTargetIQN, m_targetNumber);
             List<DeviceInfo> devices = GetSPTIDevices();
             for (int index = 0; index < devices.Count; index++)
@@ -40,9 +34,13 @@ namespace ISCSIConsole
         {
             List<DeviceInfo> result = new List<DeviceInfo>();
             List<DeviceInfo> tapeDeviceList = DeviceInterfaceUtils.GetDeviceList(DeviceInterfaceUtils.TapeClassGuid);
-            //List<DeviceInfo> mediumChangerDeviceList = DeviceInterfaceUtils.GetDeviceList(DeviceInterfaceUtils.MediumChangerClassGuid);
+            List<DeviceInfo> diskDeviceList = DeviceInterfaceUtils.GetDeviceList(DeviceInterfaceUtils.DiskClassGuid);
+            List<DeviceInfo> mediumChangerDeviceList = DeviceInterfaceUtils.GetDeviceList(DeviceInterfaceUtils.MediumChangerClassGuid);
+            List<DeviceInfo> storagePortDeviceList = DeviceInterfaceUtils.GetDeviceList(DeviceInterfaceUtils.StoragePortClassGuid);
             result.AddRange(tapeDeviceList);
-            //result.AddRange(mediumChangerDeviceList);
+            result.AddRange(diskDeviceList);
+            result.AddRange(mediumChangerDeviceList);
+            result.AddRange(storagePortDeviceList);
             return result;
         }
 
@@ -66,19 +64,20 @@ namespace ISCSIConsole
                 return;
             }
 
-            if (m_devices.Count == 0)
+            if (listDisks.SelectedIndices.Count == 0)
             {
-                MessageBox.Show("No devices added", "Error");
+                MessageBox.Show("No device was selected", "Error");
                 return;
             }
-
-            m_target = new ISCSITarget(txtTargetIQN.Text, m_devices[0].DevicePath);
+            int selectedIndex = listDisks.SelectedIndices[0];
+            m_target = new ISCSITarget(txtTargetIQN.Text, m_devices[selectedIndex]);
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
+            m_targetNumber--;
             this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
