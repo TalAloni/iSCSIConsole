@@ -26,7 +26,7 @@ namespace SCSI
             OpCode = (SCSIOpCodeName)buffer[offset + 0];
             MiscellaneousCDBInformationHeader = (byte)((buffer[offset + 1] & 0xE0) >> 5);
 
-            uint temp = ToUInt24(buffer, offset + 1);
+            uint temp = ReadUInt24(buffer, offset + 1);
             LogicalBlockAddress = temp & 0x1FFFFF;
             TransferLength = buffer[offset + 4];
             Control = buffer[offset + 5];
@@ -45,7 +45,7 @@ namespace SCSI
             return buffer;
         }
 
-        public static uint ToUInt24(byte[] buffer, int offset)
+        public static uint ReadUInt24(byte[] buffer, int offset)
         {
             return (uint)((buffer[offset + 0] << 16) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 0));
         }
