@@ -54,6 +54,7 @@ namespace DiskAccessLibrary
         public string DevicePath;
         public string DeviceDescription;
         public string FriendlyName;
+        public Guid DeviceGuid;
 
         /// <summary>
         /// Device manager shows the friendly name if it exists and the device description otherwise.
@@ -362,6 +363,7 @@ namespace DiskAccessLibrary
                 deviceInfo.DevicePath = deviceInterfaceDetailData.DevicePath;
                 deviceInfo.DeviceDescription = GetDeviceStringProperty(deviceInfoSet, deviceInfoData, SPDRP_DEVICEDESC);
                 deviceInfo.FriendlyName = GetDeviceStringProperty(deviceInfoSet, deviceInfoData, SPDRP_FRIENDLYNAME);
+                deviceInfo.DeviceGuid = deviceClassGuid;
                 result.Add(deviceInfo);
                 index++;
             }

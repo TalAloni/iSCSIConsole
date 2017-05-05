@@ -16,6 +16,11 @@ namespace Utilities
             return (short)ToUInt16(buffer, offset);
         }
 
+        public static uint ToUInt24(byte[] buffer, int offset)
+        {
+            return (uint)((buffer[offset + 0] << 16) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 0));
+        }
+
         public static uint ToUInt32(byte[] buffer, int offset)
         {
             return (uint)((buffer[offset + 0] << 24) | (buffer[offset + 1] << 16)
