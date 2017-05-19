@@ -86,7 +86,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public override Stream OpenFile(string path, FileMode mode, FileAccess access, FileShare share)
+        public override Stream OpenFile(string path, FileMode mode, FileAccess access, FileShare share, FileOptions options)
         {
             if (mode == FileMode.Open || mode == FileMode.Truncate)
             {
