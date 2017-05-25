@@ -40,6 +40,7 @@ namespace ISCSIConsole
             this.listTargets = new System.Windows.Forms.ListBox();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
+            this.btnAddSPTITarget = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -110,7 +111,7 @@ namespace ISCSIConsole
             // btnRemoveTarget
             // 
             this.btnRemoveTarget.Enabled = false;
-            this.btnRemoveTarget.Location = new System.Drawing.Point(354, 86);
+            this.btnRemoveTarget.Location = new System.Drawing.Point(354, 115);
             this.btnRemoveTarget.Name = "btnRemoveTarget";
             this.btnRemoveTarget.Size = new System.Drawing.Size(106, 23);
             this.btnRemoveTarget.TabIndex = 8;
@@ -143,11 +144,23 @@ namespace ISCSIConsole
             this.lblStatus.Name = "lblActiveSessions";
             this.lblStatus.Size = new System.Drawing.Size(0, 17);
             // 
+            // btnAddSPTITarget
+            // 
+            this.btnAddSPTITarget.Location = new System.Drawing.Point(354, 86);
+            this.btnAddSPTITarget.Name = "btnAddSPTITarget";
+            this.btnAddSPTITarget.Size = new System.Drawing.Size(106, 23);
+            this.btnAddSPTITarget.TabIndex = 11;
+            this.btnAddSPTITarget.Text = "Add SPTI Device";
+            this.btnAddSPTITarget.UseVisualStyleBackColor = true;
+            this.btnAddSPTITarget.Visible = false;
+            this.btnAddSPTITarget.Click += new System.EventHandler(this.btnAddSPTIDevice_Click);
+            // 
             // MainForm
             // 
             this.AcceptButton = this.btnStart;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(474, 195);
+            this.Controls.Add(this.btnAddSPTITarget);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.listTargets);
             this.Controls.Add(this.btnRemoveTarget);
@@ -187,5 +200,6 @@ namespace ISCSIConsole
         private System.Windows.Forms.ListBox listTargets;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel lblStatus;
+        private System.Windows.Forms.Button btnAddSPTITarget;
     }
 }

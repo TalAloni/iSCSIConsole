@@ -29,6 +29,9 @@ namespace ISCSIConsole
         public MainForm()
         {
             InitializeComponent();
+#if Win32
+            btnAddSPTITarget.Visible = true;
+#endif
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -51,6 +54,7 @@ namespace ISCSIConsole
 #if Win32
             if (!SecurityHelper.IsAdministrator())
             {
+                btnAddSPTITarget.Enabled = false;
                 lblStatus.Text = "Some features require administrator privileges and have been disabled";
             }
 #endif
@@ -118,6 +122,30 @@ namespace ISCSIConsole
             }
         }
 
+        private void btnAddSPTIDevice_Click(object sender, EventArgs e)
+        {
+            AddSPTITargetForm addTarget = new AddSPTITargetForm();
+            DialogResult addTargetResult = addTarget.ShowDialog();
+            if (addTargetResult == DialogResult.OK)
+            {
+                ISCSITarget target = addTarget.Target;
+                ((SCSI.Win32.SPTITarget)target.SCSITarget).OnLogEntry += Program.OnLogEntry;
+                target.OnAuthorizationRequest += new EventHandler<AuthorizationRequestArgs>(ISCSITarget_OnAuthorizationRequest);
+                target.OnSessionTermination += new EventHandler<SessionTerminationArgs>(ISCSITarget_OnSessionTermination);
+                m_targets.Add(target);
+                try
+                {
+                    m_server.AddTarget(target);
+                }
+                catch (ArgumentException ex)
+                {
+                    MessageBox.Show(ex.Message, "Error");
+                    return;
+                }
+                listTargets.Items.Add(target.TargetName);
+            }
+        }
+
         private void btnRemoveTarget_Click(object sender, EventArgs e)
         {
             if (listTargets.SelectedIndices.Count > 0)
@@ -130,8 +158,17 @@ namespace ISCSIConsole
                     MessageBox.Show("Could not remove iSCSI target", "Error");
                     return;
                 }
-                List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
-                LockUtils.ReleaseDisks(disks);
+
+                if (target.SCSITarget is SCSI.VirtualSCSITarget)
+                {
+                    List<Disk> disks = ((SCSI.VirtualSCSITarget)target.SCSITarget).Disks;
+                    LockUtils.ReleaseDisks(disks);
+                }
+                else if (target.SCSITarget is SCSI.Win32.SPTITarget)
+                {
+                    ((SCSI.Win32.SPTITarget)target.SCSITarget).Close();
+                }
+
                 m_targets.RemoveAt(targetIndex);
                 listTargets.Items.RemoveAt(targetIndex);
             }
