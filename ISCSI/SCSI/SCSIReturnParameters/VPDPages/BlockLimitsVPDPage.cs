@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,7 +14,7 @@ namespace SCSI
     public class BlockLimitsVPDPage
     {
         public byte PeripheralQualifier;
-        public byte PeripheralDeviceType;
+        public PeripheralDeviceType PeripheralDeviceType;
         public VitalProductDataPageName PageCode; // VitalProductDataPageName
         public byte PageLength;
         public ushort OptimalTransferLengthGranularity;
@@ -30,7 +30,7 @@ namespace SCSI
         public BlockLimitsVPDPage(byte[] buffer, int offset)
         {
             PeripheralQualifier = (byte)(buffer[offset + 0] >> 5);
-            PeripheralDeviceType = (byte)(buffer[offset + 0] & 0x1F);
+            PeripheralDeviceType = (PeripheralDeviceType)(buffer[offset + 0] & 0x1F);
             PageCode = (VitalProductDataPageName)buffer[offset + 1];
             PageLength = buffer[offset + 3];
             OptimalTransferLengthGranularity = BigEndianConverter.ToUInt16(buffer, offset + 6);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,7 +14,7 @@ namespace SCSI
     public class SupportedVitaLProductDataPages
     {
         public byte PeripheralQualifier;
-        public byte PeripheralDeviceType;
+        public PeripheralDeviceType PeripheralDeviceType;
         public byte PageLength;
         public List<byte> SupportedPageList = new List<byte>();
 
@@ -25,7 +25,7 @@ namespace SCSI
         public SupportedVitaLProductDataPages(byte[] buffer, int offset)
         {
             PeripheralQualifier = (byte)(buffer[offset + 0] >> 5);
-            PeripheralDeviceType = (byte)(buffer[offset + 0] & 0x1F);
+            PeripheralDeviceType = (PeripheralDeviceType)(buffer[offset + 0] & 0x1F);
             PageLength = buffer[offset + 3];
             for (int index = 0; index < PageLength; index++)
             { 

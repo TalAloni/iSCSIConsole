@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -14,7 +14,7 @@ namespace SCSI
     public class StandardInquiryData
     {
         public byte PeripheralQualifier;
-        public byte PeripheralDeviceType;
+        public PeripheralDeviceType PeripheralDeviceType;
         public bool RMB;     // Removable media bit
         public byte Version; // We only support Version == 2
         public bool NormACA; // Normal ACA Supported
@@ -67,7 +67,7 @@ namespace SCSI
         public StandardInquiryData(byte[] buffer, int offset)
         {
             PeripheralQualifier = (byte)(buffer[offset + 0] >> 5);
-            PeripheralDeviceType = (byte)(buffer[offset + 0] & 0x1F);
+            PeripheralDeviceType = (PeripheralDeviceType)(buffer[offset + 0] & 0x1F);
             RMB = (buffer[offset + 1] & 0x80) != 0;
             Version = buffer[offset + 2];
             if (Version != 2)

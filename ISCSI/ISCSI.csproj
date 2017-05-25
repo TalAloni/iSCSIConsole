@@ -87,6 +87,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SCSI\Enums\AddressingMethod.cs" />
     <Compile Include="SCSI\Enums\ModePageCodeName.cs" />
+    <Compile Include="SCSI\Enums\PeripheralDeviceType.cs" />
     <Compile Include="SCSI\Enums\SCSIOpCodeName.cs" />
     <Compile Include="SCSI\Enums\SCSIStatusCodeName.cs" />
     <Compile Include="SCSI\Enums\ServiceAction.cs" />
