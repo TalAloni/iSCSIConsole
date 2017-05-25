@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,6 +13,8 @@ namespace SCSI
 {
     public class ModeParameterHeader6
     {
+        public const int Length = 4;
+
         public byte ModeDataLength; // excluding this byte
         public byte MediumType;
         public bool WP;     // Write Protect, indicates that the medium is write-protected
@@ -35,7 +37,7 @@ namespace SCSI
 
         public byte[] GetBytes()
         {
-            byte[] buffer = new byte[4];
+            byte[] buffer = new byte[Length];
             buffer[0] = ModeDataLength;
             buffer[1] = MediumType;
             if (WP)
@@ -48,14 +50,6 @@ namespace SCSI
             }
             buffer[3] = BlockDescriptorLength;
             return buffer;
-        }
-
-        public int Length
-        {
-            get
-            {
-                return 4;
-            }
         }
     }
 }

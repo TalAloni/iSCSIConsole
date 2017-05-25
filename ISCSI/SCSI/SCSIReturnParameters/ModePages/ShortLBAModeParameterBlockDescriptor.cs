@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -13,32 +13,30 @@ namespace SCSI
 {
     public class ShortLBAModeParameterBlockDescriptor
     {
-        public uint LogicalBlockLength;
+        public const int Length = 8;
+
+        public uint NumberOfBlocks;
+        public byte Reserved;
+        public uint LogicalBlockLength; // 3 bytes
 
         public ShortLBAModeParameterBlockDescriptor()
         { 
         }
 
         public ShortLBAModeParameterBlockDescriptor(byte[] buffer, int offset)
-        { 
-            byte[] temp = new byte[4];
-            Array.Copy(buffer, offset + 5, temp, 1, 3);
-            LogicalBlockLength = BigEndianConverter.ToUInt32(temp, 0);
+        {
+            NumberOfBlocks = BigEndianConverter.ToUInt32(buffer, offset + 0);
+            Reserved = ByteReader.ReadByte(buffer, offset + 4);
+            LogicalBlockLength = BigEndianReader.ReadUInt24(buffer, offset + 5);
         }
 
         public byte[] GetBytes()
-        { 
-            byte[] buffer = new byte[8];
-            Array.Copy(BigEndianConverter.GetBytes(LogicalBlockLength), 1, buffer, 5, 3);
-            return buffer;
-        }
-
-        public int Length
         {
-            get
-            {
-                return 4;
-            }
+            byte[] buffer = new byte[Length];
+            BigEndianWriter.WriteUInt32(buffer, 0, NumberOfBlocks);
+            ByteWriter.WriteByte(buffer, 4, Reserved);
+            BigEndianWriter.WriteUInt24(buffer, 5, LogicalBlockLength);
+            return buffer;
         }
     }
 }

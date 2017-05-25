@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -307,9 +307,9 @@ namespace SCSI
             header.ModeDataLength += (byte)(descriptorBytes.Length + pageData.Length);
 
             response = new byte[1 + header.ModeDataLength];
-            Array.Copy(header.GetBytes(), 0, response, 0, header.Length);
-            Array.Copy(descriptorBytes, 0, response, header.Length, descriptorBytes.Length);
-            Array.Copy(pageData, 0, response, header.Length + descriptorBytes.Length, pageData.Length);
+            Array.Copy(header.GetBytes(), 0, response, 0, ModeParameterHeader6.Length);
+            Array.Copy(descriptorBytes, 0, response, ModeParameterHeader6.Length, descriptorBytes.Length);
+            Array.Copy(pageData, 0, response, ModeParameterHeader6.Length + descriptorBytes.Length, pageData.Length);
 
             // we must not return more bytes than ModeSense6Command.AllocationLength
             if (response.Length > command.AllocationLength)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -26,7 +26,7 @@ namespace SCSI
             OpCode = (SCSIOpCodeName)buffer[offset + 0];
             MiscellaneousCDBInformationHeader = (byte)((buffer[offset + 1] & 0xE0) >> 5);
 
-            uint temp = ReadUInt24(buffer, offset + 1);
+            uint temp = BigEndianReader.ReadUInt24(buffer, offset + 1);
             LogicalBlockAddress = temp & 0x1FFFFF;
             TransferLength = buffer[offset + 4];
             Control = buffer[offset + 5];
@@ -43,11 +43,6 @@ namespace SCSI
             buffer[4] = (byte)TransferLength;
             buffer[5] = Control;
             return buffer;
-        }
-
-        public static uint ReadUInt24(byte[] buffer, int offset)
-        {
-            return (uint)((buffer[offset + 0] << 16) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 0));
         }
     }
 }

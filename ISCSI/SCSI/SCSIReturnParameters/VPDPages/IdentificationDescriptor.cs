@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -111,7 +111,7 @@ namespace SCSI
         public static IdentificationDescriptor GetEUI64Identifier(uint oui, uint vendorSpecific)
         {
             byte[] eui64 = new byte[8];
-            WriteUInt24(eui64, 0, oui);
+            BigEndianWriter.WriteUInt24(eui64, 0, oui);
             // we leave byte 3 zeroed-out
             BigEndianWriter.WriteUInt32(eui64, 4, vendorSpecific);
             return new IdentificationDescriptor(IdentifierTypeName.EUI64, eui64);
@@ -122,8 +122,8 @@ namespace SCSI
         {
             byte[] identifier = new byte[8];
             identifier[0] = 0x02 << 4;
-            WriteUInt24(identifier, 2, oui);
-            WriteUInt24(identifier, 5, vendorSpecific);
+            BigEndianWriter.WriteUInt24(identifier, 2, oui);
+            BigEndianWriter.WriteUInt24(identifier, 5, vendorSpecific);
             return new IdentificationDescriptor(IdentifierTypeName.NAA, identifier);
         }
 
@@ -133,12 +133,6 @@ namespace SCSI
             result.Association = AssociationName.TargetDevice;
             result.ProtocolIdentifier = ProtocolName.ISCSI;
             return result;
-        }
-
-        public static void WriteUInt24(byte[] buffer, int offset, uint value)
-        {
-            byte[] bytes = BigEndianConverter.GetBytes(value);
-            Array.Copy(bytes, 1, buffer, offset, 3);
         }
     }
 }

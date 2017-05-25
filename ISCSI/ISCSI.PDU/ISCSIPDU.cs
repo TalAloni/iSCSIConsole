@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -64,9 +64,7 @@ namespace ISCSI
                 buffer[1] |= 0x80;
             }
             buffer[4] = TotalAHSLength;
-            buffer[5] = (byte)((DataSegmentLength >> 16) & 0xFF);
-            buffer[6] = (byte)((DataSegmentLength >> 8) & 0xFF);
-            buffer[7] = (byte)((DataSegmentLength >> 0) & 0xFF);
+            BigEndianWriter.WriteUInt24(buffer, 5, DataSegmentLength);
             Array.Copy(LUNOrOpCodeSpecific, 0, buffer, 8, 8);
             BigEndianWriter.WriteUInt32(buffer, 16, InitiatorTaskTag);
             Array.Copy(OpCodeSpecific, 0, buffer, 20, 28);
