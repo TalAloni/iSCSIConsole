@@ -77,9 +77,10 @@ namespace DiskAccessLibrary
     public class DeviceInterfaceUtils // SetupDi functions
     {
         public static readonly Guid DiskClassGuid = new Guid("53F56307-B6BF-11D0-94F2-00A0C91EFB8B");
+        public static readonly Guid CDRomClassGuid = new Guid("53F56308-B6BF-11D0-94F2-00A0C91EFB8B");
+        public static readonly Guid TapeClassGuid = new Guid("53F5630B-B6BF-11D0-94F2-00A0C91EFB8B");
         public static readonly Guid MediumChangerClassGuid = new Guid("53F56310-B6BF-11D0-94F2-00A0C91EFB8B");
         public static readonly Guid StoragePortClassGuid = new Guid("2ACCFE60-C130-11D2-B082-00A0C91EFB8B");
-        public static readonly Guid TapeClassGuid = new Guid("53F5630B-B6BF-11D0-94F2-00A0C91EFB8B");
 
         private const Int64 INVALID_HANDLE_VALUE = -1;
 
