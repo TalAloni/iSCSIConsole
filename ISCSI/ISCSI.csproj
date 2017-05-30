@@ -105,8 +105,10 @@
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\CachingParametersPage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ControlModePage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\InformationalExceptionsControlModePage.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\LongLBAModeParameterBlockDescriptor.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModePage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModePage0.cs" />
+    <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModeParameterHeader10.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\ModeParameterHeader6.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\PowerConditionModePage.cs" />
     <Compile Include="SCSI\SCSIReturnParameters\ModePages\PowerConsumptionModePage.cs" />

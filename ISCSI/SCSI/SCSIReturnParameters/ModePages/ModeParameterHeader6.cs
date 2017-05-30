@@ -15,10 +15,10 @@ namespace SCSI
     {
         public const int Length = 4;
 
-        public byte ModeDataLength; // excluding this byte
+        public byte ModeDataLength; // Excluding this byte
         public byte MediumType;
-        public bool WP;     // Write Protect, indicates that the medium is write-protected
-        public bool DPOFUA; // DPO and FUA support
+        public bool WP;             // Write Protect, indicates that the medium is write-protected
+        public bool DPOFUA;         // DPO and FUA support
         public byte BlockDescriptorLength;
 
         public ModeParameterHeader6()
@@ -30,8 +30,8 @@ namespace SCSI
         {
             ModeDataLength = buffer[offset + 0];
             MediumType = buffer[offset + 1];
-            WP = (buffer[offset + 2] & 0x80) != 0;
-            DPOFUA = (buffer[offset + 2] & 0x10) != 0;
+            WP = ((buffer[offset + 2] & 0x80) != 0);
+            DPOFUA = ((buffer[offset + 2] & 0x10) != 0);
             BlockDescriptorLength = buffer[offset + 3];
         }
 
