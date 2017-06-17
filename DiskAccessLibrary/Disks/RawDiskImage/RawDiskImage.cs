@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -44,10 +44,7 @@ namespace DiskAccessLibrary
             if (!m_isExclusiveLock)
             {
                 m_isExclusiveLock = true;
-                FileAccess fileAccess = IsReadOnly ? FileAccess.Read : FileAccess.ReadWrite;
-                // We should use noncached I/O operations to avoid excessive RAM usage.
-                // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
-                m_stream = new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+                m_stream = OpenFileStream();
                 return true;
             }
             else
@@ -70,6 +67,17 @@ namespace DiskAccessLibrary
             }
         }
 
+        private FileStream OpenFileStream()
+        {
+            FileAccess fileAccess = IsReadOnly ? FileAccess.Read : FileAccess.ReadWrite;
+            // We should use noncached I/O operations to avoid excessive RAM usage.
+            // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
+            // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
+            // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
+            FileStream stream = new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+            return stream;
+        }
+
         /// <summary>
         /// Sector refers to physical disk sector, we can only read complete sectors
         /// </summary>
@@ -78,13 +86,11 @@ namespace DiskAccessLibrary
             CheckBoundaries(sectorIndex, sectorCount);
             if (!m_isExclusiveLock)
             {
-                // We should use noncached I/O operations to avoid excessive RAM usage.
-                // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
-                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+                m_stream = OpenFileStream();
             }
             long offset = sectorIndex * BytesPerSector;
-            m_stream.Seek(offset, SeekOrigin.Begin);
             byte[] result = new byte[BytesPerSector * sectorCount];
+            m_stream.Seek(offset, SeekOrigin.Begin);
             m_stream.Read(result, 0, BytesPerSector * sectorCount);
             if (!m_isExclusiveLock)
             {
@@ -103,10 +109,7 @@ namespace DiskAccessLibrary
             CheckBoundaries(sectorIndex, data.Length / this.BytesPerSector);
             if (!m_isExclusiveLock)
             {
-                // We should use noncached I/O operations to avoid excessive RAM usage.
-                // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
-                // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
-                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+                m_stream = OpenFileStream();
             }
             long offset = sectorIndex * BytesPerSector;
             m_stream.Seek(offset, SeekOrigin.Begin);
@@ -131,7 +134,7 @@ namespace DiskAccessLibrary
 #endif
             if (!m_isExclusiveLock)
             {
-                m_stream = new FileStream(this.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+                m_stream = OpenFileStream();
             }
             else
             {
