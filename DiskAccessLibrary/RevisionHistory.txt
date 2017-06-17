@@ -95,3 +95,7 @@ Revision History:
         NTFS: Return empty byte array when trying to read from offset larger than file length.
         LockHelper.LockAllVolumesOrNone will attempt to lock only mounted volumes.
         API improvements.
+
+1.4.5 - IFileSystem: Added FileOptions parameter to OpenFile.
+        DeviceInterfaceUtils: Added GetDeviceList method.
+		Minor changes and improvements.

@@ -126,3 +126,7 @@ Revision History:
 
 1.4.4 - ISCSITarget: Event notification related bugfixes.
 
+1.4.5 - Minor logging improvement.
+        Added additional SCSI opcodes.
+        Added PeripheralDeviceType enum.
+        Added ModeParameterHeader10 / LongLBAModeParameterBlockDescriptor.
