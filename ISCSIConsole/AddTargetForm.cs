@@ -40,7 +40,7 @@ namespace ISCSIConsole
 
         private void btnCreateDiskImage_Click(object sender, EventArgs e)
         {
-            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+            if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 CreateRAMDiskForm createRAMDisk = new CreateRAMDiskForm();
                 DialogResult result = createRAMDisk.ShowDialog();
@@ -189,7 +189,7 @@ namespace ISCSIConsole
 
         private void AddTargetForm_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Shift)
+            if (e.Control)
             {
                 btnCreateDiskImage.Text = "Create RAM Disk";
             }
