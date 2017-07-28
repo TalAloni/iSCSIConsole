@@ -2,7 +2,7 @@ About iSCSI Console:
 ====================
 iSCSI Console is a Free, Open Source, User-Mode iSCSI Target Server written in C#.  
 iSCSI Console is cross-platform, portable and requires no installation.  
-iSCSI Console can serve serve physical and virtual disks to multiple clients.  
+iSCSI Console can serve physical and virtual disks to multiple clients.  
 
 About the iSCSI library:
 ========================
