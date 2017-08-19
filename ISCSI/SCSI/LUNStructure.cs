@@ -24,9 +24,9 @@ namespace SCSI
         private ushort ThirdLevelAddressing;
         private ushort FourthLevelAddressing;
 
-        public LUNStructure(ushort LUN)
+        public LUNStructure(ushort lun)
         {
-            FirstLevelAddressing = GetFirstLevelAddressing(LUN);
+            FirstLevelAddressing = GetFirstLevelAddressing(lun);
             SecondLevelAddressing = 0;
             ThirdLevelAddressing = 0;
             FourthLevelAddressing = 0;
@@ -50,11 +50,28 @@ namespace SCSI
             return buffer;
         }
 
+        public AddressingMethod AddressingMethod
+        {
+            get
+            {
+                return (AddressingMethod)(FirstLevelAddressing >> 14);
+            }
+        }
+
         public bool IsSingleLevelLUN
         {
             get
             {
-                return (SecondLevelAddressing == 0) && (ThirdLevelAddressing == 0) && (FourthLevelAddressing == 0);
+                if (AddressingMethod == AddressingMethod.PeripheralDeviceAddressing)
+                {
+                    byte bus = (byte)((FirstLevelAddressing >> 8) & 0x3F);
+                    return (bus == 0);
+                }
+                else if (AddressingMethod == AddressingMethod.FlatSpaceAddressing)
+                {
+                    return true;
+                }
+                return false;
             }
         }
         
@@ -62,7 +79,7 @@ namespace SCSI
         {
             get
             {
-                AddressingMethod addressing = (AddressingMethod)(FirstLevelAddressing >> 14);
+                AddressingMethod addressing = this.AddressingMethod;
                 if (addressing == AddressingMethod.PeripheralDeviceAddressing)
                 {
                     byte bus = (byte)((FirstLevelAddressing >> 8) & 0x3F);
@@ -90,20 +107,30 @@ namespace SCSI
             }
         }
 
-        public static ushort GetFirstLevelAddressing(ushort LUN)
+        public static ushort GetPeripheralDeviceAddressing(byte bus, byte lun)
         {
-            if (LUN > SingleLevelAddressingLimit)
+            if (bus > 63)
+            {
+                throw new ArgumentException("Cannot address more than 64 buses using peripheral device addressing");
+            }
+
+            return (ushort)((byte)AddressingMethod.PeripheralDeviceAddressing << 14 | bus << 8 | lun);
+        }
+
+        public static ushort GetFirstLevelAddressing(ushort lun)
+        {
+            if (lun > SingleLevelAddressingLimit)
             {
                 throw new ArgumentException("Cannot address more than 16384 logical units using single level addressing");
             }
 
-            if (LUN <= 255)
+            if (lun <= 255)
             {
-                return LUN;
+                return GetPeripheralDeviceAddressing(0, (byte)lun);
             }
             else
             {
-                return (ushort)((byte)AddressingMethod.FlatSpaceAddressing << 14 | LUN);
+                return (ushort)((byte)AddressingMethod.FlatSpaceAddressing << 14 | lun);
             }
         }
 
@@ -119,7 +146,6 @@ namespace SCSI
             }
         }
 
-        //  User-defined conversion from double to Digit
         public static implicit operator LUNStructure(ushort LUN)
         {
             return new LUNStructure(LUN);
