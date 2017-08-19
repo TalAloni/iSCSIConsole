@@ -136,6 +136,15 @@
     <Compile Include="Utilities\KeyValuePairUtils.cs" />
     <Compile Include="Utilities\LogEntry.cs" />
     <Compile Include="Utilities\SocketUtils.cs" />
+    <Compile Include="Win32\SCSI\Enums\SCSIDataDirection.cs" />
+    <Compile Include="Win32\SCSI\Structures\SCSI_ADAPTER_BUS_INFO.cs" />
+    <Compile Include="Win32\SCSI\Structures\SCSI_BUS_DATA.cs" />
+    <Compile Include="Win32\SCSI\Structures\SCSI_INQUIRY_DATA.cs" />
+    <Compile Include="Win32\SCSI\Structures\SCSI_PASS_THROUGH_DIRECT.cs" />
+    <Compile Include="Win32\SCSI\Structures\SCSI_PASS_THROUGH_DIRECT_WITH_BUFFER.cs" />
+    <Compile Include="Win32\SCSITarget\LogicalUnitManager.cs" />
+    <Compile Include="Win32\SCSITarget\SCSICommandParser.cs" />
+    <Compile Include="Win32\SCSITarget\SPTITarget.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj">
