@@ -25,7 +25,7 @@ What this program can do:
 6. Could run from Windows PE using Mono.
 7. Could run from Linux / OSX using Mono (Download the Cross Platform Edition) 
 
-![alt tag](http://vm1.duckdns.org/Public/ISCSIConsole/ISCSIConsole_UI.png)
+![iSCSI Console UI](ISCSIConsole_UI.png)
 
 Contact:
 ========
