@@ -349,10 +349,10 @@ namespace ISCSI.Server
                 loginParameters.Add("MaxOutstandingR2T", session.MaxOutstandingR2T.ToString());
                 loginParameters.Add("DataPDUInOrder", session.DataPDUInOrder ? "Yes" : "No");
                 loginParameters.Add("DataSequenceInOrder", session.DataSequenceInOrder ? "Yes" : "No");
-                loginParameters.Add("ErrorRecoveryLevel", session.ErrorRecoveryLevel.ToString());
             }
             loginParameters.Add("DefaultTime2Wait", session.DefaultTime2Wait.ToString());
             loginParameters.Add("DefaultTime2Retain", session.DefaultTime2Retain.ToString());
+            loginParameters.Add("ErrorRecoveryLevel", session.ErrorRecoveryLevel.ToString());
             
             return loginParameters;
         }
