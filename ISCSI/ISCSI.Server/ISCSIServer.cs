@@ -365,7 +365,8 @@ namespace ISCSI.Server
                 {
                     PDUHelper.SetExpCmdSN(response, state.Session.ExpCmdSN, state.Session.ExpCmdSN + state.Session.CommandQueueSize);
                 }
-                if (response is SCSIResponsePDU ||
+                if ((response is NOPInPDU && ((NOPInPDU)response).InitiatorTaskTag != 0xffffffff) ||
+                    response is SCSIResponsePDU ||
                     response is LoginResponsePDU ||
                     response is TextResponsePDU ||
                     (response is SCSIDataInPDU && ((SCSIDataInPDU)response).StatusPresent) ||
