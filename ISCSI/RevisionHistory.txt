@@ -134,3 +134,5 @@ Revision History:
 1.4.6 - LUNStructure: minor updates.
         Added SPTI implementation (Credit to Alex Bowden for leading the effort).
         Bugfix: Advertise ErrorRecoveryLevel in discovery session login response.
+
+1.4.7 - Bugfix: StatSN was not advanced after NOP-In response.

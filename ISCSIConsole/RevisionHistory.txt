@@ -98,3 +98,5 @@ Revision History:
 1.4.5 - Updates to the ISCSI library.
 
 1.4.6 - Use Control instead of Shift to show (hidden) RAM Disk creation button.
+
+1.4.7 - Updates to the ISCSI library.
