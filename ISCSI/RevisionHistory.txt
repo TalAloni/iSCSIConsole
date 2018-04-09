@@ -136,3 +136,6 @@ Revision History:
         Bugfix: Advertise ErrorRecoveryLevel in discovery session login response.
 
 1.4.7 - Bugfix: StatSN was not advanced after NOP-In response.
+
+1.4.8 - Bugfix: Incorrect processing of SCSIDataOutPDU in some cases.
+        Minor logging and documentation improvements.
