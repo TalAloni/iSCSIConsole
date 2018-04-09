@@ -135,14 +135,14 @@ namespace ISCSI.Server
                     if (pdu is SCSIDataOutPDU)
                     {
                         SCSIDataOutPDU request = (SCSIDataOutPDU)pdu;
-                        Log(Severity.Debug, "[{0}] SCSIDataOutPDU: Target transfer tag: {1}, LUN: {2}, Buffer offset: {3}, Data segment length: {4}, DataSN: {5}, Final: {6}", state.ConnectionIdentifier, request.TargetTransferTag, (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
+                        Log(Severity.Debug, "[{0}] SCSIDataOutPDU: InitiatorTaskTag: {1}, TargetTransferTag: {2}, LUN: {3}, BufferOffset: {4}, DataSegmentLength: {5}, DataSN: {6}, Final: {7}", state.ConnectionIdentifier, request.InitiatorTaskTag.ToString("x"), request.TargetTransferTag.ToString("x"), (ushort)request.LUN, request.BufferOffset, request.DataSegmentLength, request.DataSN, request.Final);
                         try
                         {
                             readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(request, state.ConnectionParameters, out commandsToExecute);
                         }
                         catch (InvalidTargetTransferTagException ex)
                         {
-                            Log(Severity.Warning, "[{0}] Initiator error: Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag);
+                            Log(Severity.Warning, "[{0}] Initiator error: Invalid TargetTransferTag: {1}", state.ConnectionIdentifier, ex.TargetTransferTag.ToString("x"));
                             RejectPDU reject = new RejectPDU();
                             reject.InitiatorTaskTag = request.InitiatorTaskTag;
                             reject.Reason = RejectReason.InvalidPDUField;
@@ -153,12 +153,13 @@ namespace ISCSI.Server
                     else
                     {
                         SCSICommandPDU command = (SCSICommandPDU)pdu;
-                        Log(Severity.Debug, "[{0}] SCSICommandPDU: CmdSN: {1}, LUN: {2}, Data segment length: {3}, Expected Data Transfer Length: {4}, Final: {5}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
+                        Log(Severity.Debug, "[{0}] SCSICommandPDU: CmdSN: {1}, LUN: {2}, InitiatorTaskTag: {3}, DataSegmentLength: {4}, ExpectedDataTransferLength: {5}, Final: {6}", state.ConnectionIdentifier, command.CmdSN, (ushort)command.LUN, command.InitiatorTaskTag.ToString("x"), command.DataSegmentLength, command.ExpectedDataTransferLength, command.Final);
                         readyToTransferPDUs = TargetResponseHelper.GetReadyToTransferPDUs(command, state.ConnectionParameters, out commandsToExecute);
                     }
                     foreach (ReadyToTransferPDU readyToTransferPDU in readyToTransferPDUs)
                     {
                         state.SendQueue.Enqueue(readyToTransferPDU);
+                        Log(Severity.Debug, "[{0}] Enqueued R2T, InitiatorTaskTag: {1}, TargetTransferTag: {2}, BufferOffset: {3}, DesiredDataTransferLength: {4}, R2TSN: {5}", state.ConnectionIdentifier, readyToTransferPDU.InitiatorTaskTag.ToString("x"), readyToTransferPDU.TargetTransferTag.ToString("x"), readyToTransferPDU.BufferOffset, readyToTransferPDU.DesiredDataTransferLength, readyToTransferPDU.R2TSN);
                     }
                     if (commandsToExecute != null)
                     {
@@ -166,7 +167,7 @@ namespace ISCSI.Server
                     }
                     foreach (SCSICommandPDU commandPDU in commandsToExecute)
                     {
-                        Log(Severity.Debug, "[{0}] Queuing command: CmdSN: {1}", state.ConnectionIdentifier, commandPDU.CmdSN);
+                        Log(Severity.Debug, "[{0}] Queuing command: CmdSN: {1}, InitiatorTaskTag: {2}", state.ConnectionIdentifier, commandPDU.CmdSN, commandPDU.InitiatorTaskTag.ToString("x"));
                         state.Target.QueueCommand(commandPDU.CommandDescriptorBlock, commandPDU.LUN, commandPDU.Data, commandPDU, state.OnCommandCompleted);
                     }
                 }

@@ -95,7 +95,7 @@ namespace ISCSI.Server
                 }
             }
 
-            // Any command that is preceding minCmdSN should be executed
+            // Any command that is preceding earliestCmdSN should be executed
             for(int index = 0; index < DelayedCommands.Count; index++)
             {
                 SCSICommandPDU delayedCommand = DelayedCommands[index];
