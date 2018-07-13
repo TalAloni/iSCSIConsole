@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -39,6 +39,7 @@ namespace ISCSI.Server
 
         public uint StatSN = 0; // Initial StatSN, any number will do
         private Dictionary<uint, string> m_textSequences = new Dictionary<uint, string>();
+        private Dictionary<uint, uint> m_taskTagToTransferTag = new Dictionary<uint, uint>();
         // Dictionary of current transfers: <transfer-tag, TransferEntry>
         private Dictionary<uint, TransferEntry> m_transfers = new Dictionary<uint, TransferEntry>();
 
@@ -64,11 +65,22 @@ namespace ISCSI.Server
             m_textSequences.Remove(initiatorTaskTag);
         }
 
-        public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2TSN, uint nextOffset, uint totalR2Ts)
+        public TransferEntry AddTransfer(uint initiatorTaskTag, uint transferTag, SCSICommandPDU command, uint nextR2TSN, uint nextOffset, uint totalR2Ts)
         {
+            m_taskTagToTransferTag.Add(initiatorTaskTag, transferTag);
             TransferEntry entry = new TransferEntry(command, nextR2TSN, nextOffset, totalR2Ts);
             m_transfers.Add(transferTag, entry);
             return entry;
+        }
+
+        public TransferEntry GetTransferEntryUsingTaskTag(uint initiatorTaskTag)
+        {
+            uint transferTag;
+            if (m_taskTagToTransferTag.TryGetValue(initiatorTaskTag, out transferTag))
+            {
+                return GetTransferEntry(transferTag);
+            }
+            return null;
         }
 
         public TransferEntry GetTransferEntry(uint transferTag)
@@ -78,8 +90,9 @@ namespace ISCSI.Server
             return result;
         }
 
-        public void RemoveTransfer(uint transferTag)
+        public void RemoveTransfer(uint initiatorTaskTag, uint transferTag)
         {
+            m_taskTagToTransferTag.Remove(initiatorTaskTag);
             m_transfers.Remove(transferTag);
         }
 

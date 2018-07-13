@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -55,7 +55,7 @@ namespace ISCSI.Server
                     responseList.Add(response);
                     nextOffset += (uint)connection.TargetMaxRecvDataSegmentLength;
                 }
-                connection.AddTransfer(transferTag, command, (uint)outgoingR2Ts, nextOffset, (uint)totalR2Ts);
+                connection.AddTransfer(command.InitiatorTaskTag, transferTag, command, (uint)outgoingR2Ts, nextOffset, (uint)totalR2Ts);
                 session.CommandsInTransfer.Add(command.CmdSN);
                 return responseList;
             }
@@ -77,7 +77,16 @@ namespace ISCSI.Server
             commandsToExecute = new List<SCSICommandPDU>();
 
             ISCSISession session = connection.Session;
-            TransferEntry transfer = connection.GetTransferEntry(request.TargetTransferTag);
+            TransferEntry transfer = null;
+            if (request.TargetTransferTag != 0xFFFFFFFF) // 0xFFFFFFFF means Target Transfer Tag is not supplied
+            {
+                transfer = connection.GetTransferEntry(request.TargetTransferTag);
+            }
+            else if (!session.InitialR2T)
+            {
+                transfer = connection.GetTransferEntryUsingTaskTag(request.InitiatorTaskTag);
+            }
+
             if (transfer == null)
             {
                 throw new InvalidTargetTransferTagException(request.TargetTransferTag);
@@ -92,7 +101,7 @@ namespace ISCSI.Server
             if (offset + request.DataSegmentLength == totalLength)
             {
                 // Last Data-out PDU
-                connection.RemoveTransfer(request.TargetTransferTag);
+                connection.RemoveTransfer(request.InitiatorTaskTag, request.TargetTransferTag);
                 session.CommandsInTransfer.Remove(transfer.Command.CmdSN);
                 if (session.IsPrecedingCommandPending(transfer.Command.CmdSN))
                 {
