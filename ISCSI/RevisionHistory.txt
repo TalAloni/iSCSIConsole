@@ -139,3 +139,5 @@ Revision History:
 
 1.4.8 - Bugfix: Incorrect processing of SCSIDataOutPDU in some cases.
         Minor logging and documentation improvements.
+
+1.4.9 - Corrected handling of unsolicited Data Out PDU when InitialR2T=No.
