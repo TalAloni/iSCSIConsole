@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,7 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
@@ -18,21 +18,30 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public long RunOffset; // In clusters, relative to previous data run start LCN
         public bool IsSparse;
 
-        /// <returns>Run length</returns>
+        /// <returns>Record length</returns>
         public int Read(byte[] buffer, int offset)
         {
             int runOffsetSize = buffer[offset] >> 4;
             int runLengthSize = buffer[offset] & 0x0F;
 
             RunLength = ReadVarLong(ref buffer, offset + 1, runLengthSize);
+            if (RunLength < 0)
+            {
+                throw new InvalidDataException("Invalid Data Run record");
+            }
             RunOffset = ReadVarLong(ref buffer, offset + 1 + runLengthSize, runOffsetSize);
-            IsSparse = runOffsetSize == 0;
+            IsSparse = (runOffsetSize == 0);
 
             return 1 + runLengthSize + runOffsetSize;
         }
 
         public byte[] GetBytes()
         {
+            if (IsSparse)
+            {
+                RunOffset = 0;
+            }
+
             byte[] buffer = new byte[RecordLength];
             int runLengthSize = WriteVarLong(buffer, 1, RunLength);
             int runOffsetSize;

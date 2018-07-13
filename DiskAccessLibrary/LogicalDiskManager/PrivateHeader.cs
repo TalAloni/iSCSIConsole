@@ -53,11 +53,11 @@ namespace DiskAccessLibrary.LogicalDiskManager
         public ulong PrivateRegionStartLBA;
         public ulong PrivateRegionSizeLBA;
         /// <summary>
-        /// PrimaryTocLBA / SecondaryTocLBA: on write operation, the updated TOC will be written to PreviousPrimaryTocLBA / PreviousSecondaryTocLBA,
+        /// PrimaryTocLBA / SecondaryTocLBA: on write operation, the updated TOC will be written to a different location,
         /// and then PrimaryTocLBA / SecondaryTocLBA will be updated to point to it.
         /// </summary>
-        public ulong PrimaryTocLBA; // Note: We have the previous TOC (update-sequence-number wise) adjacent, see PreviousPrimaryTocLBA
-        public ulong SecondaryTocLBA; // Note: We have the previous TOC adjacent, see PreviousSecondaryTocLBA
+        public ulong PrimaryTocLBA;
+        public ulong SecondaryTocLBA;
         public uint NumberOfConfigs; // in private region?
         public uint NumberOfLogs;    // in private region?
         public ulong ConfigSizeLBA;  // all config regions in private region in total?

@@ -51,7 +51,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
             List<KernelUpdateLogPage> pages = new List<KernelUpdateLogPage>();
             KernelUpdateLogPage firstPage = KernelUpdateLogPage.ReadFromDisk(disk, privateHeader, tocBlock, 0);
             pages.Add(firstPage);
-            for (int index = 2; index < firstPage.NumberOfPages; index++)
+            for (int index = 1; index < firstPage.NumberOfPages; index++)
             {
                 KernelUpdateLogPage page = KernelUpdateLogPage.ReadFromDisk(disk, privateHeader, tocBlock, index);
                 pages.Add(page);

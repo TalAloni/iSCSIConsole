@@ -98,4 +98,12 @@ Revision History:
 
 1.4.5 - IFileSystem: Added FileOptions parameter to OpenFile.
         DeviceInterfaceUtils: Added GetDeviceList method.
+        Minor changes and improvements.
+
+1.4.6 - Win32Errors enum: Added ERROR_INVALID_DATA
+        Bugfix: The second KLOG page was not read.
 		Minor changes and improvements.
+        Corrected documentation.
+
+1.4.7 - Bugfix: NTFS File Records that exceeded 511 bytes were corrupted during write.
+        Minor improvements to NTFS Data Run record implementation.

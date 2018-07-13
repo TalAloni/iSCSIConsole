@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -45,9 +45,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             // Read in the bytes that are replaced by the USN
             for (int i = 0; i < numberOfStrides; i++)
             {
-                byte[] endOfSectorBytes = new byte[2];
-                endOfSectorBytes[0] = buffer[offset + (BytesPerStride * (i + 1)) - 2];
-                endOfSectorBytes[1] = buffer[offset + (BytesPerStride * (i + 1)) - 2];
+                byte[] endOfSectorBytes = ByteReader.ReadBytes(buffer, offset + (BytesPerStride * (i + 1)) - 2, 2);
                 updateSequenceReplacementData.Add(endOfSectorBytes);
             }
 
