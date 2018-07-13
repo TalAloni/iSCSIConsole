@@ -40,7 +40,7 @@ namespace ISCSI.Server
         public uint StatSN = 0; // Initial StatSN, any number will do
         private Dictionary<uint, string> m_textSequences = new Dictionary<uint, string>();
         // Dictionary of current transfers: <transfer-tag, TransferEntry>
-        private Dictionary<uint, TransferEntry> n_transfers = new Dictionary<uint, TransferEntry>();
+        private Dictionary<uint, TransferEntry> m_transfers = new Dictionary<uint, TransferEntry>();
 
         public string AddTextToSequence(uint initiatorTaskTag, string text)
         {
@@ -67,20 +67,20 @@ namespace ISCSI.Server
         public TransferEntry AddTransfer(uint transferTag, SCSICommandPDU command, uint nextR2TSN, uint nextOffset, uint totalR2Ts)
         {
             TransferEntry entry = new TransferEntry(command, nextR2TSN, nextOffset, totalR2Ts);
-            n_transfers.Add(transferTag, entry);
+            m_transfers.Add(transferTag, entry);
             return entry;
         }
 
         public TransferEntry GetTransferEntry(uint transferTag)
         {
             TransferEntry result;
-            n_transfers.TryGetValue(transferTag, out result);
+            m_transfers.TryGetValue(transferTag, out result);
             return result;
         }
 
         public void RemoveTransfer(uint transferTag)
         {
-            n_transfers.Remove(transferTag);
+            m_transfers.Remove(transferTag);
         }
 
         public string ConnectionIdentifier
