@@ -43,6 +43,7 @@
     <Compile Include="Disks\VHD\ParentLocatorEntry.cs" />
     <Compile Include="Disks\VHD\VHDFooter.cs" />
     <Compile Include="Disks\VHD\VirtualHardDisk.cs" />
+    <Compile Include="Disks\VHD\VirtualHardDisk.Dynamic.cs" />
     <Compile Include="Disks\VHD\VirtualHardDiskType.cs" />
     <Compile Include="Disks\VMDK\ExtentType.cs" />
     <Compile Include="Disks\VMDK\SparseExtent.cs" />

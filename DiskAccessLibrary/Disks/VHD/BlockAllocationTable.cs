@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -17,34 +17,34 @@ namespace DiskAccessLibrary.VHD
     public class BlockAllocationTable
     {
         public const uint UnusedEntry = 0xFFFFFFFF;
-        public uint[] Entries;
+        private uint[] m_entries;
 
         public BlockAllocationTable(uint maxTableEntries)
         {
-            Entries = new uint[maxTableEntries];
+            m_entries = new uint[maxTableEntries];
             for (int index = 0; index < maxTableEntries; index++)
             {
-                Entries[index] = UnusedEntry;
+                m_entries[index] = UnusedEntry;
             }
         }
 
         public BlockAllocationTable(byte[] buffer, uint maxTableEntries)
         { 
-            Entries = new uint[maxTableEntries];
+            m_entries = new uint[maxTableEntries];
             for (int index = 0; index < maxTableEntries; index++)
             {
-                Entries[index] = BigEndianConverter.ToUInt32(buffer, index * 4);
+                m_entries[index] = BigEndianConverter.ToUInt32(buffer, index * 4);
             }
         }
 
         public byte[] GetBytes()
         {
             // The BAT is always extended to a sector boundary
-            int bufferLength = (int)Math.Ceiling((double)Entries.Length * 4 / VirtualHardDisk.BytesPerDiskSector) * VirtualHardDisk.BytesPerDiskSector;
+            int bufferLength = (int)Math.Ceiling((double)m_entries.Length * 4 / VirtualHardDisk.BytesPerDiskSector) * VirtualHardDisk.BytesPerDiskSector;
             byte[] buffer = new byte[bufferLength];
-            for (int index = 0; index < Entries.Length; index++)
+            for (int index = 0; index < m_entries.Length; index++)
             {
-                BigEndianWriter.WriteUInt32(buffer, index * 4, Entries[index]);
+                BigEndianWriter.WriteUInt32(buffer, index * 4, m_entries[index]);
             }
 
             return buffer;
@@ -52,7 +52,23 @@ namespace DiskAccessLibrary.VHD
 
         public bool IsBlockInUse(uint blockIndex)
         {
-            return Entries[blockIndex] != UnusedEntry;
+            return m_entries[blockIndex] != UnusedEntry;
+        }
+
+        public bool IsBlockInUse(uint blockIndex, out uint blockStartSector)
+        {
+            blockStartSector = m_entries[blockIndex];
+            return m_entries[blockIndex] != UnusedEntry;
+        }
+
+        public void SetBlockStartSector(uint blockIndex, uint blockStartSector)
+        {
+            if (m_entries[blockIndex] != UnusedEntry)
+            {
+                throw new InvalidOperationException("Block is already allocated");
+            }
+
+            m_entries[blockIndex] = blockStartSector;
         }
 
         public static BlockAllocationTable ReadBlockAllocationTable(string path, DynamicDiskHeader dynamicHeader)

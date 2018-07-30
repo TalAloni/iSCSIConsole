@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text;
 using Utilities;
 using DiskAccessLibrary.VHD;
 
@@ -37,7 +36,7 @@ namespace DiskAccessLibrary
         {
             // We can't read the VHD footer using this.ReadSector() because it's out of the disk boundaries
             m_file = new RawDiskImage(virtualHardDiskPath, BytesPerDiskSector);
-            byte[] buffer = m_file.ReadSector(m_file.Size / m_file.BytesPerSector - 1);
+            byte[] buffer = m_file.ReadSector(m_file.Size / BytesPerDiskSector - 1);
             m_vhdFooter = new VHDFooter(buffer);
 
             if (!m_vhdFooter.IsValid)
@@ -59,8 +58,6 @@ namespace DiskAccessLibrary
                 buffer = m_file.ReadSectors(1, 2);
                 m_dynamicHeader = new DynamicDiskHeader(buffer);
                 m_blockAllocationTable = BlockAllocationTable.ReadBlockAllocationTable(virtualHardDiskPath, m_dynamicHeader);
-
-                this.IsReadOnly = true;
             }
             else
             {
@@ -101,58 +98,53 @@ namespace DiskAccessLibrary
             {
                 return m_file.ReadSectors(sectorIndex, sectorCount);
             }
-            else // dynamic
+            else // Dynamic VHD
             {
-                byte[] buffer = new byte[sectorCount * this.BytesPerSector];
-                int sectorOffset = 0;
-                while (sectorOffset < sectorCount)
-                {
-                    uint blockIndex = (uint)((sectorIndex + sectorOffset) * this.BytesPerSector / m_dynamicHeader.BlockSize);
-                    int sectorOffsetInBlock = (int)(((sectorIndex + sectorOffset) * this.BytesPerSector % m_dynamicHeader.BlockSize) / this.BytesPerSector);
-                    int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / this.BytesPerSector);
-                    int sectorsRemainingInBlock = sectorsInBlock - sectorOffsetInBlock;
-                    int sectorsToRead = Math.Min(sectorCount - sectorOffset, sectorsRemainingInBlock);
-
-                    if (m_blockAllocationTable.IsBlockInUse(blockIndex))
-                    {
-                        uint blockStartSector = m_blockAllocationTable.Entries[blockIndex];
-                        // each data block has a sector bitmap preceding the data, the bitmap is padded to a 512-byte sector boundary.
-                        int blockBitmapSectorCount = (int)Math.Ceiling((double)sectorsInBlock / (this.BytesPerSector * 8));
-                        // "All sectors within a block whose corresponding bits in the bitmap are zero must contain 512 bytes of zero on disk"
-                        byte[] temp = m_file.ReadSectors(blockStartSector + blockBitmapSectorCount + sectorOffsetInBlock, sectorsToRead);
-                        ByteWriter.WriteBytes(buffer, sectorOffset * this.BytesPerSector, temp);
-                    }
-                    sectorOffset += sectorsToRead;
-                }
-                return buffer;
+                return ReadSectorsFromDynamicDisk(sectorIndex, sectorCount);
             }
         }
 
         public override void WriteSectors(long sectorIndex, byte[] data)
         {
-            CheckBoundaries(sectorIndex, data.Length / this.BytesPerSector);
-            m_file.WriteSectors(sectorIndex, data);
+            CheckBoundaries(sectorIndex, data.Length / BytesPerDiskSector);
+            if (m_vhdFooter.DiskType == VirtualHardDiskType.Fixed)
+            {
+                m_file.WriteSectors(sectorIndex, data);
+            }
+            else // Dynamic VHD
+            {
+                WriteSectorsToDynamicDisk(sectorIndex, data);
+            }
         }
 
         public override void Extend(long numberOfAdditionalBytes)
         {
-            if (numberOfAdditionalBytes % this.BytesPerSector > 0)
+            if (numberOfAdditionalBytes % BytesPerDiskSector > 0)
             {
-                throw new ArgumentException("numberOfAdditionalBytes must be a multiple of BytesPerSector");
+                throw new ArgumentException("numberOfAdditionalBytes must be a multiple of sector size");
             }
 
             if (m_vhdFooter.DiskType == VirtualHardDiskType.Fixed)
             {
-                long length = this.Size; // does not include the footer
-                m_file.Extend(numberOfAdditionalBytes);
                 m_vhdFooter.CurrentSize += (ulong)numberOfAdditionalBytes;
-                byte[] footerBytes = m_vhdFooter.GetBytes();
-                m_file.WriteSectors((length + numberOfAdditionalBytes) / this.BytesPerSector, footerBytes);
+                ExtendFile(numberOfAdditionalBytes);
             }
             else
             {
                 throw new NotImplementedException();
             }
+        }
+
+        private void ExtendFile(long numberOfAdditionalBytes)
+        {
+            long footerOffset = m_file.Size - VHDFooter.Length;
+            m_file.Extend(numberOfAdditionalBytes);
+            byte[] footerBytes = m_vhdFooter.GetBytes();
+            if (m_vhdFooter.DiskType != VirtualHardDiskType.Fixed)
+            {
+                m_file.WriteSectors(0, footerBytes);
+            }
+            m_file.WriteSectors((footerOffset + numberOfAdditionalBytes) / BytesPerDiskSector, footerBytes);
         }
 
         public long Cylinders
@@ -251,19 +243,19 @@ namespace DiskAccessLibrary
             cylinders = (ushort)(cylindersTimesHeads / heads);
         }
 
-        /// <param name="size">In bytes</param>
+        /// <param name="diskSize">In bytes</param>
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public static VirtualHardDisk Create(string path, long size)
+        public static VirtualHardDisk Create(string path, long diskSize)
         {
             VHDFooter footer = new VHDFooter();
-            footer.OriginalSize = (ulong)size;
-            footer.CurrentSize = (ulong)size;
+            footer.OriginalSize = (ulong)diskSize;
+            footer.CurrentSize = (ulong)diskSize;
             footer.SetCurrentTimeStamp();
-            footer.SetDiskGeometry((ulong)size / BytesPerDiskSector);
+            footer.SetDiskGeometry((ulong)diskSize / BytesPerDiskSector);
 
-            RawDiskImage diskImage = RawDiskImage.Create(path, size + VHDFooter.Length, BytesPerDiskSector);
-            diskImage.WriteSectors(size / BytesPerDiskSector, footer.GetBytes());
+            RawDiskImage diskImage = RawDiskImage.Create(path, diskSize + VHDFooter.Length, BytesPerDiskSector);
+            diskImage.WriteSectors(diskSize / BytesPerDiskSector, footer.GetBytes());
 
             return new VirtualHardDisk(path);
         }

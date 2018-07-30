@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -43,6 +43,14 @@ namespace DiskAccessLibrary.VHD
             Cookie = DynamidDiskHeaderCookie;
             DataOffset = 0xFFFFFFFFFFFFFFFF;
             HeaderVersion = 0x00010000;
+            ParentLocatorEntry1 = new ParentLocatorEntry();
+            ParentLocatorEntry2 = new ParentLocatorEntry();
+            ParentLocatorEntry3 = new ParentLocatorEntry();
+            ParentLocatorEntry4 = new ParentLocatorEntry();
+            ParentLocatorEntry5 = new ParentLocatorEntry();
+            ParentLocatorEntry6 = new ParentLocatorEntry();
+            ParentLocatorEntry7 = new ParentLocatorEntry();
+            ParentLocatorEntry8 = new ParentLocatorEntry();
         }
 
         public DynamicDiskHeader(byte[] buffer)

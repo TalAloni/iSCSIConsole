@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -276,6 +275,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         }
 
         /// <summary>
+        /// This method should only be used for informational purposes.
+        /// </summary>
+        public KeyValuePairList<long, int> GetClustersInUse()
+        {
+            long clusterCount = HighestVCN - LowestVCN + 1;
+            KeyValuePairList<long, int> sequence = m_dataRunSequence.TranslateToLCN(0, (int)clusterCount);
+            return sequence;
+        }
+
+        /// <summary>
         /// When reading attributes, they may contain additional padding,
         /// so we should use StoredRecordLength to advance the buffer position instead.
         /// </summary>
@@ -304,7 +313,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                return m_dataRunSequence.DataClusterCount;
+                return HighestVCN - LowestVCN + 1;;
             }
         }
     }

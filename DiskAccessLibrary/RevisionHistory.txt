@@ -1,8 +1,8 @@
 Revision History:
 -----------------
 1.1.0 - LDM related bugfix.
-		NTFS related bugfix and code clean up.
-		
+        NTFS related bugfix and code clean up.
+
 1.1.1 - Minor enhancements.
 
 1.1.2 - Better handling of a corrupted LDM database.
@@ -10,37 +10,37 @@ Revision History:
 1.1.3 - Disabled file system caching for virtual disks.
 
 1.1.4 - Fixed GPT partition size detection bug.
-		Allow reading from disks that are opened for write access by other applications.
+        Allow reading from disks that are opened for write access by other applications.
 
 1.1.5 - Improved disk detection mechanism.
-		Added limited VMDK support (monolithic flat).
+        Added limited VMDK support (monolithic flat).
 
 1.1.6 - Use the SetFileValidData() Windows API call to extend virtual disks faster.
 
 1.1.7 - Fixed VMDK related bug (flat files that have a space in their filename).
-		Added support for reading a monolithic sparse VMDK.
+        Added support for reading a monolithic sparse VMDK.
 
 1.1.8 - Fixed NTFS related issues.
 
 1.1.9 - Disks are now orderered according to disk number.
-		Code clean up.
+        Code clean up.
 
 1.2.0 - NTFS related bugfixes.
-		Write operations on readonly disks are no longer silently ignored and now raising exceptions, added missing readonly check to VMDK files.
+        Write operations on readonly disks are no longer silently ignored and now raising exceptions, added missing readonly check to VMDK files.
 
 1.2.1 - Minor enhancements and fixes.
 
 1.2.2 - Minor NTFS changes.
 
 1.2.3 - Fixed: LDM extent record now properly support the 0x40 flag.
-		Added helper methods for taking a disk online/offline.
+        Added helper methods for taking a disk online/offline.
 
 1.2.4 - NTFS related fixes.
 
 1.2.5 - Added support for reading dynamic VHDs.
 
 1.2.6 - More meaningful exceptions types are now thrown on errors.
-		Dynamic VHD related bugfix.
+        Dynamic VHD related bugfix.
 
 1.2.7 - Minor improvements.
 
@@ -50,7 +50,7 @@ Revision History:
       - Bugfix: VHD was not extended to the correct size.
 
 1.2.9 - We now use the same caching policy for virtual disk read and write operations. (Workaround for hosts without KB981166).
-	  - Bugfix: GPT header checksum verification failed if the size of the partition entries was not a multiple of sector size.
+      - Bugfix: GPT header checksum verification failed if the size of the partition entries was not a multiple of sector size.
 
 1.3.0 - Fixed a bug related to the RESUME boot sector.
 
@@ -102,8 +102,17 @@ Revision History:
 
 1.4.6 - Win32Errors enum: Added ERROR_INVALID_DATA
         Bugfix: The second KLOG page was not read.
-		Minor changes and improvements.
+        Minor changes and improvements.
         Corrected documentation.
 
 1.4.7 - Bugfix: NTFS File Records that exceeded 511 bytes were corrupted during write.
         Minor improvements to NTFS Data Run record implementation.
+
+1.4.8 - NTFS: ClusterUsageBitmap: Cosmetic improvements.
+        NTFS: Throw InvalidDataException if FILE or INDX record signature is invalid.
+        NTFS: NonResidentAttributeRecord: Minor optimization.
+        NTFS: NonResidentAttributeRecord: Added GetClustersInUse() method.        
+        VHD: BlockAllocationTable: Improved implementation.
+        VHD: DynamicDiskHeader: Improved implementation.
+        VHD: Implemented dynamic VHD write functionality.
+        Minor changes and improvements.
