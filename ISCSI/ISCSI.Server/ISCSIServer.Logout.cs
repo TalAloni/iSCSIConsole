@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,8 +6,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Text;
 using Utilities;
 
 namespace ISCSI.Server
@@ -16,7 +14,7 @@ namespace ISCSI.Server
     {
         private ISCSIPDU GetLogoutResponsePDU(LogoutRequestPDU request, ConnectionParameters connection)
         {
-            Log(Severity.Verbose, "[{0}] Logour Request", connection.ConnectionIdentifier);
+            Log(Severity.Verbose, "[{0}] Logout Request", connection.ConnectionIdentifier);
             if (connection.Session.IsDiscovery && request.ReasonCode != LogoutReasonCode.CloseTheSession)
             {
                 // RFC 3720: Discovery-session: The target MUST ONLY accept [..] logout request with the reason "close the session"
