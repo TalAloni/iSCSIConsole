@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary
@@ -74,7 +73,7 @@ namespace DiskAccessLibrary
             // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
             // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
             // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
-            FileStream stream = new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, 0x1000, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
+            FileStream stream = new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, m_bytesPerSector, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
             return stream;
         }
 

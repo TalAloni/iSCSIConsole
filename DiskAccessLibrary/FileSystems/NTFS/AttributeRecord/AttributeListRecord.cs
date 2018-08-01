@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -36,12 +35,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 AttributeListEntry entry = new AttributeListEntry(data, position);
                 AttributeList.Add(entry);
                 position += entry.Length;
-                
-                if (entry.Length < AttributeListEntry.HeaderLength)
-                {
-                    string message = String.Format("Invalid attribute list entry, data length: {0}, position: {1}", data.Length, position);
-                    throw new InvalidDataException(message);
-                }
             }
         }
 

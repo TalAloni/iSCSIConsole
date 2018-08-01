@@ -17,12 +17,12 @@ namespace DiskAccessLibrary
         private byte[] ReadSectorsFromDynamicDisk(long sectorIndex, int sectorCount)
         {
             byte[] buffer = new byte[sectorCount * BytesPerDiskSector];
+            int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / BytesPerDiskSector);
             int sectorOffset = 0;
             while (sectorOffset < sectorCount)
             {
                 uint blockIndex = (uint)((sectorIndex + sectorOffset) * BytesPerDiskSector / m_dynamicHeader.BlockSize);
                 int sectorOffsetInBlock = (int)(((sectorIndex + sectorOffset) * BytesPerDiskSector % m_dynamicHeader.BlockSize) / BytesPerDiskSector);
-                int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / BytesPerDiskSector);
                 int sectorsRemainingInBlock = sectorsInBlock - sectorOffsetInBlock;
                 int sectorsToRead = Math.Min(sectorCount - sectorOffset, sectorsRemainingInBlock);
 
@@ -38,6 +38,38 @@ namespace DiskAccessLibrary
                 sectorOffset += sectorsToRead;
             }
             return buffer;
+        }
+
+        public bool AreSectorsInUse(long sectorIndex, int sectorCount)
+        {
+            if (m_vhdFooter.DiskType != VirtualHardDiskType.Fixed)
+            {
+                int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / BytesPerDiskSector);
+                int sectorOffset = 0;
+                while (sectorOffset < sectorCount)
+                {
+                    uint blockIndex = (uint)((sectorIndex + sectorOffset) * BytesPerDiskSector / m_dynamicHeader.BlockSize);
+                    int sectorOffsetInBlock = (int)(((sectorIndex + sectorOffset) * BytesPerDiskSector % m_dynamicHeader.BlockSize) / BytesPerDiskSector);
+                    int sectorsRemainingInBlock = sectorsInBlock - sectorOffsetInBlock;
+                    int sectorsToRead = Math.Min(sectorCount - sectorOffset, sectorsRemainingInBlock);
+
+                    uint blockStartSector;
+                    if (m_blockAllocationTable.IsBlockInUse(blockIndex, out blockStartSector))
+                    {
+                        byte[] bitmap = ReadBlockUsageBitmap(blockIndex);
+                        if (!AreSectorsInUse(bitmap, sectorOffsetInBlock, sectorsToRead))
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                    sectorOffset += sectorsToRead;
+                }
+            }
+            return true;
         }
 
         private byte[] ReadBlockUsageBitmap(uint blockIndex)
@@ -66,13 +98,13 @@ namespace DiskAccessLibrary
 
         private void WriteSectorsToDynamicDisk(long sectorIndex, byte[] data)
         {
-            int sectorOffset = 0;
             int sectorCount = data.Length / BytesPerDiskSector;
+            int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / BytesPerDiskSector);
+            int sectorOffset = 0;
             while (sectorOffset < sectorCount)
             {
                 uint blockIndex = (uint)((sectorIndex + sectorOffset) * BytesPerDiskSector / m_dynamicHeader.BlockSize);
                 int sectorOffsetInBlock = (int)(((sectorIndex + sectorOffset) * BytesPerDiskSector % m_dynamicHeader.BlockSize) / BytesPerDiskSector);
-                int sectorsInBlock = (int)(m_dynamicHeader.BlockSize / BytesPerDiskSector);
                 int sectorsRemainingInBlock = sectorsInBlock - sectorOffsetInBlock;
                 int sectorsToWrite = Math.Min(sectorCount - sectorOffset, sectorsRemainingInBlock);
 
@@ -143,6 +175,38 @@ namespace DiskAccessLibrary
             }
         }
 
+        private static bool AreSectorsInUse(byte[] bitmap, int sectorOffsetInBitmap, int sectorCount)
+        {
+            int leadingBits = (8 - (sectorOffsetInBitmap % 8)) % 8;
+            for (int sectorOffset = 0; sectorOffset < leadingBits; sectorOffset++)
+            {
+                if (!IsSectorInUse(bitmap, sectorOffsetInBitmap + sectorOffset))
+                {
+                    return false;
+                }
+            }
+
+            int byteCount = Math.Max(sectorCount - leadingBits, 0) / 8;
+            int byteOffsetInBitmap = (sectorOffsetInBitmap + leadingBits) / 8;
+            for (int byteOffset = 0; byteOffset < byteCount; byteOffset++)
+            {
+                if (bitmap[byteOffsetInBitmap + byteOffset] != 0xFF)
+                {
+                    return false;
+                }
+            }
+
+            for (int sectorOffset = leadingBits + byteCount * 8; sectorOffset < sectorCount; sectorOffset++)
+            {
+                if (!IsSectorInUse(bitmap, sectorOffsetInBitmap + sectorOffset))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool IsSectorInUse(byte[] bitmap, int sectorOffsetInBitmap)
         {
             int byteOffset = sectorOffsetInBitmap / 8;
@@ -178,13 +242,12 @@ namespace DiskAccessLibrary
         /// <exception cref="System.UnauthorizedAccessException"></exception>
         public static VirtualHardDisk CreateDynamicDisk(string path, long diskSize)
         {
-            const int BlockSizeInBytes = 4096 * BytesPerDiskSector;
-
-            if (diskSize % BlockSizeInBytes > 0)
+            if (diskSize % BytesPerDiskSector > 0)
             {
-                // All blocks within a given image must be the same size
-                throw new ArgumentException("Dynamic VHD disk size must be a multiple of 2MiB");
+                throw new ArgumentException("diskSize must be a multiple of sector size");
             }
+
+            const int BlockSizeInBytes = 4096 * BytesPerDiskSector;
 
             VHDFooter footer = new VHDFooter();
             footer.OriginalSize = (ulong)diskSize;

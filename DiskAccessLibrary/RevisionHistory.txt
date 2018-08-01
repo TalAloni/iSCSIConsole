@@ -116,3 +116,10 @@ Revision History:
         VHD: DynamicDiskHeader: Improved implementation.
         VHD: Implemented dynamic VHD write functionality.
         Minor changes and improvements.
+
+1.4.9 - NTFS: AttributeListEntry: throw InvalidDataException when length is invalid.
+        NTFS: NTFSVolume: Added GetFileRecordsInDirectoryFromMft() method for recovery purposes.
+        VHD: CreateDynamicDisk now accepts any multiple of sector size as disk size.
+        VHD: Create renamed to CreateFixedDisk, checks that disk size is a multiple of sector size.
+        VHD: Added AreSectorsInUse() method.
+        RawDiskImage: Circumvented FileStream buffering which resulted in reading more sectors than required.

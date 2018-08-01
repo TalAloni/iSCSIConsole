@@ -246,8 +246,13 @@ namespace DiskAccessLibrary
         /// <param name="diskSize">In bytes</param>
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public static VirtualHardDisk Create(string path, long diskSize)
+        public static VirtualHardDisk CreateFixedDisk(string path, long diskSize)
         {
+            if (diskSize % BytesPerDiskSector > 0)
+            {
+                throw new ArgumentException("diskSize must be a multiple of sector size");
+            }
+
             VHDFooter footer = new VHDFooter();
             footer.OriginalSize = (ulong)diskSize;
             footer.CurrentSize = (ulong)diskSize;

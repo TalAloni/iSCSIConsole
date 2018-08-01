@@ -41,7 +41,7 @@ namespace ISCSIConsole
                 DiskImage diskImage;
                 try
                 {
-                    diskImage = VirtualHardDisk.Create(path, size);
+                    diskImage = VirtualHardDisk.CreateFixedDisk(path, size);
                 }
                 catch (IOException ex)
                 {
