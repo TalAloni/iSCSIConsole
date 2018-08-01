@@ -141,3 +141,5 @@ Revision History:
         Minor logging and documentation improvements.
 
 1.4.9 - Corrected handling of unsolicited Data Out PDU when InitialR2T=No.
+
+1.5.0 - Corrected logging typo.

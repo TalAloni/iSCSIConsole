@@ -104,3 +104,6 @@ Revision History:
 1.4.8 - Updates to the ISCSI library.
 
 1.4.9 - Updates to the ISCSI library.
+
+1.5.0 - Writing to a Dynamic VHD is now supported.
+        Updates to the ISCSI library.

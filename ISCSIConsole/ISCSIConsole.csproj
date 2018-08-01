@@ -147,4 +147,8 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <PropertyGroup>
+    <PostBuildEvent>if $(ConfigurationName) == Release CD "$(ProjectDir)ILMerge\"
+if $(ConfigurationName) == Release "$(ProjectDir)ILMerge\ILMerge.bat"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
