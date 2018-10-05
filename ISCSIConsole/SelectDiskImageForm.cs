@@ -52,6 +52,8 @@ namespace ISCSIConsole
                 MessageBox.Show("Unsupported Disk Image Format", "Error");
                 return;
             }
+
+            diskImage.IsReadOnly = chkReadOnly.Checked;
             bool isLocked = false;
             try
             {
