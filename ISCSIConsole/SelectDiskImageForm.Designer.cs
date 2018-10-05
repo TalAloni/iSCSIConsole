@@ -34,7 +34,7 @@ namespace ISCSIConsole
             this.btnBrowse = new System.Windows.Forms.Button();
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.chkReadOnly = new System.Windows.Forms.CheckBox();
             this.openDiskImageDialog = new System.Windows.Forms.OpenFileDialog();
             this.SuspendLayout();
             // 
@@ -85,15 +85,15 @@ namespace ISCSIConsole
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             // 
-            // checkBox1
+            // chkReadOnly
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(12, 92);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(74, 17);
-            this.checkBox1.TabIndex = 8;
-            this.checkBox1.Text = "Read only";
-            this.checkBox1.UseVisualStyleBackColor = true;
+            this.chkReadOnly.AutoSize = true;
+            this.chkReadOnly.Location = new System.Drawing.Point(12, 92);
+            this.chkReadOnly.Name = "chkReadOnly";
+            this.chkReadOnly.Size = new System.Drawing.Size(74, 17);
+            this.chkReadOnly.TabIndex = 8;
+            this.chkReadOnly.Text = "Read only";
+            this.chkReadOnly.UseVisualStyleBackColor = true;
             // 
             // openDiskImageDialog
             // 
@@ -105,7 +105,7 @@ namespace ISCSIConsole
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.CancelButton = this.btnCancel;
             this.ClientSize = new System.Drawing.Size(394, 125);
-            this.Controls.Add(this.checkBox1);
+            this.Controls.Add(this.chkReadOnly);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.btnBrowse);
@@ -131,7 +131,7 @@ namespace ISCSIConsole
         private System.Windows.Forms.Button btnBrowse;
         private System.Windows.Forms.Button btnOK;
         private System.Windows.Forms.Button btnCancel;
-        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckBox chkReadOnly;
         private System.Windows.Forms.OpenFileDialog openDiskImageDialog;
     }
 }
