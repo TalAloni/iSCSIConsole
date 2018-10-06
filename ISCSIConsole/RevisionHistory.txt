@@ -107,3 +107,5 @@ Revision History:
 
 1.5.0 - Writing to a Dynamic VHD is now supported.
         Updates to the ISCSI library.
+
+1.5.1 - Bugfix: 'Read only' checkbox was ignored.
