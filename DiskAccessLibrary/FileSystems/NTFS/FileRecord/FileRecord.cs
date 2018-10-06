@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,17 +7,17 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    public class FileRecord // A collection of base record segment and zero or more file record segments making up this file record
+    /// <summary>
+    /// A collection of base record segment and zero or more file record segments making up this file record.
+    /// </summary>
+    public class FileRecord
     {
-        List<FileRecordSegment> m_segments;
+        private List<FileRecordSegment> m_segments;
         private List<AttributeRecord> m_attributes;
-
-        private DataRecord m_dataRecord;
 
         public FileRecord(FileRecordSegment segment)
         {
@@ -30,28 +30,32 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_segments = segments;
         }
 
-        public void UpdateSegments(int maximumSegmentLength, int bytesPerSector, ushort minorNTFSVersion)
+        /// <remarks>
+        /// https://blogs.technet.microsoft.com/askcore/2009/10/16/the-four-stages-of-ntfs-file-growth/
+        /// </remarks>
+        public void UpdateSegments(int bytesPerFileRecordSegment, ushort minorNTFSVersion)
         {
+            List<AttributeRecord> attributes = this.Attributes;
+
             foreach (FileRecordSegment segment in m_segments)
             {
                 segment.ImmediateAttributes.Clear();
             }
 
-            int segmentLength = FileRecordSegment.GetFirstAttributeOffset(maximumSegmentLength, minorNTFSVersion);
+            int segmentLength = FileRecordSegment.GetFirstAttributeOffset(bytesPerFileRecordSegment, minorNTFSVersion);
             segmentLength += FileRecordSegment.EndMarkerLength;
 
-            foreach (AttributeRecord attribute in this.Attributes)
+            foreach (AttributeRecord attribute in attributes)
             {
                 segmentLength += (int)attribute.RecordLength;
             }
 
-            if (segmentLength <= maximumSegmentLength)
+            if (segmentLength <= bytesPerFileRecordSegment)
             {
-                // a single record segment is needed
-                FileRecordSegment baseRecordSegment = m_segments[0];
-                foreach (AttributeRecord attribute in this.Attributes)
+                // A single record segment is needed
+                foreach (AttributeRecord attribute in attributes)
                 {
-                    baseRecordSegment.ImmediateAttributes.Add(attribute);
+                    m_segments[0].ImmediateAttributes.Add(attribute);
                 }
 
                 // free the rest of the segments, if there are any
@@ -62,15 +66,97 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
             else
             {
-                // we have to check if we can make some data streams non-resident,
-                // otherwise we have to use child segments and create an attribute list
-                throw new NotImplementedException();
+                // We slice the attributes and put them in segments, the attribute list will be built by the caller after the new segments will be allocated
+                FileRecordHelper.SliceAttributes(m_segments, attributes, bytesPerFileRecordSegment, minorNTFSVersion);
             }
         }
 
-        public List<AttributeRecord> GetAssembledAttributes()
+        private List<AttributeRecord> GetAttributes()
         {
-            return GetAssembledAttributes(m_segments);
+            if (m_segments.Count > 1)
+            {
+                return FileRecordHelper.GetAssembledAttributes(m_segments);
+            }
+            else
+            {
+                return new List<AttributeRecord>(m_segments[0].ImmediateAttributes);
+            }
+        }
+
+        public AttributeRecord CreateAttributeRecord(AttributeType type, string name)
+        {
+            AttributeRecord attribute = AttributeRecord.Create(type, name, m_segments[0].NextAttributeInstance);
+            m_segments[0].NextAttributeInstance++;
+            FileRecordHelper.InsertSorted(this.Attributes, attribute);
+            return attribute;
+        }
+
+        public AttributeRecord GetAttributeRecord(AttributeType type, string name)
+        {
+            foreach (AttributeRecord attribute in this.Attributes)
+            {
+                if (attribute.AttributeType == type && attribute.Name == name)
+                {
+                    return attribute;
+                }
+            }
+
+            return null;
+        }
+
+        public void RemoveAttributeRecord(AttributeType attributeType, string name)
+        {
+            for (int index = 0; index < Attributes.Count; index++)
+            {
+                if (Attributes[index].AttributeType == attributeType && Attributes[index].Name == name)
+                {
+                    Attributes.RemoveAt(index);
+                    break;
+                }
+            }
+        }
+
+        public void RemoveAttributeRecords(AttributeType attributeType, string name)
+        {
+            for (int index = 0; index < Attributes.Count; index++)
+            {
+                if (Attributes[index].AttributeType == attributeType && Attributes[index].Name == name)
+                {
+                    Attributes.RemoveAt(index);
+                    index--;
+                }
+            }
+        }
+
+        private List<FileNameRecord> GetFileNameRecords()
+        {
+            List<FileNameRecord> result = new List<FileNameRecord>();
+            foreach (AttributeRecord attribute in this.Attributes)
+            {
+                if (attribute is FileNameAttributeRecord)
+                {
+                    FileNameRecord fileNameRecord = ((FileNameAttributeRecord)attribute).Record;
+                    result.Add(fileNameRecord);
+                }
+            }
+            return result;
+        }
+
+        /// <param name="fileNameNamespace">POSIX or Win32 or DOS, multiple flags are not supported</param>
+        private FileNameRecord GetFileNameRecord(FileNameFlags fileNameNamespace)
+        {
+            foreach (AttributeRecord attribute in this.Attributes)
+            {
+                if (attribute is FileNameAttributeRecord)
+                {
+                    FileNameRecord fileNameRecord = ((FileNameAttributeRecord)attribute).Record;
+                    if (fileNameRecord.IsInNamespace(fileNameNamespace))
+                    {
+                        return fileNameRecord;
+                    }
+                }
+            }
+            return null;
         }
 
         public List<FileRecordSegment> Segments
@@ -81,13 +167,45 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
+        public FileRecordSegment BaseSegment
+        {
+            get
+            {
+                return m_segments[0];
+            }
+        }
+
+        public long BaseSegmentNumber
+        {
+            get
+            {
+                return m_segments[0].SegmentNumber;
+            }
+        }
+
+        public ushort BaseSequenceNumber
+        {
+            get
+            {
+                return m_segments[0].SequenceNumber;
+            }
+        }
+
+        public MftSegmentReference BaseSegmentReference
+        {
+            get
+            {
+                return new MftSegmentReference(BaseSegmentNumber, BaseSequenceNumber);
+            }
+        }
+
         public List<AttributeRecord> Attributes
         {
             get
             {
                 if (m_attributes == null)
                 {
-                    m_attributes = GetAssembledAttributes();
+                    m_attributes = GetAttributes();
                 }
                 return m_attributes;
             }
@@ -108,46 +226,26 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public FileNameRecord GetFileNameRecord(FilenameNamespace filenameNamespace)
-        {
-            foreach (AttributeRecord attribute in this.Attributes)
-            {
-                if (attribute is FileNameAttributeRecord)
-                {
-                    FileNameRecord fileNameAttribute = ((FileNameAttributeRecord)attribute).Record;
-                    if (fileNameAttribute.Namespace == filenameNamespace)
-                    {
-                        return fileNameAttribute;
-                    }
-                }
-            }
-            return null;
-        }
-
         public FileNameRecord LongFileNameRecord
         {
             get
             {
-                FileNameRecord record = GetFileNameRecord(FilenameNamespace.Win32);
+                FileNameRecord record = GetFileNameRecord(FileNameFlags.Win32);
                 if (record == null)
                 {
-                    record = GetFileNameRecord(FilenameNamespace.POSIX);
+                    record = GetFileNameRecord(FileNameFlags.POSIX);
                 }
                 return record;
             }
         }
 
-        // 8.3 filename
-        public FileNameRecord ShortFileNameRecord
+        /// <summary>Returns FileNameRecord containing 8.3 filename</summary>
+        public FileNameRecord DosFileNameRecord
         {
             get
             {
-                FileNameRecord record = GetFileNameRecord(FilenameNamespace.DOS);
-                if (record == null)
-                {
-                    // Win32AndDOS means that both the Win32 and the DOS filenames are identical and hence have been saved in this single filename record.
-                    record = GetFileNameRecord(FilenameNamespace.Win32AndDOS);
-                }
+                // FileNameFlags.Win32 | FileNameFlags.DOS means that both the Win32 and the DOS filenames are identical and hence have been saved in this single filename record.
+                FileNameRecord record = GetFileNameRecord(FileNameFlags.DOS);
                 return record;
             }
         }
@@ -159,10 +257,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 FileNameRecord fileNameRecord = this.LongFileNameRecord;
                 if (fileNameRecord == null)
                 {
-                    fileNameRecord = this.ShortFileNameRecord;
+                    fileNameRecord = this.DosFileNameRecord;
                 }
 
                 return fileNameRecord;
+            }
+        }
+
+        public List<FileNameRecord> FileNameRecords
+        {
+            get
+            {
+                return GetFileNameRecords();
             }
         }
 
@@ -185,63 +291,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public long ParentDirMftSegmentNumber
+        public MftSegmentReference ParentDirectoryReference
         {
             get
             {
-                FileNameRecord fileNameRecord = this.LongFileNameRecord;
-                if (fileNameRecord == null)
-                {
-                    fileNameRecord = this.ShortFileNameRecord;
-                }
-
+                FileNameRecord fileNameRecord = this.FileNameRecord;
                 if (fileNameRecord != null)
                 {
-                    return fileNameRecord.ParentDirectory.SegmentNumber;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-
-        public AttributeRecord GetAttributeRecord(AttributeType type, string name)
-        {
-            foreach (AttributeRecord attribute in this.Attributes)
-            {
-                if (attribute.AttributeType == type && attribute.Name == name)
-                {
-                    return attribute;
-                }
-            }
-
-            return null;
-        }
-
-        public DataRecord DataRecord
-        {
-            get
-            {
-                if (m_dataRecord == null)
-                {
-                    AttributeRecord record = GetAttributeRecord(AttributeType.Data, String.Empty);
-                    if (record != null)
-                    {
-                        m_dataRecord = new DataRecord(record);
-                    }
-                }
-                return m_dataRecord;
-            }
-        }
-
-        public NonResidentAttributeRecord NonResidentDataRecord
-        {
-            get
-            {
-                if (this.DataRecord.Record is NonResidentAttributeRecord)
-                {
-                    return (NonResidentAttributeRecord)m_dataRecord.Record;
+                    return fileNameRecord.ParentDirectory;
                 }
                 else
                 {
@@ -250,25 +307,35 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        /// <summary>
-        /// Segment number of base record
-        /// </summary>
-        public long MftSegmentNumber
+        public AttributeRecord DataRecord
         {
             get
             {
-                return m_segments[0].MftSegmentNumber;
+                return GetAttributeRecord(AttributeType.Data, String.Empty);
             }
         }
 
-        /// <summary>
-        /// Sequence number of base record
-        /// </summary>
-        public long SequenceNumber
+        public NonResidentAttributeRecord NonResidentDataRecord
         {
             get
             {
-                return m_segments[0].SequenceNumber;
+                AttributeRecord dataRecord = this.DataRecord;
+                if (dataRecord is NonResidentAttributeRecord)
+                {
+                    return (NonResidentAttributeRecord)dataRecord;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        public AttributeRecord BitmapRecord
+        {
+            get
+            {
+                return GetAttributeRecord(AttributeType.Bitmap, String.Empty);
             }
         }
 
@@ -288,14 +355,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int StoredAttributesLength
+        public int AttributesLengthOnDisk
         {
             get
             {
                 int length = 0;
                 foreach (AttributeRecord attribute in this.Attributes)
                 {
-                    length += (int)attribute.StoredRecordLength;
+                    length += (int)attribute.RecordLengthOnDisk;
                 }
                 return length;
             }
@@ -305,94 +372,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                return (this.MftSegmentNumber <= MasterFileTable.LastReservedMftSegmentNumber);
+                return (this.BaseSegmentNumber < MasterFileTable.FirstUserSegmentNumber);
             }
-        }
-
-        public static List<AttributeRecord> GetAssembledAttributes(List<FileRecordSegment> segments)
-        {
-            List<AttributeRecord> result = new List<AttributeRecord>();
-            // we need to assemble fragmented attributes (if there are any)
-            // if two attributes have the same AttributeType and Name, then we need to assemble them back together.
-            // Note: only non-resident attributes can be fragmented
-            // Reference: http://technet.microsoft.com/en-us/library/cc976808.aspx
-            Dictionary<KeyValuePair<AttributeType, string>, List<NonResidentAttributeRecord>> fragments = new Dictionary<KeyValuePair<AttributeType, string>, List<NonResidentAttributeRecord>>();
-            foreach (FileRecordSegment segment in segments)
-            {
-                foreach (AttributeRecord attribute in segment.ImmediateAttributes)
-                {
-                    if (attribute is ResidentAttributeRecord)
-                    {
-                        result.Add(attribute);
-                    }
-                    else
-                    {
-                        KeyValuePair<AttributeType, string> key = new KeyValuePair<AttributeType, string>(attribute.AttributeType, attribute.Name);
-                        if (fragments.ContainsKey(key))
-                        {
-                            fragments[key].Add((NonResidentAttributeRecord)attribute);
-                        }
-                        else
-                        {
-                            List<NonResidentAttributeRecord> attributeFragments = new List<NonResidentAttributeRecord>();
-                            attributeFragments.Add((NonResidentAttributeRecord)attribute);
-                            fragments.Add(key, attributeFragments);
-                        }
-                    }
-                }
-            }
-
-            // assemble all non-resident attributes
-            foreach (List<NonResidentAttributeRecord> attributeFragments in fragments.Values)
-            {
-                // we assume attribute fragments are written to disk sorted by LowestVCN
-                NonResidentAttributeRecord baseAttribute = attributeFragments[0];
-                if (baseAttribute.LowestVCN != 0)
-                {
-                    string message = String.Format("Attribute fragments must be sorted, MftSegmentNumber: {0}, attribute type: {1}",
-                                                   segments[0].MftSegmentNumber, baseAttribute.AttributeType);
-                    throw new InvalidDataException(message);
-                }
-
-                if (baseAttribute.DataRunSequence.DataClusterCount != baseAttribute.HighestVCN + 1)
-                {
-                    string message = String.Format("Cannot properly assemble data run sequence 0, expected length: {0}, sequence length: {1}",
-                                                   baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
-                    throw new InvalidDataException(message);
-                }
-
-                for (int index = 1; index < attributeFragments.Count; index++)
-                {
-                    NonResidentAttributeRecord attributeFragment = attributeFragments[index];
-                    if (attributeFragment.LowestVCN == baseAttribute.HighestVCN + 1)
-                    {
-                        // The DataRunSequence of each additional file record segment starts at absolute LCN,
-                        // so we need to convert it to relative offset before adding it to the base DataRunSequence
-                        long absoluteOffset = attributeFragment.DataRunSequence[0].RunOffset;
-                        long previousLCN = baseAttribute.DataRunSequence.LastDataRunStartLCN;
-                        long relativeOffset = absoluteOffset - previousLCN;
-                        attributeFragment.DataRunSequence[0].RunOffset = relativeOffset;
-
-                        baseAttribute.DataRunSequence.AddRange(attributeFragment.DataRunSequence);
-                        baseAttribute.HighestVCN = attributeFragment.HighestVCN;
-
-                        if (baseAttribute.DataRunSequence.DataClusterCount != baseAttribute.HighestVCN + 1)
-                        {
-                            string message = String.Format("Cannot properly assemble data run sequence, expected length: {0}, sequence length: {1}",
-                                                           baseAttribute.HighestVCN + 1, baseAttribute.DataRunSequence.DataClusterCount);
-                            throw new InvalidDataException(message);
-                        }
-                    }
-                    else
-                    {
-                        throw new InvalidDataException("Invalid attribute fragments order");
-                    }
-                }
-
-                result.Add(baseAttribute);
-            }
-
-            return result;
         }
     }
 }

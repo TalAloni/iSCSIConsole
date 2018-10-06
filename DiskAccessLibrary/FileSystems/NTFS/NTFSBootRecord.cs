@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -40,7 +40,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ulong MftStartLCN;
         public ulong MftMirrorStartLCN;
         public sbyte RawClustersPerFileRecordSegment; // signed
-        public sbyte RawClustersPerIndexBlock;    // signed
+        public sbyte RawClustersPerIndexRecord; // signed
         public ulong VolumeSerialNumber;
         public uint Checksum;
 
@@ -67,7 +67,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             MftStartLCN = LittleEndianConverter.ToUInt64(buffer, 0x30);
             MftMirrorStartLCN = LittleEndianConverter.ToUInt64(buffer, 0x38);
             RawClustersPerFileRecordSegment = (sbyte)buffer[0x40];
-            RawClustersPerIndexBlock = (sbyte)buffer[0x44];
+            RawClustersPerIndexRecord = (sbyte)buffer[0x44];
             VolumeSerialNumber = LittleEndianConverter.ToUInt64(buffer, 0x48);
             Checksum = LittleEndianConverter.ToUInt32(buffer, 0x50);
 
@@ -93,7 +93,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt64(buffer, 0x30, MftStartLCN);
             LittleEndianWriter.WriteUInt64(buffer, 0x38, MftMirrorStartLCN);
             buffer[0x40] = (byte)RawClustersPerFileRecordSegment;
-            buffer[0x44] = (byte)RawClustersPerIndexBlock;
+            buffer[0x44] = (byte)RawClustersPerIndexRecord;
             LittleEndianWriter.WriteUInt64(buffer, 0x48, VolumeSerialNumber);
             LittleEndianWriter.WriteUInt32(buffer, 0x50, Checksum);
 
@@ -110,11 +110,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int FileRecordSegmentLength // Size in bytes
+        public int BytesPerFileRecordSegment
         {
             get
             {
                 return CalcRecordSize(RawClustersPerFileRecordSegment);
+            }
+        }
+
+        public int BytesPerIndexRecord
+        {
+            get
+            {
+                return CalcRecordSize(RawClustersPerIndexRecord);
             }
         }
 
@@ -133,7 +141,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                return this.FileRecordSegmentLength / BytesPerSector;
+                return this.BytesPerFileRecordSegment / BytesPerSector;
             }
         }
 

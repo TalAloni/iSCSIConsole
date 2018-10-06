@@ -167,9 +167,16 @@ namespace DiskAccessLibrary
                     // means there is an issue with the media. Interpret this error as a success.
                     return true;
                 }
+                else if (errorCode == (int)Win32Error.ERROR_INVALID_FUNCTION)
+                {
+                    // This error is usually received when IOCTL code is not be supported for the current device (e.g. driver returns ERROR_INVALID_FUNCTION).
+                    // Interpret this error as a success.
+                    // Observed when using Dataram RAMDisk v4.4.0 RC36
+                    return true;
+                }
                 else
                 {
-                    string message = String.Format("Media is not accessible, Win32 Error: {0}", errorCode);
+                    string message = String.Format("Failed to determine if media is accessible, Win32 Error: {0}", errorCode);
                     throw new IOException(message);
                 }
             }
@@ -395,6 +402,12 @@ namespace DiskAccessLibrary
             storageDescriptorHeader = (STORAGE_DESCRIPTOR_HEADER)Marshal.PtrToStructure(lpOutBuffer, typeof(STORAGE_DESCRIPTOR_HEADER));
             Marshal.FreeHGlobal(lpOutBuffer);
 
+            if ((int)storageDescriptorHeader.Size < Marshal.SizeOf(typeof(STORAGE_DEVICE_DESCRIPTOR)))
+            {
+                // Observed when using Dataram RAMDisk v4.4.0 RC36
+                throw new InvalidDataException("Invalid STORAGE_DEVICE_DESCRIPTOR length");
+            }
+
             lpOutBuffer = Marshal.AllocHGlobal((int)storageDescriptorHeader.Size);
 
             success = DeviceIoControl(hDevice, IOCTL_STORAGE_QUERY_PROPERTY, lpInBuffer, (uint)Marshal.SizeOf(storagePropertyQuery),
@@ -408,7 +421,7 @@ namespace DiskAccessLibrary
             int rawDevicePropertiesOffset = Marshal.SizeOf(deviceDescriptor);
             int rawDevicePropertiesLength = (int)storageDescriptorHeader.Size - rawDevicePropertiesOffset;
             deviceDescriptor.RawDeviceProperties = new byte[rawDevicePropertiesLength];
-            Marshal.Copy(new IntPtr(lpOutBuffer.ToInt64() + rawDevicePropertiesOffset), deviceDescriptor.RawDeviceProperties, 0, rawDevicePropertiesLength); 
+            Marshal.Copy(new IntPtr(lpOutBuffer.ToInt64() + rawDevicePropertiesOffset), deviceDescriptor.RawDeviceProperties, 0, rawDevicePropertiesLength);
             Marshal.FreeHGlobal(lpOutBuffer);
             Marshal.FreeHGlobal(lpInBuffer);
 

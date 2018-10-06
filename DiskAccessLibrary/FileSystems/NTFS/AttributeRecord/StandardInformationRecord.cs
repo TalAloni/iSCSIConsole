@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,47 +6,34 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    [Flags]
-    public enum FileAttributes : uint
-    {
-        Readonly = 0x0001,
-        Hidden = 0x0002,
-        System = 0x0004,
-        Archive = 0x0020,
-        Device = 0x0040,
-        Normal = 0x0080,
-        Temporary = 0x0100,
-        SparseFile = 0x0200,
-        ReparsePoint = 0x0400,
-        Compressed = 0x0800,
-        Offline = 0x1000,
-        NotContentIndexed = 0x2000,
-        Encrypted = 0x4000,
-    }
-
-    // StandardInformation attribute is always resident
+    /// <remarks>
+    /// StandardInformation attribute is always resident.
+    /// </remarks>
     public class StandardInformationRecord : ResidentAttributeRecord
     {
-        public const int Length = 0x30;
-        public const int LengthExtended = 0x48; // Note: even on NTFS 3.x, a few metafiles will use shorter length records.
+        public const int RecordDataLengthNTFS12 = 0x30;
+        public const int RecordDataLengthNTFS30 = 0x48; // Note: even on NTFS 3.x, a few metafiles will use shorter length records.
 
-        public DateTime CreationTime;
-        public DateTime ModificationTime;
-        public DateTime MftModificationTime;
-        public DateTime LastAccessTime;
+        public DateTime CreationTime;        // File creation time
+        public DateTime ModificationTime;    // Last time the DATA attribute was modified
+        public DateTime MftModificationTime; // Last time any attribute was modified.
+        public DateTime LastAccessTime;      // Last time the file was accessed.
         public FileAttributes FileAttributes;
         public uint MaximumVersionNumber;
         public uint VersionNumber;
-        public uint ClassID;
-        public uint OwnerID; // NTFS 3.0+
-        public uint SecurityID; // NTFS 3.0+
-        public ulong QuotaCharged; // NTFS 3.0+
-        public ulong UpdateSequenceNumber; // a.k.a. USN, NTFS 3.0+
+        public uint ClassID; // NTFS v3.0+
+        public uint OwnerID; // NTFS v3.0+
+        public uint SecurityID; // NTFS v3.0+
+        public ulong QuotaCharged; // NTFS v3.0+
+        public ulong UpdateSequenceNumber; // a.k.a. USN, NTFS v3.0+
+
+        public StandardInformationRecord(string name, ushort instance) : base(AttributeType.StandardInformation, name, instance)
+        {
+        }
 
         public StandardInformationRecord(byte[] buffer, int offset) : base(buffer, offset)
         {
@@ -57,9 +44,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             FileAttributes = (FileAttributes)LittleEndianConverter.ToUInt32(this.Data, 0x20);
             MaximumVersionNumber = LittleEndianConverter.ToUInt32(this.Data, 0x24);
             VersionNumber = LittleEndianConverter.ToUInt32(this.Data, 0x28);
-            ClassID = LittleEndianConverter.ToUInt32(this.Data, 0x2C);
-            if (this.Data.Length == LengthExtended)
+            if (this.Data.Length == RecordDataLengthNTFS30)
             {
+                ClassID = LittleEndianConverter.ToUInt32(this.Data, 0x2C);
                 OwnerID = LittleEndianConverter.ToUInt32(this.Data, 0x30);
                 SecurityID = LittleEndianConverter.ToUInt32(this.Data, 0x34);
                 QuotaCharged = LittleEndianConverter.ToUInt64(this.Data, 0x38);
@@ -67,9 +54,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public override byte[] GetBytes(int bytesPerCluster)
+        public override byte[] GetBytes()
         {
-            this.Data = new byte[LengthExtended];
+            this.Data = new byte[this.DataLength];
             WriteDateTime(this.Data, 0x00, CreationTime);
             WriteDateTime(this.Data, 0x08, ModificationTime);
             WriteDateTime(this.Data, 0x10, MftModificationTime);
@@ -83,7 +70,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt64(this.Data, 0x38, QuotaCharged);
             LittleEndianWriter.WriteUInt64(this.Data, 0x40, UpdateSequenceNumber);
 
-            return base.GetBytes(bytesPerCluster);
+            return base.GetBytes();
+        }
+
+        public override ulong DataLength
+        {
+            get
+            {
+                return RecordDataLengthNTFS30;
+            }
         }
 
         public static DateTime ReadDateTime(byte[] buffer, int offset)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -45,20 +44,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public override void SetLength(long value)
         {
-            if (value > (long)m_file.Length)
-            {
-                ulong additionalLength = (ulong)value - m_file.Length;
-                m_file.ExtendFile(additionalLength);
-            }
-            else if (value < (long)m_file.Length)
-            {
-                throw new NotImplementedException();
-            }
+            m_file.SetLength((ulong)value);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            byte[] data = m_file.ReadFromFile((ulong)m_position, count);
+            byte[] data = m_file.ReadData((ulong)m_position, count);
             Array.Copy(data, 0, buffer, offset, data.Length);
             m_position += data.Length;
             return data.Length;
@@ -68,7 +59,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             byte[] data = new byte[count];
             Array.Copy(buffer, offset, data, 0, count);
-            m_file.WriteToFile((ulong)m_position, data);
+            m_file.WriteData((ulong)m_position, data);
             m_position += count;
         }
 

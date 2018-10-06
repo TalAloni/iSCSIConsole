@@ -38,6 +38,11 @@ namespace DiskAccessLibrary
                 {
                     continue;
                 }
+                catch (InvalidDataException)
+                {
+                    // e.g. When using Dataram RAMDisk v4.4.0 RC36
+                    continue;
+                }
                 result.Add(disk);
             }
 

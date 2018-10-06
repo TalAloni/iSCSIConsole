@@ -172,11 +172,12 @@ namespace DiskAccessLibrary
 
         /// <summary>
         /// returns a handle to a device information set that contains requested device information elements.
-        /// 
+        /// </summary>
+        /// <remarks>
         /// The caller must delete the returned device information set when it is no longer needed
         /// by calling DestroyDeviceInfoList().
-        /// </summary>
-        // http://msdn.microsoft.com/en-us/library/windows/hardware/ff551069%28v=vs.85%29.aspx
+        /// https://docs.microsoft.com/en-us/windows/desktop/api/setupapi/nf-setupapi-setupdigetclassdevsw
+        /// </remarks>
         public static IntPtr GetClassDevices(Guid classGuid)
         {
             uint flags = (uint)(DiGetClassFlags.DIGCF_PRESENT | DiGetClassFlags.DIGCF_DEVICEINTERFACE); // Only Devices present & Interface class
@@ -204,11 +205,13 @@ namespace DiskAccessLibrary
             }
         }
 
-        // http://msdn.microsoft.com/en-us/library/windows/hardware/ff551120%28v=vs.85%29.aspx
+        /// <remarks>
+        /// https://docs.microsoft.com/en-us/windows/desktop/api/setupapi/nf-setupapi-setupdigetdeviceinterfacedetaila
+        /// </remarks>
         public static SP_DEVICE_INTERFACE_DETAIL_DATA GetDeviceInterfaceDetail(IntPtr deviceInfoSet, SP_DEVICE_INTERFACE_DATA deviceInterfaceData)
         {
             // For ERROR_INVALID_USER_BUFFER error see:
-            // http://msdn.microsoft.com/en-us/library/windows/hardware/ff552343%28v=vs.85%29.aspx
+            // https://docs.microsoft.com/en-us/windows/desktop/api/setupapi/ns-setupapi-_sp_device_interface_detail_data_a
             // http://stackoverflow.com/questions/10728644/properly-declare-sp-device-interface-detail-data-for-pinvoke
             uint requiredSize;
             SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData = new SP_DEVICE_INTERFACE_DETAIL_DATA();

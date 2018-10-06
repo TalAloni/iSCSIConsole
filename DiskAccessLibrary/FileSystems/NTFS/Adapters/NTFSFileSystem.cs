@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using DiskAccessLibrary;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -17,7 +16,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// </summary>
     public class NTFSFileSystem : FileSystem, IExtendableFileSystem
     {
-        NTFSVolume m_volume;
+        private NTFSVolume m_volume;
 
         public NTFSFileSystem(Volume volume)
         {
@@ -44,22 +43,74 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public override FileSystemEntry CreateFile(string path)
         {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            string parentDirectoryName = Path.GetDirectoryName(path);
+            string fileName = Path.GetFileName(path);
+            FileRecord parentDirectoryRecord = m_volume.GetFileRecord(parentDirectoryName);
+            if (parentDirectoryRecord != null)
+            {
+                FileRecord fileRecord = m_volume.CreateFile(parentDirectoryRecord.BaseSegmentReference, fileName, false);
+                return ToFileSystemEntry(path, fileRecord);
+            }
+            else
+            {
+                throw new DirectoryNotFoundException();
+            }
         }
 
         public override FileSystemEntry CreateDirectory(string path)
         {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            string parentDirectoryName = Path.GetDirectoryName(path);
+            string directoryName = Path.GetFileName(path);
+            FileRecord parentDirectoryRecord = m_volume.GetFileRecord(parentDirectoryName);
+            if (parentDirectoryRecord != null)
+            {
+                FileRecord directoryRecord = m_volume.CreateFile(parentDirectoryRecord.BaseSegmentReference, directoryName, true);
+                return ToFileSystemEntry(path, directoryRecord);
+            }
+            else
+            {
+                throw new DirectoryNotFoundException();
+            }
         }
 
         public override void Move(string source, string destination)
         {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            FileRecord sourceFileRecord = m_volume.GetFileRecord(source);
+            if (sourceFileRecord == null)
+            {
+                throw new FileNotFoundException();
+            }
+
+            string destinationDirectory = Path.GetDirectoryName(destination);
+            string destinationFileName = Path.GetFileName(destination);
+            FileRecord destinationDirectoryFileRecord = m_volume.GetFileRecord(destinationDirectory);
+            if (destinationDirectoryFileRecord == null)
+            {
+                throw new DirectoryNotFoundException();
+            }
+
+            m_volume.MoveFile(sourceFileRecord, destinationDirectoryFileRecord.BaseSegmentReference, destinationFileName);
         }
 
         public override void Delete(string path)
         {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            FileRecord fileRecord = m_volume.GetFileRecord(path);
+            if (fileRecord != null)
+            {
+                if (fileRecord.IsDirectory)
+                {
+                    IndexData directoryIndex = new IndexData(m_volume, fileRecord, AttributeType.FileName);
+                    if (!directoryIndex.IsEmpty)
+                    {
+                        throw new DirectoryNotEmptyException();
+                    }
+                }
+                m_volume.DeleteFile(fileRecord);
+            }
+            else
+            {
+                throw new FileNotFoundException();
+            }
         }
 
         public override List<FileSystemEntry> ListEntriesInDirectory(string path)
@@ -67,12 +118,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             FileRecord directoryRecord = m_volume.GetFileRecord(path);
             if (directoryRecord != null && directoryRecord.IsDirectory)
             {
-                List<FileRecord> records = m_volume.GetFileRecordsInDirectory(directoryRecord.MftSegmentNumber);
+                KeyValuePairList<MftSegmentReference, FileNameRecord> records = m_volume.GetFileNameRecordsInDirectory(directoryRecord.BaseSegmentReference);
                 List<FileSystemEntry> result = new List<FileSystemEntry>();
 
                 path = FileSystem.GetDirectoryPath(path);
 
-                foreach (FileRecord record in records)
+                foreach (FileNameRecord record in records.Values)
                 {
                     string fullPath = path + record.FileName;
                     FileSystemEntry entry = ToFileSystemEntry(fullPath, record);
@@ -88,73 +139,136 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public override Stream OpenFile(string path, FileMode mode, FileAccess access, FileShare share, FileOptions options)
         {
-            if (mode == FileMode.Open || mode == FileMode.Truncate)
+            FileRecord record;
+            if (mode == FileMode.CreateNew)
             {
-                FileRecord record = m_volume.GetFileRecord(path);
-                if (record != null && !record.IsDirectory)
+                record = m_volume.GetFileRecord(path);
+                if (record != null)
                 {
-                    NTFSFile file = new NTFSFile(m_volume, record);
-                    NTFSFileStream stream = new NTFSFileStream(file);
-
-                    if (mode == FileMode.Truncate)
-                    {
-                        stream.SetLength(0);
-                    }
-                    return stream;
+                    throw new AlreadyExistsException();
                 }
-                else
+            }
+
+            if (mode == FileMode.CreateNew || mode == FileMode.Create || mode == FileMode.OpenOrCreate)
+            {
+                record = m_volume.GetFileRecord(path);
+                if (record == null)
+                {
+                    string directoryPath = Path.GetDirectoryName(path);
+                    string fileName = Path.GetFileName(path);
+                    FileRecord directoryRecord = m_volume.GetFileRecord(directoryPath);
+                    if (directoryRecord == null)
+                    {
+                        throw new DirectoryNotFoundException();
+                    }
+                    record = m_volume.CreateFile(directoryRecord.BaseSegmentReference, fileName, false);
+                }
+                else if (mode == FileMode.Create)
+                {
+                    mode = FileMode.Truncate;
+                }
+            }
+            else // Open, Truncate or Append
+            {
+                record = m_volume.GetFileRecord(path);
+                if (record == null)
                 {
                     throw new FileNotFoundException();
                 }
             }
-            throw new NotImplementedException("The method or operation is not implemented.");
+
+            if (record.IsDirectory)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            NTFSFile file = new NTFSFile(m_volume, record);
+            NTFSFileStream stream = new NTFSFileStream(file);
+
+            if (mode == FileMode.Truncate)
+            {
+                stream.SetLength(0);
+            }
+            else if (mode == FileMode.Append)
+            {
+                stream.Seek((long)file.Length, SeekOrigin.Begin);
+            }
+            return stream;
         }
 
         public override void SetAttributes(string path, bool? isHidden, bool? isReadonly, bool? isArchived)
         {
             FileRecord record = m_volume.GetFileRecord(path);
-            if (isHidden.HasValue)
+            if (record != null)
             {
-                if (isHidden.Value)
+                if (isHidden.HasValue)
                 {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Hidden;
+                    if (isHidden.Value)
+                    {
+                        record.StandardInformation.FileAttributes |= FileAttributes.Hidden;
+                    }
+                    else
+                    {
+                        record.StandardInformation.FileAttributes &= ~FileAttributes.Hidden;
+                    }
                 }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Hidden;
-                }
-            }
 
-            if (isReadonly.HasValue)
-            {
-                if (isReadonly.Value)
+                if (isReadonly.HasValue)
                 {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Readonly;
+                    if (isReadonly.Value)
+                    {
+                        record.StandardInformation.FileAttributes |= FileAttributes.Readonly;
+                    }
+                    else
+                    {
+                        record.StandardInformation.FileAttributes &= ~FileAttributes.Readonly;
+                    }
                 }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Readonly;
-                }
-            }
 
-            if (isArchived.HasValue)
-            {
-                if (isArchived.Value)
+                if (isArchived.HasValue)
                 {
-                    record.StandardInformation.FileAttributes |= FileAttributes.Archive;
+                    if (isArchived.Value)
+                    {
+                        record.StandardInformation.FileAttributes |= FileAttributes.Archive;
+                    }
+                    else
+                    {
+                        record.StandardInformation.FileAttributes &= ~FileAttributes.Archive;
+                    }
                 }
-                else
-                {
-                    record.StandardInformation.FileAttributes &= ~FileAttributes.Archive;
-                }
-            }
 
-            m_volume.MasterFileTable.UpdateFileRecord(record);
+                record.StandardInformation.MftModificationTime = DateTime.Now;
+                m_volume.UpdateFileRecord(record);
+            }
         }
 
         public override void SetDates(string path, DateTime? creationDT, DateTime? lastWriteDT, DateTime? lastAccessDT)
         {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            FileRecord record = m_volume.GetFileRecord(path);
+            if (record != null)
+            {
+                if (creationDT.HasValue)
+                {
+                    record.StandardInformation.CreationTime = creationDT.Value;
+                    record.FileNameRecord.CreationTime = creationDT.Value;
+                }
+
+                if (lastWriteDT.HasValue)
+                {
+                    record.StandardInformation.ModificationTime = lastWriteDT.Value;
+                    record.FileNameRecord.ModificationTime = lastWriteDT.Value;
+                }
+
+                if (lastAccessDT.HasValue)
+                {
+                    record.StandardInformation.LastAccessTime = lastAccessDT.Value;
+                    record.FileNameRecord.LastAccessTime = lastAccessDT.Value;
+                }
+
+                record.StandardInformation.MftModificationTime = DateTime.Now;
+                record.FileNameRecord.MftModificationTime = DateTime.Now;
+                m_volume.UpdateFileRecord(record);
+            }
         }
 
         public long GetMaximumSizeToExtend()
@@ -206,12 +320,23 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public static FileSystemEntry ToFileSystemEntry(string path, FileRecord record)
         {
-            ulong size = record.IsDirectory ? 0 : record.DataRecord.DataRealSize;
+            ulong size = record.IsDirectory ? 0 : record.DataRecord.DataLength;
             FileAttributes attributes = record.StandardInformation.FileAttributes;
             bool isHidden = (attributes & FileAttributes.Hidden) > 0;
             bool isReadonly = (attributes & FileAttributes.Readonly) > 0;
             bool isArchived = (attributes & FileAttributes.Archive) > 0;
             return new FileSystemEntry(path, record.FileName, record.IsDirectory, size, record.FileNameRecord.CreationTime, record.FileNameRecord.ModificationTime, record.FileNameRecord.LastAccessTime, isHidden, isReadonly, isArchived);
+        }
+
+        public static FileSystemEntry ToFileSystemEntry(string path, FileNameRecord record)
+        {
+            ulong size = record.FileSize;
+            bool isDirectory = record.IsDirectory;
+            FileAttributes attributes = record.FileAttributes;
+            bool isHidden = (attributes & FileAttributes.Hidden) > 0;
+            bool isReadonly = (attributes & FileAttributes.Readonly) > 0;
+            bool isArchived = (attributes & FileAttributes.Archive) > 0;
+            return new FileSystemEntry(path, record.FileName, isDirectory, size, record.CreationTime, record.ModificationTime, record.LastAccessTime, isHidden, isReadonly, isArchived);
         }
     }
 }

@@ -123,3 +123,22 @@ Revision History:
         VHD: Create renamed to CreateFixedDisk, checks that disk size is a multiple of sector size.
         VHD: Added AreSectorsInUse() method.
         RawDiskImage: Circumvented FileStream buffering which resulted in reading more sectors than required.
+
+1.5.0 - Bugfix: IOExceptions thrown had Win32 error code set instead of HResult.
+        Better handling of broken disk drivers (e.g. Dataram RAMDisk v4.4.0 RC36).
+        IOExceptionHelper: Moved ThrowIOError() method from FileStreamEx class to IOExceptionHelper class.
+        IOExceptionHelper: Added GetWin32ErrorCode() and GetExceptionHResult() methods.
+        NTFS: Major implementation improvements.
+        Win32Error: Corrected underlying type to ushort.
+        Win32Error: Added file system related error codes.
+        FileStreamEx: Optimized implementation.
+        FileStreamEx: Added ReadOverlapped() and WriteOverlapped() methods.
+        FileStreamEx: Added SetValidLength() method.
+        FileStreamEx: Added flushToDisk parameter to Flush() implementation.
+        Disk: Marked IsReadOnly property as virtual.
+        RawDiskImage: Added option to use overlapped IO.
+        VirtualHardDisk: Added option to use overlapped IO.
+        VirtualMachineDisk: Bugfix: Extent opened for write when IsReadOnly was true.
+        Added DiskFullException implementation.
+        Added AlreadyExistsException implementation.
+        Added DirectoryNotEmptyException implementation.

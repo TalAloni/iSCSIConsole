@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,90 +6,78 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    [Flags]
-    public enum IndexRootFlags : byte
-    { 
-        LargeIndex = 0x01, // denotes the presence of IndexAllocation record
-    }
-
-    // IndexRoot attribute is always resident
+    /// <remarks>
+    /// IndexRoot attribute is always resident.
+    /// </remarks>
     public class IndexRootRecord : ResidentAttributeRecord
     {
-        public const string FileNameIndexName = "$I30";
-
-        /* Index root start */ 
-        public AttributeType IndexedAttributeType; // FileName for directories
+        public const int IndexHeaderOffset = 0x10;
+ 
+        public AttributeType IndexedAttributeType;
         public CollationRule CollationRule;
-        public uint IndexAllocationEntryLength; // in bytes
-        public byte ClustersPerIndexRecord;
+        public uint BytesPerIndexRecord;
+        public byte BlocksPerIndexRecord; // In units of clusters when BytesPerIndexRecord >= Volume.BytesPerCluster, otherwise in units of 512 byte blocks.
         // 3 zero bytes
-        /* Index root end */
-        /* Index Header start */
-        public uint EntriesOffset; // relative to Index Header start offset
-        public uint IndexLength;  // including the Index Header
-        public uint AllocatedLength;
-        public IndexRootFlags IndexFlags;
-        // 3 zero bytes
-        /* Index Header end */
+        private IndexHeader m_indexHeader;
+        public List<IndexEntry> IndexEntries;
 
-        public List<IndexNodeEntry> IndexEntries = new List<IndexNodeEntry>();
-        public List<FileNameIndexEntry> FileNameEntries = new List<FileNameIndexEntry>();
-
+        public IndexRootRecord(string name, ushort instance) : base(AttributeType.IndexRoot, name, instance)
+        {
+            m_indexHeader = new IndexHeader();
+            IndexEntries = new List<IndexEntry>();
+        }
+        
         public IndexRootRecord(byte[] buffer, int offset) : base(buffer, offset)
         {
             IndexedAttributeType = (AttributeType)LittleEndianConverter.ToUInt32(this.Data, 0x00);
             CollationRule = (CollationRule)LittleEndianConverter.ToUInt32(this.Data, 0x04);
-            IndexAllocationEntryLength = LittleEndianConverter.ToUInt32(this.Data, 0x08);
-            ClustersPerIndexRecord = ByteReader.ReadByte(this.Data, 0x0C);
+            BytesPerIndexRecord = LittleEndianConverter.ToUInt32(this.Data, 0x08);
+            BlocksPerIndexRecord = ByteReader.ReadByte(this.Data, 0x0C);
             // 3 zero bytes (padding to 8-byte boundary)
-            EntriesOffset = LittleEndianConverter.ToUInt32(this.Data, 0x10);
-            IndexLength = LittleEndianConverter.ToUInt32(this.Data, 0x14);
-            AllocatedLength = LittleEndianConverter.ToUInt32(this.Data, 0x18);
-            IndexFlags = (IndexRootFlags)ByteReader.ReadByte(this.Data, 0x1C);
-            // 3 zero bytes (padding to 8-byte boundary)
+            m_indexHeader = new IndexHeader(this.Data, 0x10);
 
-            if (Name == FileNameIndexName)
-            {
-                int position = 0x10 + (int)EntriesOffset;
-                if (IsLargeIndex)
-                {
-                    IndexNode node = new IndexNode(this.Data, position);
-                    IndexEntries = node.Entries;
-                }
-                else
-                {
-                    FileNameIndexLeafNode leaf = new FileNameIndexLeafNode(this.Data, position);
-                    FileNameEntries = leaf.Entries;
-                }
-            }
+            int entriesOffset = IndexHeaderOffset + (int)m_indexHeader.EntriesOffset;
+            IndexEntries = IndexEntry.ReadIndexEntries(this.Data, entriesOffset);
         }
 
-        public KeyValuePairList<MftSegmentReference, FileNameRecord> GetSmallIndexEntries()
+        public override byte[] GetBytes()
         {
-            if (IsLargeIndex)
-            {
-                throw new ArgumentException("Not a small index");
-            }
+            this.Data = new byte[this.DataLength];
+            m_indexHeader.EntriesOffset = IndexHeader.Length;
+            m_indexHeader.TotalLength = (uint)this.Data.Length - IndexHeaderOffset;
+            m_indexHeader.AllocatedLength = (uint)this.Data.Length - IndexHeaderOffset;
 
-            KeyValuePairList<MftSegmentReference, FileNameRecord> result = new KeyValuePairList<MftSegmentReference, FileNameRecord>();
+            LittleEndianWriter.WriteUInt32(this.Data, 0x00, (uint)IndexedAttributeType);
+            LittleEndianWriter.WriteUInt32(this.Data, 0x04, (uint)CollationRule);
+            LittleEndianWriter.WriteUInt32(this.Data, 0x08, (uint)BytesPerIndexRecord);
+            ByteWriter.WriteByte(this.Data, 0x0C, BlocksPerIndexRecord);
+            m_indexHeader.WriteBytes(this.Data, 0x10);
+            IndexEntry.WriteIndexEntries(this.Data, IndexHeaderOffset + IndexHeader.Length, IndexEntries);
 
-            foreach (FileNameIndexEntry entry in FileNameEntries)
-            {
-                result.Add(entry.FileReference, entry.Record);
-            }
-            return result;
+            return base.GetBytes();
         }
 
-        public bool IsLargeIndex
+        public override ulong DataLength
         {
             get
             {
-                return (IndexFlags & IndexRootFlags.LargeIndex) > 0;
+                return (ulong)(IndexHeaderOffset + IndexHeader.Length + IndexEntry.GetLength(IndexEntries));
+            }
+        }
+
+        public bool IsParentNode
+        {
+            get
+            {
+                return m_indexHeader.IsParentNode;
+            }
+            set
+            {
+                m_indexHeader.IsParentNode = value;
             }
         }
     }

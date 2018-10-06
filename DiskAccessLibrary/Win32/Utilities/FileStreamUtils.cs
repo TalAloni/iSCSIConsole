@@ -16,7 +16,7 @@ namespace DiskAccessLibrary
     public class FileStreamUtils
     {
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool SetFileValidData(SafeFileHandle hFile, long ValidDataLength);
+        private static extern bool SetFileValidData(SafeFileHandle handle, long validDataLength);
 
         /// <summary>
         /// On NTFS, extending a file reserves disk space but does not zero out the data.
@@ -24,10 +24,10 @@ namespace DiskAccessLibrary
         /// The data past the valid data length are logically zero but are not physically zero on disk.
         /// When you write to a point past the current valid data length, all the bytes between the valid data length and the start of your write need to be zeroed out before the new valid data length can be set to the end of your write operation.
         /// Extending the file and then calling SetValidLength() may save a considerable amount of time zeroing out the extended portion of the file.
-        /// 
-        /// See this link for more details:
-        /// http://blogs.msdn.com/b/oldnewthing/archive/2011/09/22/10215053.aspx
         /// </summary>
+        /// <remarks>
+        /// Calling SetFileValidData requires SeManageVolumePrivilege privileges.
+        /// </remarks>
         public static bool SetValidLength(FileStream fileStream, long validDataLength)
         {
             bool success = SetFileValidData(fileStream.SafeFileHandle, validDataLength);

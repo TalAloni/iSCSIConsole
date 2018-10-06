@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2008-2011, Kenneth Bell
+// Copyright (c) 2018, Tal Aloni
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -32,16 +33,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <summary>
         /// NTFS Standard Information.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         StandardInformation = 0x10,
 
         /// <summary>
-        /// Attribute list, that holds a list of attribute locations for files with a large attribute set.
+        /// Lists the location of all attribute records that do not fit in the MFT record.
         /// </summary>
         AttributeList = 0x20,
 
         /// <summary>
         /// FileName information, one per hard link.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         FileName = 0x30,
 
         /// <summary>
@@ -57,11 +60,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <summary>
         /// The name of the NTFS volume.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         VolumeName = 0x60,
 
         /// <summary>
         /// Information about the NTFS volume.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         VolumeInformation = 0x70,
 
         /// <summary>
@@ -72,11 +77,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <summary>
         /// Root information for directories and other NTFS indexes.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         IndexRoot = 0x90,
 
         /// <summary>
-        /// For 'large' directories and other NTFS index's, the index contents.
+        /// For 'large' directories and other NTFS indexes, the index contents.
         /// </summary>
+        /// <remarks>Always non-resident</remarks>
         IndexAllocation = 0xA0,
 
         /// <summary>
@@ -92,6 +99,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <summary>
         /// Extended Attributes meta-information.
         /// </summary>
+        /// <remarks>Always resident</remarks>
         ExtendedAttributesInformation = 0xD0,
 
         /// <summary>

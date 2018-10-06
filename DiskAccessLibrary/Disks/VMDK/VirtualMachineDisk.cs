@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -131,11 +131,27 @@ namespace DiskAccessLibrary
                 m_descriptor.UpdateExtentEntries(lines);
 
                 File.WriteAllLines(m_descriptorPath, lines.ToArray(), Encoding.ASCII);
-                ((DiskImage)m_extent).Extend(numberOfAdditionalBytes);
+                m_extent.Extend(numberOfAdditionalBytes);
             }
             else
             {
                 throw new NotImplementedException("Extending a monolithic sparse is not supported");
+            }
+        }
+
+        public override bool IsReadOnly
+        {
+            get
+            {
+                return base.IsReadOnly;
+            }
+            set
+            {
+                base.IsReadOnly = value;
+                if (m_descriptor.DiskType == VirtualMachineDiskType.MonolithicFlat)
+                {
+                    m_extent.IsReadOnly = value;
+                }
             }
         }
 

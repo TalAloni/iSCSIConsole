@@ -10,16 +10,28 @@ using System.IO;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
+    /// <remarks>
+    /// The maximum NTFS file size is 2^64 bytes, so total number of file clusters can be represented using long
+    /// https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-2000-server/cc938937(v=technet.10)
+    /// </remarks>
     public class DataRun
     {
-        // The maximum NTFS file size is 2^64 bytes, so total number of file clusters can be represented using long
-        // http://technet.microsoft.com/en-us/library/cc938937.aspx
         public long RunLength; // In clusters
         public long RunOffset; // In clusters, relative to previous data run start LCN
         public bool IsSparse;
+        private int m_recordLengthOnDisk;
 
-        /// <returns>Record length</returns>
-        public int Read(byte[] buffer, int offset)
+        public DataRun()
+        {
+        }
+
+        public DataRun(long runLength, long runOffset)
+        {
+            RunLength = runLength;
+            RunOffset = runOffset;
+        }
+
+        public DataRun(byte[] buffer, int offset)
         {
             int runOffsetSize = buffer[offset] >> 4;
             int runLengthSize = buffer[offset] & 0x0F;
@@ -31,31 +43,34 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
             RunOffset = ReadVarLong(ref buffer, offset + 1 + runLengthSize, runOffsetSize);
             IsSparse = (runOffsetSize == 0);
-
-            return 1 + runLengthSize + runOffsetSize;
+            m_recordLengthOnDisk = 1 + runLengthSize + runOffsetSize;
         }
 
-        public byte[] GetBytes()
+        public void WriteBytes(byte[] buffer, int offset)
         {
             if (IsSparse)
             {
                 RunOffset = 0;
             }
 
-            byte[] buffer = new byte[RecordLength];
-            int runLengthSize = WriteVarLong(buffer, 1, RunLength);
+            int runLengthSize = WriteVarLong(buffer, offset + 1, RunLength);
             int runOffsetSize;
             if (IsSparse)
             {
                 runOffsetSize = 0;
             }
             else
-            { 
-                runOffsetSize = WriteVarLong(buffer, 1 + runLengthSize, RunOffset);
+            {
+                runOffsetSize = WriteVarLong(buffer, offset + 1 + runLengthSize, RunOffset);
             }
 
-            buffer[0] = (byte)((runLengthSize & 0x0F) | ((runOffsetSize << 4) & 0xF0));
+            buffer[offset + 0] = (byte)((runLengthSize & 0x0F) | ((runOffsetSize << 4) & 0xF0));
+        }
 
+        public byte[] GetBytes()
+        {
+            byte[] buffer = new byte[RecordLength];
+            WriteBytes(buffer, 0);
             return buffer;
         }
 
@@ -134,7 +149,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         }
 
         /// <summary>
-        /// Length of the DataRun record inside the non-resident attribute record
+        /// Length of the DataRun record
         /// </summary>
         public int RecordLength
         {
@@ -143,6 +158,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 int runLengthSize = VarLongSize(RunLength);
                 int runOffsetSize = VarLongSize(RunOffset);
                 return 1 + runLengthSize + runOffsetSize;
+            }
+        }
+
+        public int RecordLengthOnDisk
+        {
+            get
+            {
+                return m_recordLengthOnDisk;
             }
         }
     }

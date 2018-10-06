@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using DiskAccessLibrary;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -21,10 +20,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     public partial class NTFSVolume : IExtendableFileSystem
     {
         private Volume m_volume;
+        private NTFSBootRecord m_bootRecord; // Partition's boot record
         private MasterFileTable m_mft;
-        private ClusterUsageBitmap m_bitmap;
-
-        private NTFSBootRecord m_bootRecord; // partition's boot record
+        private VolumeBitmap m_bitmap;
+        private VolumeInformationRecord m_volumeInformation;
+        private readonly bool m_generateDosNames = false;
 
         public NTFSVolume(Volume volume) : this(volume, false)
         { 
@@ -39,11 +39,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             if (m_bootRecord != null)
             {
                 m_mft = new MasterFileTable(this, useMftMirror);
-                m_bitmap = new ClusterUsageBitmap(this);
+                m_bitmap = new VolumeBitmap(this);
+                m_volumeInformation = GetVolumeInformationRecord();
             }
         }
 
-        public FileRecord GetFileRecord(string path)
+        public virtual FileRecord GetFileRecord(string path)
         {
             if (path != String.Empty && !path.StartsWith(@"\"))
             {
@@ -57,174 +58,194 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             if (path == String.Empty)
             {
-                return m_mft.GetFileRecord(MasterFileTable.RootDirSegmentNumber);
+                return GetFileRecord(MasterFileTable.RootDirSegmentReference);
             }
 
             string[] components = path.Substring(1).Split('\\');
-            long directorySegmentNumber = MasterFileTable.RootDirSegmentNumber;
+            MftSegmentReference directoryReference = MasterFileTable.RootDirSegmentReference;
             for (int index = 0; index < components.Length; index++)
             {
-                KeyValuePairList<MftSegmentReference, FileNameRecord> records = GetFileNameRecordsInDirectory(directorySegmentNumber);
+                FileRecord directoryRecord = GetFileRecord(directoryReference);
                 if (index < components.Length - 1)
                 {
-                    FileRecord record = FindDirectoryRecord(records, components[index]);
-                    if (record != null)
+                    if (!directoryRecord.IsDirectory)
                     {
-                        directorySegmentNumber = record.MftSegmentNumber;
+                        return null;
                     }
-                    else
+                    IndexData indexData = new IndexData(this, directoryRecord, AttributeType.FileName);
+                    directoryReference = indexData.FindFileNameRecordSegmentReference(components[index]);
+                    if (directoryReference == null)
                     {
                         return null;
                     }
                 }
-                else // last component
+                else // Last component
                 {
-                    return FindRecord(records, components[index]);
+                    IndexData indexData = new IndexData(this, directoryRecord, AttributeType.FileName);
+                    MftSegmentReference fileReference = indexData.FindFileNameRecordSegmentReference(components[index]);
+                    if (fileReference == null)
+                    {
+                        return null;
+                    }
+                    FileRecord fileRecord = GetFileRecord(fileReference);
+                    if (fileRecord != null && !fileRecord.IsMetaFile)
+                    {
+                        return fileRecord;
+                    }
                 }
             }
 
             return null;
         }
 
-        private FileRecord FindDirectoryRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string directoryName)
+        protected internal virtual FileRecord GetFileRecord(MftSegmentReference fileReference)
         {
-            FileRecord directoryRecord = FindRecord(records, directoryName);
-            if (directoryRecord.IsDirectory)
-            {
-                return directoryRecord;
-            }
-            return null;
+            return m_mft.GetFileRecord(fileReference);
         }
 
-        private FileRecord FindRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string name)
+        public virtual FileRecord CreateFile(MftSegmentReference parentDirectory, string fileName, bool isDirectory)
         {
-            KeyValuePair<MftSegmentReference, FileNameRecord>? nameRecord = FindFileNameRecord(records, name);
-            if (nameRecord != null)
+            // Worst case scenrario: the MFT might be full and the parent directory index requires multiple splits
+            if (NumberOfFreeClusters < 24)
             {
-                FileRecord record = m_mft.GetFileRecord(nameRecord.Value.Key);
-                if (record.IsInUse && !record.IsMetaFile)
+                throw new DiskFullException();
+            }
+            FileRecord parentDirectoryRecord = GetFileRecord(parentDirectory);
+            IndexData parentDirectoryIndex = new IndexData(this, parentDirectoryRecord, AttributeType.FileName);
+
+            if (parentDirectoryIndex.ContainsFileName(fileName))
+            {
+                throw new AlreadyExistsException();
+            }
+
+            List<FileNameRecord> fileNameRecords = IndexHelper.GenerateFileNameRecords(parentDirectory, fileName, isDirectory, m_generateDosNames, parentDirectoryIndex);
+            FileRecord fileRecord = m_mft.CreateFile(fileNameRecords);
+
+            // Update parent directory index
+            foreach (FileNameRecord fileNameRecord in fileNameRecords)
+            {
+                parentDirectoryIndex.AddEntry(fileRecord.BaseSegmentReference, fileNameRecord.GetBytes());
+            }
+
+            return fileRecord;
+        }
+
+        protected internal virtual void UpdateFileRecord(FileRecord fileRecord)
+        {
+            m_mft.UpdateFileRecord(fileRecord);
+        }
+
+        public virtual void MoveFile(FileRecord fileRecord, MftSegmentReference newParentDirectory, string newFileName)
+        {
+            // Worst case scenrario: the new parent directory index requires multiple splits
+            if (NumberOfFreeClusters < 4)
+            {
+                throw new DiskFullException();
+            }
+
+            FileRecord oldParentDirectoryRecord = GetFileRecord(fileRecord.ParentDirectoryReference);
+            IndexData oldParentDirectoryIndex = new IndexData(this, oldParentDirectoryRecord, AttributeType.FileName);
+            IndexData newParentDirectoryIndex;
+            if (fileRecord.ParentDirectoryReference == newParentDirectory)
+            {
+                newParentDirectoryIndex = oldParentDirectoryIndex;
+            }
+            else
+            {
+                FileRecord newParentDirectoryRecord = GetFileRecord(newParentDirectory);
+                newParentDirectoryIndex = new IndexData(this, newParentDirectoryRecord, AttributeType.FileName);
+                if (newParentDirectoryIndex.ContainsFileName(newFileName))
                 {
-                    return record;
+                    throw new AlreadyExistsException();
                 }
             }
-            return null;
+
+            List<FileNameRecord> fileNameRecords = fileRecord.FileNameRecords;
+            foreach (FileNameRecord fileNameRecord in fileNameRecords)
+            {
+                oldParentDirectoryIndex.RemoveEntry(fileNameRecord.GetBytes());
+            }
+
+            DateTime creationTime = fileRecord.FileNameRecord.CreationTime;
+            DateTime modificationTime = fileRecord.FileNameRecord.ModificationTime;
+            DateTime mftModificationTime = fileRecord.FileNameRecord.MftModificationTime;
+            DateTime lastAccessTime = fileRecord.FileNameRecord.LastAccessTime;
+            ulong allocatedLength = fileRecord.FileNameRecord.AllocatedLength;
+            ulong fileSize = fileRecord.FileNameRecord.FileSize;
+            FileAttributes fileAttributes = fileRecord.FileNameRecord.FileAttributes;
+            ushort packedEASize = fileRecord.FileNameRecord.PackedEASize;
+            fileNameRecords = IndexHelper.GenerateFileNameRecords(newParentDirectory, newFileName, fileRecord.IsDirectory, m_generateDosNames, newParentDirectoryIndex, creationTime, modificationTime, mftModificationTime, lastAccessTime, allocatedLength, fileSize, fileAttributes, packedEASize);
+            fileRecord.RemoveAttributeRecords(AttributeType.FileName, String.Empty);
+            foreach (FileNameRecord fileNameRecord in fileNameRecords)
+            {
+                FileNameAttributeRecord fileNameAttribute = (FileNameAttributeRecord)fileRecord.CreateAttributeRecord(AttributeType.FileName, String.Empty);
+                fileNameAttribute.IsIndexed = true;
+                fileNameAttribute.Record = fileNameRecord;
+            }
+            UpdateFileRecord(fileRecord);
+
+            foreach (FileNameRecord fileNameRecord in fileNameRecords)
+            {
+                newParentDirectoryIndex.AddEntry(fileRecord.BaseSegmentReference, fileNameRecord.GetBytes());
+            }
         }
 
-        private KeyValuePairList<MftSegmentReference, FileNameRecord> GetFileNameRecordsInDirectory(long directoryBaseSegmentNumber)
+        public virtual void DeleteFile(FileRecord fileRecord)
         {
-            FileRecord record = m_mft.GetFileRecord(directoryBaseSegmentNumber);
+            MftSegmentReference parentDirectory = fileRecord.ParentDirectoryReference;
+            FileRecord parentDirectoryRecord = GetFileRecord(parentDirectory);
+            IndexData parentDirectoryIndex = new IndexData(this, parentDirectoryRecord, AttributeType.FileName);
+
+            // Update parent directory index
+            List<FileNameRecord> fileNameRecords = fileRecord.FileNameRecords;
+            foreach(FileNameRecord fileNameRecord in fileNameRecords)
+            {
+                parentDirectoryIndex.RemoveEntry(fileNameRecord.GetBytes());
+            }
+
+            // Deallocate all data clusters
+            foreach (AttributeRecord atttributeRecord in fileRecord.Attributes)
+            {
+                if (atttributeRecord is NonResidentAttributeRecord)
+                {
+                    NonResidentAttributeData attributeData = new NonResidentAttributeData(this, fileRecord, (NonResidentAttributeRecord)atttributeRecord);
+                    attributeData.Truncate(0);
+                }
+            }
+
+            m_mft.DeleteFile(fileRecord);
+        }
+
+        public virtual KeyValuePairList<MftSegmentReference, FileNameRecord> GetFileNameRecordsInDirectory(MftSegmentReference directoryReference)
+        {
+            FileRecord directoryRecord = GetFileRecord(directoryReference);
             KeyValuePairList<MftSegmentReference, FileNameRecord> result = null;
-            if (record != null && record.IsDirectory)
+            if (directoryRecord != null && directoryRecord.IsDirectory)
             {
-                IndexRootRecord indexRoot = (IndexRootRecord)record.GetAttributeRecord(AttributeType.IndexRoot, IndexRootRecord.FileNameIndexName);
-                IndexAllocationRecord indexAllocation = (IndexAllocationRecord)record.GetAttributeRecord(AttributeType.IndexAllocation, IndexRootRecord.FileNameIndexName);
-                
-                if (indexRoot.IsLargeIndex)
-                {
-                    if (indexAllocation != null)
-                    {
-                        result = indexAllocation.GetAllEntries(this, indexRoot);
-                    }
-                }
-                else
-                {
-                    result = indexRoot.GetSmallIndexEntries();
-                }
+                IndexData indexData = new IndexData(this, directoryRecord, AttributeType.FileName);
+                result = indexData.GetAllFileNameRecords();
 
-                if (result != null)
+                for (int index = 0; index < result.Count; index++)
                 {
-                    for (int index = 0; index < result.Count; index++)
+                    bool isMetaFile = (result[index].Key.SegmentNumber < MasterFileTable.FirstUserSegmentNumber);
+                    if (result[index].Value.Flags == FileNameFlags.DOS || isMetaFile)
                     {
-                        if (result[index].Value.Namespace == FilenameNamespace.DOS)
-                        {
-                            // The same FileRecord can have multiple entries, each with it's own namespace
-                            result.RemoveAt(index);
-                            index--;
-                        }
+                        // The same FileRecord can have multiple FileNameRecord entries, each with its own namespace
+                        result.RemoveAt(index);
+                        index--;
                     }
                 }
             }
-            return result;
-        }
-
-        public List<FileRecord> GetFileRecordsInDirectory(long directoryBaseSegmentNumber)
-        {
-            return GetFileRecordsInDirectory(directoryBaseSegmentNumber, false);
-        }
-
-        private List<FileRecord> GetFileRecordsInDirectory(long directoryBaseSegmentNumber, bool includeMetaFiles)
-        {
-            KeyValuePairList<MftSegmentReference, FileNameRecord> entries = GetFileNameRecordsInDirectory(directoryBaseSegmentNumber);
-            List<FileRecord> result = new List<FileRecord>();
-            
-            if (entries != null)
-            {
-                List<MftSegmentReference> files = entries.Keys;
-                foreach (MftSegmentReference reference in files)
-                {
-                    FileRecord record = m_mft.GetFileRecord(reference);
-                    if (record != null)
-                    {
-                        if (record.IsInUse && (includeMetaFiles || !record.IsMetaFile))
-                        {
-                            result.Add(record);
-                        }
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// This method is slower and should only be used for recovery purposes.
-        /// </summary>
-        public List<FileRecord> GetFileRecordsInDirectoryFromMft(long directoryBaseSegmentNumber)
-        {
-            return GetFileRecordsInDirectoryFromMft(directoryBaseSegmentNumber, false);
-        }
-
-        /// <summary>
-        /// This method is slower and should only be used for recovery purposes.
-        /// </summary>
-        private List<FileRecord> GetFileRecordsInDirectoryFromMft(long directoryBaseSegmentNumber, bool includeMetaFiles)
-        {
-            long maxNumOfRecords = m_mft.GetMaximumNumberOfSegments();
-            List<FileRecord> result = new List<FileRecord>();
-
-            for (long index = 0; index < maxNumOfRecords; index++)
-            {
-                FileRecord record;
-                try
-                {
-                    record = m_mft.GetFileRecord(index);
-                }
-                catch (InvalidDataException)
-                {
-                    continue;
-                }
-                if (record != null)
-                {
-                    if (record.ParentDirMftSegmentNumber == directoryBaseSegmentNumber)
-                    {
-                        if (record.IsInUse && (includeMetaFiles || !record.IsMetaFile))
-                        {
-                            result.Add(record);
-                        }
-                    }
-                }
-            }
-
             return result;
         }
 
         // logical cluster
-        public byte[] ReadCluster(long clusterLCN)
+        protected internal byte[] ReadCluster(long clusterLCN)
         {
             return ReadClusters(clusterLCN, 1);
         }
 
-        public byte[] ReadClusters(long clusterLCN, int count)
+        protected internal byte[] ReadClusters(long clusterLCN, int count)
         {
             long firstSectorIndex = clusterLCN * m_bootRecord.SectorsPerCluster;
             int sectorsToRead = m_bootRecord.SectorsPerCluster * count;
@@ -234,34 +255,51 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return result;
         }
 
-        public void WriteClusters(long clusterLCN, byte[] data)
+        protected internal void WriteClusters(long clusterLCN, byte[] data)
         {
             long firstSectorIndex = clusterLCN * m_bootRecord.SectorsPerCluster;
             m_volume.WriteSectors(firstSectorIndex, data);
         }
 
-        public byte[] ReadSectors(long sectorIndex, int sectorCount)
+        protected internal byte[] ReadSectors(long sectorIndex, int sectorCount)
         {
             return m_volume.ReadSectors(sectorIndex, sectorCount);
         }
 
-        public void WriteSectors(long sectorIndex, byte[] data)
+        protected internal void WriteSectors(long sectorIndex, byte[] data)
         {
             m_volume.WriteSectors(sectorIndex, data);
         }
 
-        public VolumeInformationRecord GetVolumeInformationRecord()
+        internal VolumeNameRecord GetVolumeNameRecord()
         {
             FileRecord volumeRecord = m_mft.GetVolumeRecord();
             if (volumeRecord != null)
             {
-                VolumeInformationRecord volumeInformationRecord = (VolumeInformationRecord)volumeRecord.GetAttributeRecord(AttributeType.VolumeInformation, String.Empty);
-                return volumeInformationRecord;
+                return (VolumeNameRecord)volumeRecord.GetAttributeRecord(AttributeType.VolumeName, String.Empty);
             }
             else
             {
                 throw new InvalidDataException("Invalid NTFS volume record");
             }
+        }
+
+        internal VolumeInformationRecord GetVolumeInformationRecord()
+        {
+            FileRecord volumeRecord = m_mft.GetVolumeRecord();
+            if (volumeRecord != null)
+            {
+                return (VolumeInformationRecord)volumeRecord.GetAttributeRecord(AttributeType.VolumeInformation, String.Empty);
+            }
+            else
+            {
+                throw new InvalidDataException("Invalid NTFS volume record");
+            }
+        }
+
+        internal AttributeDefinition GetAttributeDefinition()
+        {
+            return new AttributeDefinition(this);
         }
 
         public override string ToString()
@@ -271,7 +309,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 builder.AppendLine("Bytes Per Sector: " + m_bootRecord.BytesPerSector);
                 builder.AppendLine("Bytes Per Cluster: " + m_bootRecord.BytesPerCluster);
-                builder.AppendLine("File Record Length: " + m_bootRecord.FileRecordSegmentLength);
+                builder.AppendLine("Bytes Per File Record Segment: " + m_bootRecord.BytesPerFileRecordSegment);
                 builder.AppendLine("First MFT Cluster (LCN): " + m_bootRecord.MftStartLCN);
                 builder.AppendLine("First MFT Mirror Cluster (LCN): " + m_bootRecord.MftMirrorStartLCN);
                 builder.AppendLine("Volume size (bytes): " + this.Size);
@@ -288,22 +326,22 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 if (mftRecord != null)
                 {
                     builder.AppendLine("Number of $MFT Data Runs: " + mftRecord.NonResidentDataRecord.DataRunSequence.Count);
-                    builder.AppendLine("Number of $MFT Clusters: " + mftRecord.NonResidentDataRecord.DataRunSequence.DataClusterCount);
+                    builder.AppendLine("$MFT Size in Clusters: " + mftRecord.NonResidentDataRecord.DataRunSequence.DataClusterCount);
 
                     builder.Append(mftRecord.NonResidentDataRecord.DataRunSequence.ToString());
 
                     builder.AppendLine("Number of $MFT Attributes: " + mftRecord.Attributes.Count);
-                    builder.AppendLine("Length of $MFT Attributes: " + mftRecord.StoredAttributesLength);
+                    builder.AppendLine("Length of $MFT Attributes: " + mftRecord.AttributesLengthOnDisk);
                     builder.AppendLine();
 
-                    FileRecord bitmapRecord = m_mft.GetBitmapRecord();
-                    if (bitmapRecord != null)
+                    FileRecord volumeBitmapRecord = m_mft.GetVolumeBitmapRecord();
+                    if (volumeBitmapRecord != null)
                     {
-                        builder.AppendLine("$Bitmap LCN: " + bitmapRecord.NonResidentDataRecord.DataRunSequence.FirstDataRunLCN);
-                        builder.AppendLine("$Bitmap Clusters: " + bitmapRecord.NonResidentDataRecord.DataRunSequence.DataClusterCount);
+                        builder.AppendLine("Volume Bitmap Start LCN: " + volumeBitmapRecord.NonResidentDataRecord.DataRunSequence.FirstDataRunLCN);
+                        builder.AppendLine("Volume Bitmap Size in Clusters: " + volumeBitmapRecord.NonResidentDataRecord.DataRunSequence.DataClusterCount);
 
-                        builder.AppendLine("Number of $Bitmap Attributes: " + bitmapRecord.Attributes.Count);
-                        builder.AppendLine("Length of $Bitmap Attributes: " + bitmapRecord.StoredAttributesLength);
+                        builder.AppendLine("Number of Volume Bitmap Attributes: " + volumeBitmapRecord.Attributes.Count);
+                        builder.AppendLine("Length of Volume Bitmap Attributes: " + volumeBitmapRecord.AttributesLengthOnDisk);
                     }
                 }
 
@@ -315,6 +353,21 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 builder.AppendLine("Free space: " + this.FreeSpace);
             }
             return builder.ToString();
+        }
+
+        internal KeyValuePairList<long, long> AllocateClusters(long numberOfClusters)
+        {
+            return m_bitmap.AllocateClusters(numberOfClusters);
+        }
+
+        internal KeyValuePairList<long, long> AllocateClusters(long desiredStartLCN, long numberOfClusters)
+        {
+            return m_bitmap.AllocateClusters(desiredStartLCN, numberOfClusters);
+        }
+
+        internal void DeallocateClusters(long startLCN, long numberOfClusters)
+        {
+            m_bitmap.DeallocateClusters(startLCN, numberOfClusters);
         }
 
         public bool IsValid
@@ -333,6 +386,22 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
+        public ushort MajorVersion
+        {
+            get
+            {
+                return m_volumeInformation.MajorVersion;
+            }
+        }
+
+        public ushort MinorVersion
+        {
+            get
+            {
+                return m_volumeInformation.MinorVersion;
+            }
+        }
+
         public long Size
         {
             get
@@ -341,15 +410,23 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
+        public long NumberOfFreeClusters
+        {
+            get
+            {
+                return m_bitmap.NumberOfFreeClusters;
+            }
+        }
+
         public long FreeSpace
         {
             get
             {
-                return m_bitmap.CountNumberOfFreeClusters() * this.BytesPerCluster;
+                return m_bitmap.NumberOfFreeClusters * this.BytesPerCluster;
             }
         }
 
-        public NTFSBootRecord BootRecord
+        internal NTFSBootRecord BootRecord
         {
             get
             {
@@ -357,15 +434,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public MasterFileTable MasterFileTable
-        {
-            get
-            {
-                return m_mft;
-            }
-        }
-
-        public int BytesPerCluster
+        internal int BytesPerCluster
         {
             get
             {
@@ -373,7 +442,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int BytesPerSector
+        internal int BytesPerSector
         {
             get
             {
@@ -381,7 +450,23 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int SectorsPerCluster
+        internal int BytesPerFileRecordSegment
+        {
+            get
+            {
+                return m_bootRecord.BytesPerFileRecordSegment;
+            }
+        }
+
+        internal int BytesPerIndexRecord
+        {
+            get
+            {
+                return m_bootRecord.BytesPerIndexRecord;
+            }
+        }
+
+        internal int SectorsPerCluster
         {
             get
             {
@@ -389,7 +474,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int SectorsPerFileRecordSegment
+        internal int SectorsPerFileRecordSegment
         {
             get
             {
@@ -397,39 +482,20 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public ushort MajorVersion
+        internal int AttributeRecordLengthToMakeNonResident
         {
             get
             {
-                VolumeInformationRecord volumeInformationRecord = GetVolumeInformationRecord();
-                return volumeInformationRecord.MajorVersion;
+                return m_mft.AttributeRecordLengthToMakeNonResident;
             }
         }
 
-        public ushort MinorVersion
+        protected internal static MftSegmentReference RootDirSegmentReference
         {
             get
             {
-                VolumeInformationRecord volumeInformationRecord = GetVolumeInformationRecord();
-                return volumeInformationRecord.MinorVersion;
+                return MasterFileTable.RootDirSegmentReference;
             }
-        }
-
-        public KeyValuePairList<ulong, long> AllocateClusters(ulong desiredStartLCN, long numberOfClusters)
-        {
-            return m_bitmap.AllocateClusters(desiredStartLCN, numberOfClusters);
-        }
-
-        private static KeyValuePair<MftSegmentReference, FileNameRecord>? FindFileNameRecord(KeyValuePairList<MftSegmentReference, FileNameRecord> records, string name)
-        {
-            foreach (KeyValuePair<MftSegmentReference, FileNameRecord> record in records)
-            {
-                if (String.Equals(record.Value.FileName, name, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return record;
-                }
-            }
-            return null;
         }
     }
 }

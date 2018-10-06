@@ -83,6 +83,13 @@ namespace DiskAccessLibrary
             return m_file.ExclusiveLock();
         }
 
+#if Win32
+        public bool ExclusiveLock(bool useOverlappedIO)
+        {
+            return m_file.ExclusiveLock(useOverlappedIO);
+        }
+#endif
+
         public override bool ReleaseLock()
         {
             return m_file.ReleaseLock();
