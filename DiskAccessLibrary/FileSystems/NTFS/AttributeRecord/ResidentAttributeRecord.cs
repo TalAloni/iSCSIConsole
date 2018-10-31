@@ -67,6 +67,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         }
 
         /// <summary>
+        /// Each attribute record must be aligned to 8-byte boundary, so RecordLength must be a multiple of 8.
         /// When reading attributes, they may contain additional padding,
         /// so we should use RecordLengthOnDisk to advance the buffer position instead.
         /// </summary>
@@ -97,10 +98,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
+        /// <summary>
+        /// Each attribute record must be aligned to 8-byte boundary, so RecordLength must be a multiple of 8.
+        /// </summary>
         public static int GetRecordLength(int nameLength, int dataLength)
         {
             int length = HeaderLength + nameLength * 2 + dataLength;
-            // Each record is aligned to 8-byte boundary
+            // Each record must be aligned to 8-byte boundary
             length = (int)Math.Ceiling((double)length / 8) * 8;
             return length;
         }

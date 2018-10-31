@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -24,16 +24,22 @@ namespace DiskAccessLibrary.VMDK
             m_file = new RawDiskImage(path, VirtualMachineDisk.BytesPerDiskSector);
             byte[] headerBytes = m_file.ReadSector(0);
             m_header = new SparseExtentHeader(headerBytes);
-
-            if (m_header.IsValidAndSupported)
+            if (!m_header.IsSupported)
             {
-                if (m_header.DescriptorOffset > 0)
-                {
-                    byte[] descriptorBytes = m_file.ReadSectors((long)m_header.DescriptorOffset, (int)m_header.DescriptorSize);
-                    string text = ASCIIEncoding.ASCII.GetString(descriptorBytes);
-                    List<string> lines = VirtualMachineDiskDescriptor.GetLines(text);
-                    m_descriptor = new VirtualMachineDiskDescriptor(lines);
-                }
+                throw new NotSupportedException("Sparse extent header version is not supported");
+            }
+
+            if (m_header.CompressionAlgirithm != SparseExtentCompression.None)
+            {
+                throw new NotSupportedException("Sparse extent compression is not supported");
+            }
+
+            if (m_header.DescriptorOffset > 0)
+            {
+                byte[] descriptorBytes = m_file.ReadSectors((long)m_header.DescriptorOffset, (int)m_header.DescriptorSize);
+                string text = ASCIIEncoding.ASCII.GetString(descriptorBytes);
+                List<string> lines = VirtualMachineDiskDescriptor.GetLines(text);
+                m_descriptor = new VirtualMachineDiskDescriptor(lines);
             }
         }
 
@@ -41,6 +47,13 @@ namespace DiskAccessLibrary.VMDK
         {
             return m_file.ExclusiveLock();
         }
+
+#if Win32
+        public override bool ExclusiveLock(bool useOverlappedIO)
+        {
+            return m_file.ExclusiveLock(useOverlappedIO);
+        }
+#endif
 
         public override bool ReleaseLock()
         {

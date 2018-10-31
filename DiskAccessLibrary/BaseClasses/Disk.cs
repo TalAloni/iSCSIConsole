@@ -6,12 +6,9 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 public abstract class Disk
 {
-    private bool m_isReadOnly = false;
-
     /// <summary>
     /// Sector refers to physical disk sector
     /// </summary>
@@ -23,18 +20,6 @@ public abstract class Disk
         return ReadSectors(sectorIndex, 1);
     }
 
-    public virtual bool IsReadOnly
-    {
-        get
-        {
-            return m_isReadOnly;
-        }
-        set
-        {
-            m_isReadOnly = value;
-        }
-    }
-
     public abstract int BytesPerSector
     {
         get;
@@ -43,6 +28,14 @@ public abstract class Disk
     public abstract long Size
     {
         get;
+    }
+
+    public virtual bool IsReadOnly
+    {
+        get
+        {
+            return false;
+        }
     }
 
     public long TotalSectors

@@ -182,6 +182,14 @@ namespace DiskAccessLibrary
             }
         }
 
+        public override int BytesPerSector
+        {
+            get
+            {
+                return m_bytesPerSector;
+            }
+        }
+
         public override long Size
         {
             get
@@ -190,11 +198,11 @@ namespace DiskAccessLibrary
             }
         }
 
-        public override int BytesPerSector
+        public override bool IsReadOnly
         {
             get
             {
-                return m_bytesPerSector;
+                return m_isReadOnly;
             }
         }
 

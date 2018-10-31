@@ -28,20 +28,17 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_numberOfUsableBits = numberOfUsableBits;
         }
 
-        /// <remarks>
-        /// .
-        /// </remarks>
         /// <returns>Record index</returns>
-        public long? AllocateRecord()
+        public long? AllocateRecord(uint transactionID)
         {
-            long? recordIndex = AllocateRecord(m_searchStartIndex);
+            long? recordIndex = AllocateRecord(m_searchStartIndex, transactionID);
             if (recordIndex.HasValue)
             {
                 m_searchStartIndex = recordIndex.Value + 1;
             }
             else
             {
-                recordIndex = AllocateRecord(0, m_searchStartIndex - 1);
+                recordIndex = AllocateRecord(0, m_searchStartIndex - 1, transactionID);
                 if (recordIndex.HasValue)
                 {
                     m_searchStartIndex = recordIndex.Value + 1;
@@ -51,13 +48,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         }
 
         /// <returns>Record index</returns>
-        public long? AllocateRecord(long searchStartIndex)
+        public long? AllocateRecord(long searchStartIndex, uint transactionID)
         {
-            return AllocateRecord(searchStartIndex, m_numberOfUsableBits - 1);
+            return AllocateRecord(searchStartIndex, m_numberOfUsableBits - 1, transactionID);
         }
 
         /// <returns>Record index</returns>
-        public long? AllocateRecord(long searchStartIndex, long searchEndIndex)
+        public long? AllocateRecord(long searchStartIndex, long searchEndIndex, uint transactionID)
         {
             long bufferedVCN = -1;
             byte[] bufferedClusterBytes = null;
@@ -71,10 +68,17 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     bufferedVCN = currentVCN;
                 }
 
-                int bitOffsetInBitmap = (int)(index % (Volume.BytesPerCluster * 8));
-                if (IsBitClear(bufferedClusterBytes, bitOffsetInBitmap))
+                int bitOffsetInCluster = (int)(index % (Volume.BytesPerCluster * 8));
+                if (IsBitClear(bufferedClusterBytes, bitOffsetInCluster))
                 {
-                    SetBit(bufferedClusterBytes, bitOffsetInBitmap);
+                    if (!this.AttributeRecord.IsResident)
+                    {
+                        BitmapRange bitmapRange = new BitmapRange((uint)bitOffsetInCluster, 1);
+                        byte[] operationData = bitmapRange.GetBytes();
+                        ulong streamOffset = (ulong)(currentVCN * Volume.BytesPerCluster);
+                        Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, transactionID);
+                    }
+                    SetBit(bufferedClusterBytes, bitOffsetInCluster);
                     WriteCluster(currentVCN, bufferedClusterBytes);
                     return index;
                 }
@@ -83,13 +87,23 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return null;
         }
 
-        public void DeallocateRecord(long recordIndex)
+        public void DeallocateRecord(long recordIndex, uint transactionID)
         {
             long currentVCN = recordIndex / (Volume.BytesPerCluster * 8);
-            int bitOffsetInBitmap = (int)(recordIndex % (Volume.BytesPerCluster * 8));
-            byte[] bitmap = ReadCluster(currentVCN);
-            ClearBit(bitmap, bitOffsetInBitmap);
-            WriteCluster(currentVCN, bitmap);
+            int bitOffsetInCluster = (int)(recordIndex % (Volume.BytesPerCluster * 8));
+            byte[] clusterBytes = ReadCluster(currentVCN);
+            if (!IsBitClear(clusterBytes, bitOffsetInCluster))
+            {
+                if (!this.AttributeRecord.IsResident)
+                {
+                    BitmapRange bitmapRange = new BitmapRange((uint)bitOffsetInCluster, 1);
+                    byte[] operationData = bitmapRange.GetBytes();
+                    ulong streamOffset = (ulong)(currentVCN * Volume.BytesPerCluster);
+                    Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, transactionID);
+                }
+                ClearBit(clusterBytes, bitOffsetInCluster);
+                WriteCluster(currentVCN, clusterBytes);
+            }
         }
 
         public void ExtendBitmap(long numberOfBits)

@@ -28,5 +28,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         /// <remarks>This flag should only be used in FileNameRecord, and should not be used in StandardInformationRecord</remarks>
         FileNameIndexPresent = 0x10000000, // DUP_FILE_NAME_INDEX_PRESENT
+
+        /// <summary>Indicates the presence of object ID index, quota index, security index or EFS related index</summary>
+        /// <remarks>NTFS 3.0+</remarks>
+        ViewIndexPresent = 0x20000000,
     }
 }

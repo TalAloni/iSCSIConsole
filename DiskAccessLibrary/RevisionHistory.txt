@@ -142,3 +142,20 @@ Revision History:
         Added DiskFullException implementation.
         Added AlreadyExistsException implementation.
         Added DirectoryNotEmptyException implementation.
+
+1.5.1 - PhysicalDisk: Added isReadOnly constructor parameter.
+        DiskExtent: Added IsReadOnly property.
+        Volume: Added IsReadOnly virtual property.
+        VirtualMachineDisk: Bugfix: IsReadOnly always returned false.
+        VMDK: Improved implementation.
+		DiskImage: Added ExclusiveLock() overload for overlapped IO
+        NTFS: NTFSVolume: Added IsReadOnly property.
+        NTFS: Major improvements to logging implementation.
+        NTFS: Log changes to MFT data and changes to Bitmap attributes.
+        NTFS: MasterFileTable: GetFileRecord, GetFileRecordSegment: throw InvalidDataException if SequenceNumber does not match FileRecordSegment.
+        NTFS: VolumeInformationRecord: Added IsDirty property.
+        NTFS: NTFSVolume: throw exception in the constructor if the volume is invalid or not supported.
+        NTFS: FileRecordSegment: Bugfix: Alignment of EndMarkerLength to 8-byte boundary was not taken into account.
+        NTFS: NTFSVolume: Changed RootDirSegmentReference property from protected internal to public.
+        NTFS: IndexHelper: Bugfix: Correctly set BlocksPerIndexRecord when BytesPerIndexRecord > BytesPerCluster.
+        NTFS: NTFSVolume: Added support for multithreading.

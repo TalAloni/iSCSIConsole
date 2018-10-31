@@ -1,7 +1,7 @@
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    public enum LogRecordType : uint
+    public enum LfsRecordType : uint
     {
         ClientRecord = 1,  // LfsClientRecord
         ClientRestart = 2, // LfsClientRestart

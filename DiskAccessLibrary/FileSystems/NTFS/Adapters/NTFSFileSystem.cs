@@ -310,11 +310,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public bool IsValidAndSupported
+        public override bool SupportsNamedStreams
         {
             get
             {
-                return m_volume.IsValidAndSupported;
+                return false;
             }
         }
 

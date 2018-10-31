@@ -13,7 +13,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// <summary>
     /// LFS_CLIENT_RECORD
     /// </summary>
-    public class LogClientRecord
+    public class LfsClientRecord
     {
         public const int ClientNameMaxLength = 32; // 32 unicode characters
 
@@ -27,12 +27,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         // uint ClientNameLength // Number of bytes
         public string ClientName;
 
-        public LogClientRecord()
+        public LfsClientRecord()
         {
             ClientName = String.Empty;
         }
 
-        public LogClientRecord(byte[] buffer, int offset)
+        public LfsClientRecord(byte[] buffer, int offset)
         {
             OldestLsn = LittleEndianConverter.ToUInt64(buffer, offset + 0x00);
             ClientRestartLsn = LittleEndianConverter.ToUInt64(buffer, offset + 0x08);

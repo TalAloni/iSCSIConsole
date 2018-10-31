@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -17,12 +18,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// This class can be used by higher level implementation that may include
     /// functions such as file copy, caching, symbolic links and etc.
     /// </summary>
+    /// <remarks>
+    /// If a caller wishes to access this class from multiple threads, the underlying volume must be thread safe.
+    /// </remarks>
     public partial class NTFSVolume : IExtendableFileSystem
     {
         private Volume m_volume;
         private NTFSBootRecord m_bootRecord; // Partition's boot record
         private MasterFileTable m_mft;
+        private LogFile m_logFile;
+        private NTFSLogClient m_logClient;
         private VolumeBitmap m_bitmap;
+        private ReaderWriterLock m_mftLock = new ReaderWriterLock(); // We use this lock to synchronize MFT and directory indexes operations
+        private object m_bitmapLock = new object();
         private VolumeInformationRecord m_volumeInformation;
         private readonly bool m_generateDosNames = false;
 
@@ -36,12 +44,25 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             byte[] bootSector = m_volume.ReadSector(0);
             m_bootRecord = NTFSBootRecord.ReadRecord(bootSector);
-            if (m_bootRecord != null)
+            if (m_bootRecord == null)
             {
-                m_mft = new MasterFileTable(this, useMftMirror);
-                m_bitmap = new VolumeBitmap(this);
-                m_volumeInformation = GetVolumeInformationRecord();
+                throw new InvalidDataException("The volume does not contain a valid NTFS boot record");
             }
+            m_mft = new MasterFileTable(this, useMftMirror);
+            m_volumeInformation = GetVolumeInformationRecord();
+            if (m_volumeInformation.IsDirty)
+            {
+                throw new NotSupportedException("The volume is marked dirty, please run CHKDSK to repair the volume");
+            }
+            // Note: We could support NTFS v1.2 with minimal effort, but there isn't really any point.
+            if (!(m_volumeInformation.MajorVersion == 3 && m_volumeInformation.MinorVersion == 0) &&
+                !(m_volumeInformation.MajorVersion == 3 && m_volumeInformation.MinorVersion == 1))
+            {
+                throw new NotSupportedException(String.Format("NTFS v{0}.{1} is not supported", m_volumeInformation.MajorVersion, m_volumeInformation.MinorVersion));
+            }
+            m_logFile = new LogFile(this);
+            m_logClient = new NTFSLogClient(m_logFile);
+            m_bitmap = new VolumeBitmap(this);
         }
 
         public virtual FileRecord GetFileRecord(string path)
@@ -100,7 +121,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         protected internal virtual FileRecord GetFileRecord(MftSegmentReference fileReference)
         {
-            return m_mft.GetFileRecord(fileReference);
+            m_mftLock.AcquireReaderLock(Timeout.Infinite);
+            FileRecord fileRecord = m_mft.GetFileRecord(fileReference);
+            m_mftLock.ReleaseReaderLock();
+            return fileRecord;
         }
 
         public virtual FileRecord CreateFile(MftSegmentReference parentDirectory, string fileName, bool isDirectory)
@@ -111,28 +135,54 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 throw new DiskFullException();
             }
             FileRecord parentDirectoryRecord = GetFileRecord(parentDirectory);
+            m_mftLock.AcquireWriterLock(Timeout.Infinite);
             IndexData parentDirectoryIndex = new IndexData(this, parentDirectoryRecord, AttributeType.FileName);
 
             if (parentDirectoryIndex.ContainsFileName(fileName))
             {
+                m_mftLock.ReleaseWriterLock();
                 throw new AlreadyExistsException();
             }
 
             List<FileNameRecord> fileNameRecords = IndexHelper.GenerateFileNameRecords(parentDirectory, fileName, isDirectory, m_generateDosNames, parentDirectoryIndex);
-            FileRecord fileRecord = m_mft.CreateFile(fileNameRecords);
+            uint transactionID = m_logClient.AllocateTransactionID();
+            FileRecord fileRecord = m_mft.CreateFile(fileNameRecords, transactionID);
 
             // Update parent directory index
             foreach (FileNameRecord fileNameRecord in fileNameRecords)
             {
                 parentDirectoryIndex.AddEntry(fileRecord.BaseSegmentReference, fileNameRecord.GetBytes());
             }
+            m_logClient.WriteForgetTransactionRecord(transactionID);
+            m_logClient.WriteRestartRecord(this.MajorVersion, true);
+            m_mftLock.ReleaseWriterLock();
 
             return fileRecord;
         }
 
         protected internal virtual void UpdateFileRecord(FileRecord fileRecord)
         {
-            m_mft.UpdateFileRecord(fileRecord);
+            UpdateFileRecord(fileRecord, null);
+        }
+
+        protected internal virtual void UpdateFileRecord(FileRecord fileRecord, uint? transactionID)
+        {
+            m_mftLock.AcquireWriterLock(Timeout.Infinite);
+            bool allocateTransactionID = !transactionID.HasValue;
+            if (allocateTransactionID)
+            {
+                transactionID = m_logClient.AllocateTransactionID();
+            }
+            m_mft.UpdateFileRecord(fileRecord, transactionID.Value);
+            if (allocateTransactionID)
+            {
+                m_logClient.WriteForgetTransactionRecord(transactionID.Value);
+                if (m_logClient.TransactionCount == 0)
+                {
+                    m_logClient.WriteRestartRecord(this.MajorVersion, true);
+                }
+            }
+            m_mftLock.ReleaseWriterLock();
         }
 
         public virtual void MoveFile(FileRecord fileRecord, MftSegmentReference newParentDirectory, string newFileName)
@@ -144,6 +194,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
 
             FileRecord oldParentDirectoryRecord = GetFileRecord(fileRecord.ParentDirectoryReference);
+            m_mftLock.AcquireWriterLock(Timeout.Infinite);
             IndexData oldParentDirectoryIndex = new IndexData(this, oldParentDirectoryRecord, AttributeType.FileName);
             IndexData newParentDirectoryIndex;
             if (fileRecord.ParentDirectoryReference == newParentDirectory)
@@ -156,11 +207,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 newParentDirectoryIndex = new IndexData(this, newParentDirectoryRecord, AttributeType.FileName);
                 if (newParentDirectoryIndex.ContainsFileName(newFileName))
                 {
+                    m_mftLock.ReleaseWriterLock();
                     throw new AlreadyExistsException();
                 }
             }
 
             List<FileNameRecord> fileNameRecords = fileRecord.FileNameRecords;
+            uint transactionID = m_logClient.AllocateTransactionID();
             foreach (FileNameRecord fileNameRecord in fileNameRecords)
             {
                 oldParentDirectoryIndex.RemoveEntry(fileNameRecord.GetBytes());
@@ -182,20 +235,25 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 fileNameAttribute.IsIndexed = true;
                 fileNameAttribute.Record = fileNameRecord;
             }
-            UpdateFileRecord(fileRecord);
+            UpdateFileRecord(fileRecord, transactionID);
 
             foreach (FileNameRecord fileNameRecord in fileNameRecords)
             {
                 newParentDirectoryIndex.AddEntry(fileRecord.BaseSegmentReference, fileNameRecord.GetBytes());
             }
+            m_logClient.WriteForgetTransactionRecord(transactionID);
+            m_logClient.WriteRestartRecord(this.MajorVersion, true);
+            m_mftLock.ReleaseWriterLock();
         }
 
         public virtual void DeleteFile(FileRecord fileRecord)
         {
             MftSegmentReference parentDirectory = fileRecord.ParentDirectoryReference;
             FileRecord parentDirectoryRecord = GetFileRecord(parentDirectory);
+            m_mftLock.AcquireWriterLock(Timeout.Infinite);
             IndexData parentDirectoryIndex = new IndexData(this, parentDirectoryRecord, AttributeType.FileName);
 
+            uint transactionID = m_logClient.AllocateTransactionID();
             // Update parent directory index
             List<FileNameRecord> fileNameRecords = fileRecord.FileNameRecords;
             foreach(FileNameRecord fileNameRecord in fileNameRecords)
@@ -213,7 +271,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 }
             }
 
-            m_mft.DeleteFile(fileRecord);
+            m_mft.DeleteFile(fileRecord, transactionID);
+            m_logClient.WriteForgetTransactionRecord(transactionID);
+            m_logClient.WriteRestartRecord(this.MajorVersion, true);
+            m_mftLock.ReleaseWriterLock();
         }
 
         public virtual KeyValuePairList<MftSegmentReference, FileNameRecord> GetFileNameRecordsInDirectory(MftSegmentReference directoryReference)
@@ -222,8 +283,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             KeyValuePairList<MftSegmentReference, FileNameRecord> result = null;
             if (directoryRecord != null && directoryRecord.IsDirectory)
             {
+                m_mftLock.AcquireReaderLock(Timeout.Infinite);
                 IndexData indexData = new IndexData(this, directoryRecord, AttributeType.FileName);
                 result = indexData.GetAllFileNameRecords();
+                m_mftLock.ReleaseReaderLock();
 
                 for (int index = 0; index < result.Count; index++)
                 {
@@ -357,32 +420,25 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         internal KeyValuePairList<long, long> AllocateClusters(long numberOfClusters)
         {
-            return m_bitmap.AllocateClusters(numberOfClusters);
+            lock (m_bitmapLock)
+            {
+                return m_bitmap.AllocateClusters(numberOfClusters);
+            }
         }
 
         internal KeyValuePairList<long, long> AllocateClusters(long desiredStartLCN, long numberOfClusters)
         {
-            return m_bitmap.AllocateClusters(desiredStartLCN, numberOfClusters);
+            lock (m_bitmapLock)
+            {
+                return m_bitmap.AllocateClusters(desiredStartLCN, numberOfClusters);
+            }
         }
 
         internal void DeallocateClusters(long startLCN, long numberOfClusters)
         {
-            m_bitmap.DeallocateClusters(startLCN, numberOfClusters);
-        }
-
-        public bool IsValid
-        {
-            get
+            lock (m_bitmapLock)
             {
-                return (m_bootRecord != null && m_mft.GetMftRecord() != null);
-            }
-        }
-
-        public bool IsValidAndSupported
-        {
-            get
-            {
-                return (this.IsValid && MajorVersion == 3 && MinorVersion == 1);
+                m_bitmap.DeallocateClusters(startLCN, numberOfClusters);
             }
         }
 
@@ -407,6 +463,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             get
             {
                 return (long)(m_bootRecord.TotalSectors * m_bootRecord.BytesPerSector);
+            }
+        }
+
+        public bool IsReadOnly
+        {
+            get
+            {
+                return m_volume.IsReadOnly;
             }
         }
 
@@ -490,7 +554,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        protected internal static MftSegmentReference RootDirSegmentReference
+        internal NTFSLogClient LogClient
+        {
+            get
+            {
+                return m_logClient;
+            }
+        }
+
+        public static MftSegmentReference RootDirSegmentReference
         {
             get
             {

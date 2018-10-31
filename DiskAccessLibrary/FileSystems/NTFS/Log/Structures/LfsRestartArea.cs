@@ -13,17 +13,17 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// <summary>
     /// LFS_RESTART_AREA
     /// </summary>
-    public class LogRestartArea
+    public class LfsRestartArea
     {
-        public const int FixedLengthNTFS12 = 0x30;
+        public const int FixedLengthNTFS12 = 0x30; // Note: Windows NT 4.0 uses 0x30, Windows NT 3.51 uses 0x28
         public const int FixedLengthNTFS31 = 0x40;
-        public const ushort NoClients = 0xFFFF;
+        public const ushort NoClient = 0xFFFF;
 
         public ulong CurrentLsn;
         // ushort LogClients;
         public ushort ClientFreeList;  // The index of the first free log client record in the array
         public ushort ClientInUseList; // The index of the first in-use log client record in the array
-        public LogRestartFlags Flags;
+        public LfsRestartFlags Flags;
         public uint SeqNumberBits;
         public ushort RestartAreaLength;
         // ushort ClientArrayOffset;
@@ -31,21 +31,21 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public uint LastLsnDataLength; // Not including the LFS_RECORD_HEADER
         public ushort RecordHeaderLength;
         public ushort LogPageDataOffset;
-        // uint Unknown
-        public List<LogClientRecord> LogClientArray = new List<LogClientRecord>();
+        public uint RevisionNumber; // This value is incremented by 1 every time the LogRestartArea is being written (initial value is chosen at random)
+        public List<LfsClientRecord> LogClientArray = new List<LfsClientRecord>();
 
-        public LogRestartArea()
+        public LfsRestartArea()
         {
-            RecordHeaderLength = LogRecord.HeaderLength;
+            RecordHeaderLength = LfsRecord.HeaderLength;
         }
 
-        public LogRestartArea(byte[] buffer, int offset)
+        public LfsRestartArea(byte[] buffer, int offset)
         {
             CurrentLsn = LittleEndianConverter.ToUInt64(buffer, offset + 0x00);
             ushort logClients = LittleEndianConverter.ToUInt16(buffer, offset + 0x08);
             ClientFreeList = LittleEndianConverter.ToUInt16(buffer, offset + 0x0A);
             ClientInUseList = LittleEndianConverter.ToUInt16(buffer, offset + 0x0C);
-            Flags = (LogRestartFlags)LittleEndianConverter.ToUInt16(buffer, offset + 0x0E);
+            Flags = (LfsRestartFlags)LittleEndianConverter.ToUInt16(buffer, offset + 0x0E);
             SeqNumberBits = LittleEndianConverter.ToUInt32(buffer, offset + 0x10);
             RestartAreaLength = LittleEndianConverter.ToUInt16(buffer, offset + 0x14);
             ushort clientArrayOffset = LittleEndianConverter.ToUInt16(buffer, offset + 0x16);
@@ -53,10 +53,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LastLsnDataLength = LittleEndianConverter.ToUInt32(buffer, offset + 0x20);
             RecordHeaderLength = LittleEndianConverter.ToUInt16(buffer, offset + 0x24);
             LogPageDataOffset = LittleEndianConverter.ToUInt16(buffer, offset + 0x26);
+            if (clientArrayOffset >= 0x30)
+            {
+                RevisionNumber = LittleEndianConverter.ToUInt32(buffer, offset + 0x28);
+            }
             int position = offset + clientArrayOffset;
             for (int index = 0; index < logClients; index++)
             {
-                LogClientRecord clientRecord = new LogClientRecord(buffer, position);
+                LfsClientRecord clientRecord = new LfsClientRecord(buffer, position);
                 LogClientArray.Add(clientRecord);
                 position += clientRecord.Length;
             }
@@ -78,11 +82,63 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt32(buffer, offset + 0x20, LastLsnDataLength);
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x24, RecordHeaderLength);
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x26, LogPageDataOffset);
+            LittleEndianWriter.WriteUInt32(buffer, offset + 0x28, RevisionNumber);
             int position = offset + clientArrayOffset;
-            foreach(LogClientRecord clientRecord in LogClientArray)
+            foreach (LfsClientRecord clientRecord in LogClientArray)
             {
                 clientRecord.WriteBytes(buffer, position);
                 position += clientRecord.Length;
+            }
+        }
+
+        /// <summary>
+        /// The number of bits chosen to represent the log file size
+        /// (must be greater than or equal to the number of bits needed)
+        /// </summary>
+        public int FileSizeBits
+        {
+            get
+            {
+                return 64 - (int)SeqNumberBits + 3;
+            }
+            set
+            {
+                // All log records are aligned to 8-byte boundary
+                SeqNumberBits = (uint)(64 - (value - 3));
+            }
+        }
+
+        /// <summary>
+        /// Windows 2000 and earlier will close the log file by setting the
+        /// ClientInUseList to NoClient when the volume is dismounted cleanly.
+        /// </summary>
+        public bool IsInUse
+        {
+            get
+            {
+                return (ClientInUseList != NoClient);
+            }
+        }
+
+        /// <summary>
+        /// Windows XP and later will set the clean bit when the volume is dismounted cleanly.
+        /// </summary>
+        public bool IsClean
+        {
+            get
+            {
+                return (Flags & LfsRestartFlags.CleanDismount) != 0;
+            }
+            set
+            {
+                if (value)
+                {
+                    Flags |= LfsRestartFlags.CleanDismount;
+                }
+                else
+                {
+                    Flags &= ~LfsRestartFlags.CleanDismount;
+                }
             }
         }
 
@@ -91,7 +147,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             get
             {
                 int length = FixedLengthNTFS31;
-                foreach (LogClientRecord clientRecord in LogClientArray)
+                foreach (LfsClientRecord clientRecord in LogClientArray)
                 {
                     length += clientRecord.Length;
                 }

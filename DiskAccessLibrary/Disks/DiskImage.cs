@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary
@@ -15,10 +14,16 @@ namespace DiskAccessLibrary
     public abstract partial class DiskImage : Disk
     {
         private string m_path;
+        private bool m_isReadOnly;
 
-        public DiskImage(string diskImagePath)
+        public DiskImage(string diskImagePath) : this(diskImagePath, false)
+        {
+        }
+
+        public DiskImage(string diskImagePath, bool isReadOnly)
         {
             m_path = diskImagePath;
+            m_isReadOnly = isReadOnly;
         }
 
         public void CheckBoundaries(long sectorIndex, int sectorCount)
@@ -33,6 +38,10 @@ namespace DiskAccessLibrary
 
         public abstract bool ExclusiveLock();
 
+#if Win32
+        public abstract bool ExclusiveLock(bool useOverlappedIO);
+#endif
+
         public abstract bool ReleaseLock();
 
         public string Path
@@ -43,23 +52,40 @@ namespace DiskAccessLibrary
             }
         }
 
+        public override bool IsReadOnly
+        {
+            get
+            {
+                return m_isReadOnly;
+            }
+        }
+
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.IO.InvalidDataException"></exception>
         /// <exception cref="System.NotImplementedException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
         public static DiskImage GetDiskImage(string path)
         {
+            return GetDiskImage(path, false);
+        }
+
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public static DiskImage GetDiskImage(string path, bool isReadOnly)
+        {
             if (path.EndsWith(".vhd", StringComparison.InvariantCultureIgnoreCase))
             {
-                return new VirtualHardDisk(path);
+                return new VirtualHardDisk(path, isReadOnly);
             }
             else if (path.EndsWith(".vmdk", StringComparison.InvariantCultureIgnoreCase))
             {
-                return new VirtualMachineDisk(path);
+                return new VirtualMachineDisk(path, isReadOnly);
             }
             else
             {
-                return new RawDiskImage(path);
+                return new RawDiskImage(path, isReadOnly);
             }
         }
     }

@@ -42,8 +42,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 segment.ImmediateAttributes.Clear();
             }
 
-            int segmentLength = FileRecordSegment.GetFirstAttributeOffset(bytesPerFileRecordSegment, minorNTFSVersion);
-            segmentLength += FileRecordSegment.EndMarkerLength;
+            int segmentLength = bytesPerFileRecordSegment - FileRecordSegment.GetNumberOfBytesAvailable(bytesPerFileRecordSegment, minorNTFSVersion);
 
             foreach (AttributeRecord attribute in attributes)
             {

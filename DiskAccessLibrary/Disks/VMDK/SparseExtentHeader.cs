@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,7 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using Utilities;
 
 namespace DiskAccessLibrary.VMDK
@@ -31,7 +31,7 @@ namespace DiskAccessLibrary.VMDK
         public char NonEndLineChar;
         public char DoubleEndLineChar1;
         public char DoubleEndLineChar2;
-        public ushort CompressionAlgirithm;
+        public SparseExtentCompression CompressionAlgirithm;
 
         public SparseExtentHeader()
         {
@@ -40,6 +40,10 @@ namespace DiskAccessLibrary.VMDK
         public SparseExtentHeader(byte[] buffer)
         {
             Signature = ByteReader.ReadAnsiString(buffer, 0x00, 4);
+            if (!String.Equals(Signature, ValidSignature))
+            {
+                throw new InvalidDataException("Sparse extent header signature is invalid");
+            }
             Version = LittleEndianConverter.ToUInt32(buffer, 0x04);
             Flags = LittleEndianConverter.ToUInt32(buffer, 0x08);
             Capacity = LittleEndianConverter.ToUInt64(buffer, 0x0C);
@@ -55,22 +59,14 @@ namespace DiskAccessLibrary.VMDK
             NonEndLineChar = (char)ByteReader.ReadByte(buffer, 0x4A);
             DoubleEndLineChar1 = (char)ByteReader.ReadByte(buffer, 0x4B);
             DoubleEndLineChar2 = (char)ByteReader.ReadByte(buffer, 0x4C);
-            CompressionAlgirithm = (char)LittleEndianConverter.ToUInt16(buffer, 0x4D);
+            CompressionAlgirithm = (SparseExtentCompression)LittleEndianConverter.ToUInt16(buffer, 0x4D);
         }
 
-        public bool IsValid
+        public bool IsSupported
         {
             get
             {
-                return String.Equals(Signature, ValidSignature);
-            }
-        }
-
-        public bool IsValidAndSupported
-        {
-            get
-            {
-                return this.IsValid && (Version == 1) && (CompressionAlgirithm == 0);
+                return (Version == 1);
             }
         }
     }

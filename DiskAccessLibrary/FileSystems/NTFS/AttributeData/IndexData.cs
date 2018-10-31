@@ -517,20 +517,24 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <returns>Record Index</returns>
         private long AllocateIndexRecord()
         {
-            long? indexRecord = m_bitmapData.AllocateRecord();
+            uint transactionID = m_volume.LogClient.AllocateTransactionID();
+            long? indexRecord = m_bitmapData.AllocateRecord(transactionID);
             if (indexRecord == null)
             {
                 long numberOfUsableBits = m_bitmapData.NumberOfUsableBits;
                 m_indexAllocationData.Extend(m_rootRecord.BytesPerIndexRecord * ExtendGranularity);
                 m_bitmapData.ExtendBitmap(ExtendGranularity);
-                indexRecord = m_bitmapData.AllocateRecord(numberOfUsableBits);
+                indexRecord = m_bitmapData.AllocateRecord(numberOfUsableBits, transactionID);
             }
+            m_volume.LogClient.WriteForgetTransactionRecord(transactionID);
             return indexRecord.Value;
         }
 
         private void DeallocateIndexRecord(long recordIndex)
         {
-            m_bitmapData.DeallocateRecord(recordIndex);
+            uint transactionID = m_volume.LogClient.AllocateTransactionID();
+            m_bitmapData.DeallocateRecord(recordIndex, transactionID);
+            m_volume.LogClient.WriteForgetTransactionRecord(transactionID);
             // TODO: We may truncate the IndexAllocation attribute data and bitmap
         }
 
@@ -538,6 +542,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             long sectorIndex = ConvertToSectorIndex(subnodeVBN);
             byte[] recordBytes = m_indexAllocationData.ReadSectors(sectorIndex, this.SectorsPerIndexRecord);
+            MultiSectorHelper.RevertUsaProtection(recordBytes, 0);
             IndexRecord record = new IndexRecord(recordBytes, 0);
             return record;
         }
@@ -547,7 +552,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             long sectorsPerIndexRecord = m_rootRecord.BytesPerIndexRecord / m_volume.BytesPerSector;
             long sectorIndex = recordIndex * sectorsPerIndexRecord;
 
-            m_indexAllocationData.WriteSectors(sectorIndex, indexRecord.GetBytes((int)m_rootRecord.BytesPerIndexRecord));
+            m_indexAllocationData.WriteSectors(sectorIndex, indexRecord.GetBytes((int)m_rootRecord.BytesPerIndexRecord, true));
         }
 
         private long ConvertToSectorIndex(long recordVBN)

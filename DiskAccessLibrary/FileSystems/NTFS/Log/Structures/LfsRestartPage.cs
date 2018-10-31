@@ -15,9 +15,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// Windows NT 3.51 sets the version to 1.0
     /// Windows NT 4.0 and later set the version to 1.1
     /// </remarks>
-    public class LogRestartPage
+    public class LfsRestartPage
     {
         private const string ValidSignature = "RSTR";
+        private const string ModifiedSignature = "CHKD"; // Indicates that CHKDSK was run
         private const int UpdateSequenceArrayOffset = 0x1E;
 
         /* Start of LFS_RESTART_PAGE_HEADER */
@@ -31,19 +32,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ushort UpdateSequenceNumber; // a.k.a. USN
         // byte[] UpdateSequenceReplacementData
         /* End of LFS_RESTART_PAGE_HEADER */
-        public LogRestartArea LogRestartArea;
+        public LfsRestartArea LogRestartArea;
 
-        public LogRestartPage()
+        public LfsRestartPage()
         {
-            LogRestartArea = new LogRestartArea();
+            LogRestartArea = new LfsRestartArea();
             MinorVersion = 1;
             MajorVersion = 1;
         }
 
-        public LogRestartPage(byte[] buffer, int offset)
+        public LfsRestartPage(byte[] buffer, int offset)
         {
             MultiSectorHeader multiSectorHeader = new MultiSectorHeader(buffer, offset + 0x00);
-            if (multiSectorHeader.Signature != ValidSignature)
+            if (multiSectorHeader.Signature != ValidSignature && multiSectorHeader.Signature != ModifiedSignature)
             {
                 throw new InvalidDataException("Invalid RSTR record signature");
             }
@@ -53,13 +54,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ushort restartOffset = LittleEndianConverter.ToUInt16(buffer, offset + 0x18);
             MinorVersion = LittleEndianConverter.ToInt16(buffer, offset + 0x1A);
             MajorVersion = LittleEndianConverter.ToInt16(buffer, offset + 0x1C);
-            int position = offset + multiSectorHeader.UpdateSequenceArrayOffset;
-            List<byte[]> updateSequenceReplacementData = MultiSectorHelper.ReadUpdateSequenceArray(buffer, position, multiSectorHeader.UpdateSequenceArraySize, out UpdateSequenceNumber);
-            MultiSectorHelper.DecodeSegmentBuffer(buffer, offset, UpdateSequenceNumber, updateSequenceReplacementData);
-            LogRestartArea = new LogRestartArea(buffer, offset + restartOffset);
+            UpdateSequenceNumber = LittleEndianConverter.ToUInt16(buffer, offset + multiSectorHeader.UpdateSequenceArrayOffset);
+            LogRestartArea = new LfsRestartArea(buffer, offset + restartOffset);
         }
 
-        public byte[] GetBytes(int bytesPerSystemPage)
+        public byte[] GetBytes(int bytesPerSystemPage, bool applyUsaProtection)
         {
             m_systemPageSize = (uint)bytesPerSystemPage;
             int strideCount = bytesPerSystemPage / MultiSectorHelper.BytesPerStride;
@@ -75,11 +74,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt16(buffer, 0x18, (ushort)restartOffset);
             LittleEndianWriter.WriteInt16(buffer, 0x1A, MinorVersion);
             LittleEndianWriter.WriteInt16(buffer, 0x1C, MajorVersion);
+            LittleEndianWriter.WriteUInt16(buffer, UpdateSequenceArrayOffset, UpdateSequenceNumber);
             LogRestartArea.WriteBytes(buffer, restartOffset);
 
-            // Write UpdateSequenceNumber and UpdateSequenceReplacementData
-            List<byte[]> updateSequenceReplacementData = MultiSectorHelper.EncodeSegmentBuffer(buffer, 0, bytesPerSystemPage, UpdateSequenceNumber);
-            MultiSectorHelper.WriteUpdateSequenceArray(buffer, UpdateSequenceArrayOffset, updateSequenceArraySize, UpdateSequenceNumber, updateSequenceReplacementData);
+            if (applyUsaProtection)
+            {
+                MultiSectorHelper.ApplyUsaProtection(buffer, 0);
+            }
             return buffer;
         }
 

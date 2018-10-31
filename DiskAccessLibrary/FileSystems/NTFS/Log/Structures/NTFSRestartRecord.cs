@@ -25,6 +25,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     {
         public const int LengthNTFS12 = 64;
         public const int LengthNTFS30 = 104;
+        public const int LengthVista = 112;
 
         public uint MajorVersion;
         public uint MinorVersion;
@@ -37,11 +38,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public uint AttributeNamesLength;
         public uint DirtyPageTableLength;
         public uint TransactionTableLength;
+        public ulong Unknown1;                 // Windows 2000 and later
+        public ulong PreviousRestartRecordLsn; // Windows 2000 and later
+        public uint BytesPerCluster;           // Windows 2000 and later
+        // 2 reserved bytes                    // Windows 2000 and later
+        public MftSegmentReference UsnJournal; // Windows 2000 and later
+        public ulong Unknown2;                 // Windows 2000 and later, always 0
+        public ulong UnknownLsn;               // Windows Vista and later
 
-        public NTFSRestartRecord()
+        public NTFSRestartRecord(uint majorVersion, uint minorVersion)
         {
-            MajorVersion = 1;
-            MinorVersion = 0;
+            MajorVersion = majorVersion;
+            MinorVersion = minorVersion;
+            UsnJournal = MftSegmentReference.NullReference;
         }
 
         public NTFSRestartRecord(byte[] recordBytes)
@@ -57,6 +66,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             AttributeNamesLength = LittleEndianConverter.ToUInt32(recordBytes, 0x34);
             DirtyPageTableLength = LittleEndianConverter.ToUInt32(recordBytes, 0x38);
             TransactionTableLength = LittleEndianConverter.ToUInt32(recordBytes, 0x3C);
+            if (recordBytes.Length >= LengthNTFS30)
+            {
+                Unknown1 = LittleEndianConverter.ToUInt64(recordBytes, 0x40);
+                PreviousRestartRecordLsn = LittleEndianConverter.ToUInt64(recordBytes, 0x48);
+                BytesPerCluster = LittleEndianConverter.ToUInt32(recordBytes, 0x50);
+                UsnJournal = new MftSegmentReference(recordBytes, 0x58);
+                Unknown2 = LittleEndianConverter.ToUInt64(recordBytes, 0x60);
+                if (recordBytes.Length >= LengthVista)
+                {
+                    UnknownLsn = LittleEndianConverter.ToUInt64(recordBytes, 0x68);
+                }
+            }
         }
 
         public byte[] GetBytes(ushort majorNTFSVersion)
@@ -71,9 +92,21 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt64(recordBytes, 0x20, DirtyPageTableLsn);
             LittleEndianWriter.WriteUInt64(recordBytes, 0x28, TransactionTableLsn);
             LittleEndianWriter.WriteUInt32(recordBytes, 0x30, OpenAttributeTableLength);
-            LittleEndianWriter.WriteUInt32(recordBytes, 0x30, AttributeNamesLength);
-            LittleEndianWriter.WriteUInt32(recordBytes, 0x30, DirtyPageTableLength);
-            LittleEndianWriter.WriteUInt32(recordBytes, 0x30, TransactionTableLength);
+            LittleEndianWriter.WriteUInt32(recordBytes, 0x34, AttributeNamesLength);
+            LittleEndianWriter.WriteUInt32(recordBytes, 0x38, DirtyPageTableLength);
+            LittleEndianWriter.WriteUInt32(recordBytes, 0x3C, TransactionTableLength);
+            if (length >= LengthNTFS30)
+            {
+                LittleEndianWriter.WriteUInt64(recordBytes, 0x40, Unknown1);
+                LittleEndianWriter.WriteUInt64(recordBytes, 0x48, PreviousRestartRecordLsn);
+                LittleEndianWriter.WriteUInt32(recordBytes, 0x50, BytesPerCluster);
+                UsnJournal.WriteBytes(recordBytes, 0x58);
+                LittleEndianWriter.WriteUInt64(recordBytes, 0x60, Unknown2);
+                if (length >= LengthVista)
+                {
+                    LittleEndianWriter.WriteUInt64(recordBytes, 0x68, UnknownLsn);
+                }
+            }
             return recordBytes;
         }
     }

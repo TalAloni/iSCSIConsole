@@ -28,7 +28,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             indexRoot.BytesPerIndexRecord = (uint)bytesPerIndexRecord;
             if (bytesPerIndexRecord >= bytesPerCluster)
             {
-                indexRoot.BlocksPerIndexRecord = 1;
+                indexRoot.BlocksPerIndexRecord = (byte)(bytesPerIndexRecord / bytesPerCluster);
             }
             else
             {

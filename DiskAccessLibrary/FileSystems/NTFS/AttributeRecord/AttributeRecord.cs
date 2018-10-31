@@ -110,6 +110,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         }
 
         /// <summary>
+        /// Each attribute record must be aligned to 8-byte boundary, so RecordLength must be a multiple of 8.
         /// When reading attributes, they may contain additional padding,
         /// so we should use RecordLengthOnDisk to advance the buffer position instead.
         /// </summary>

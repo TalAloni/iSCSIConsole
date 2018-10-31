@@ -12,7 +12,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 {
     public class NTFSLogRecord
     {
-        private const int FixedLength = 32;
+        private const int FixedLength = 40; // 32 bytes + 8 bytes reserved for the first LCN in LCNsForPage array. This is the minimum header length that the NTFS v4.x/v5.x driver will accept.
+        public const int BytesPerLogBlock = 512;
 
         /* Start of NTFS_LOG_RECORD_HEADER */
         public NTFSLogOperation RedoOperation;
@@ -21,11 +22,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         // ushort RedoLength;
         // ushort UndoOffset; // Offset MUST be aligned to 8 byte boundary
         // ushort UndoLength;
-        public ushort TargetAttributeIndex; // 0 for the MFT itself
+        public ushort TargetAttributeOffset; // Offset of the attribute in the open attribute table, 0 is a valid value for for operations that do not require TargetAttribute (see IsTargetAttributeRequired() method)
         // ushort LCNsToFollow;
         public ushort RecordOffset;
         public ushort AttributeOffset;
-        public ushort ClusterBlockOffset;
+        public ushort ClusterBlockOffset; // Number of 512 byte blocks
         public ushort Reserved;
         public long TargetVCN;
         public List<long> LCNsForPage = new List<long>();
@@ -47,7 +48,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ushort redoLength = LittleEndianConverter.ToUInt16(recordBytes, 0x06);
             ushort undoOffset = LittleEndianConverter.ToUInt16(recordBytes, 0x08);
             ushort undoLength = LittleEndianConverter.ToUInt16(recordBytes, 0x0A);
-            TargetAttributeIndex = LittleEndianConverter.ToUInt16(recordBytes, 0x0C);
+            TargetAttributeOffset = LittleEndianConverter.ToUInt16(recordBytes, 0x0C);
             ushort lcnsToFollow = LittleEndianConverter.ToUInt16(recordBytes, 0x0E);
             RecordOffset = LittleEndianConverter.ToUInt16(recordBytes, 0x10);
             AttributeOffset = LittleEndianConverter.ToUInt16(recordBytes, 0x12);
@@ -59,8 +60,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 long lcn = (long)LittleEndianConverter.ToUInt64(recordBytes, 0x20 + index * 8);
                 LCNsForPage.Add(lcn);
             }
-            /*int dataOffset = 0x20 + lcnsToFollow * 8;
-            int dataLength = recordBytes.Length - dataOffset;*/
             RedoData = ByteReader.ReadBytes(recordBytes, redoOffset, redoLength);
             if (undoOffset == redoOffset && undoLength == redoLength)
             {
@@ -79,7 +78,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public byte[] GetBytes()
         {
-            int redoDataOffset = 0x20 + LCNsForPage.Count * 8;
+            // The NTFS_LOG_RECORD_HEADER structure definition reserves 8 bytes for the first LCN
+            int redoDataOffset = FixedLength + ((LCNsForPage.Count >= 1) ? (LCNsForPage.Count - 1) * 8 : 0);
             int undoDataOffset;
             if (UndoData == RedoData)
             {
@@ -97,7 +97,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt16(recordBytes, 0x06, (ushort)RedoData.Length);
             LittleEndianWriter.WriteUInt16(recordBytes, 0x08, (ushort)undoDataOffset);
             LittleEndianWriter.WriteUInt16(recordBytes, 0x0A, (ushort)UndoData.Length);
-            LittleEndianWriter.WriteUInt16(recordBytes, 0x0C, TargetAttributeIndex);
+            LittleEndianWriter.WriteUInt16(recordBytes, 0x0C, TargetAttributeOffset);
             LittleEndianWriter.WriteUInt16(recordBytes, 0x0E, (ushort)LCNsForPage.Count);
             LittleEndianWriter.WriteUInt16(recordBytes, 0x10, RecordOffset);
             LittleEndianWriter.WriteUInt16(recordBytes, 0x12, AttributeOffset);
@@ -108,10 +108,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 LittleEndianWriter.WriteUInt64(recordBytes, 0x20 + index * 8, (ulong)LCNsForPage[index]);
             }
-            ByteWriter.WriteBytes(recordBytes, undoDataOffset, UndoData);
+            ByteWriter.WriteBytes(recordBytes, redoDataOffset, RedoData);
             if (UndoData != RedoData)
             {
-                ByteWriter.WriteBytes(recordBytes, redoDataOffset, RedoData);
+                ByteWriter.WriteBytes(recordBytes, undoDataOffset, UndoData);
             }
             return recordBytes;
         }
@@ -120,17 +120,39 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                int length = FixedLength + LCNsForPage.Count * 8;
+                // The NTFS_LOG_RECORD_HEADER structure definition reserves 8 bytes for the first LCN
+                int length = FixedLength + ((LCNsForPage.Count >= 1) ? (LCNsForPage.Count - 1) * 8 : 0);
                 if (UndoData == RedoData)
                 {
-                    length += UndoData.Length;
+                    length += RedoData.Length;
                 }
                 else
                 {
-                    length += (int)Math.Ceiling((double)UndoData.Length / 8);
-                    length += RedoData.Length;
+                    length += (int)Math.Ceiling((double)RedoData.Length / 8) * 8;
+                    length += UndoData.Length;
                 }
                 return length;
+            }
+        }
+
+        public static bool IsTargetAttributeRequired(NTFSLogOperation operation)
+        {
+            switch (operation)
+            {
+                case NTFSLogOperation.Noop:
+                case NTFSLogOperation.CompensationLogRecord:
+                case NTFSLogOperation.DeleteDirtyClusters:
+                case NTFSLogOperation.EndTopLevelAction:
+                case NTFSLogOperation.PrepareTransaction:
+                case NTFSLogOperation.CommitTransaction:
+                case NTFSLogOperation.ForgetTransaction:
+                case NTFSLogOperation.OpenAttributeTableDump:
+                case NTFSLogOperation.AttributeNamesDump:
+                case NTFSLogOperation.DirtyPageTableDump:
+                case NTFSLogOperation.TransactionTableDump:
+                    return false;
+                default:
+                    return true;
             }
         }
     }

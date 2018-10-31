@@ -6,7 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using DiskAccessLibrary.FileSystems.NTFS;
 using Utilities;
 
@@ -16,11 +16,17 @@ namespace DiskAccessLibrary.FileSystems
     {
         public static FileSystem ReadFileSystem(Volume volume)
         {
-            NTFSFileSystem ntfs = new NTFSFileSystem(volume);
-            if (ntfs.IsValidAndSupported)
+            try
             {
-                return ntfs;
+                return new NTFSFileSystem(volume);
             }
+            catch (InvalidDataException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
+
             return null;
         }
     }

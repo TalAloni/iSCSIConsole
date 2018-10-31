@@ -32,10 +32,18 @@ namespace DiskAccessLibrary
         /// <exception cref="System.IO.InvalidDataException"></exception>
         /// <exception cref="System.NotImplementedException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public VirtualHardDisk(string virtualHardDiskPath) : base(virtualHardDiskPath)
+        public VirtualHardDisk(string virtualHardDiskPath) : this(virtualHardDiskPath, false)
+        {
+        }
+
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public VirtualHardDisk(string virtualHardDiskPath, bool isReadOnly) : base(virtualHardDiskPath, isReadOnly)
         {
             // We can't read the VHD footer using this.ReadSector() because it's out of the disk boundaries
-            m_file = new RawDiskImage(virtualHardDiskPath, BytesPerDiskSector);
+            m_file = new RawDiskImage(virtualHardDiskPath, BytesPerDiskSector, isReadOnly);
             byte[] buffer = m_file.ReadSector(m_file.Size / BytesPerDiskSector - 1);
             m_vhdFooter = new VHDFooter(buffer);
 
@@ -84,7 +92,7 @@ namespace DiskAccessLibrary
         }
 
 #if Win32
-        public bool ExclusiveLock(bool useOverlappedIO)
+        public override bool ExclusiveLock(bool useOverlappedIO)
         {
             return m_file.ExclusiveLock(useOverlappedIO);
         }

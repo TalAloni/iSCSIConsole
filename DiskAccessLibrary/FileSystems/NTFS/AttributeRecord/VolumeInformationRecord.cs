@@ -53,5 +53,24 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 return RecordDataLength;
             }
         }
+
+        public bool IsDirty
+        {
+            get
+            {
+                return (VolumeFlags & VolumeFlags.Dirty) != 0;
+            }
+            set
+            {
+                if (value)
+                {
+                    VolumeFlags |= VolumeFlags.Dirty;
+                }
+                else
+                {
+                    VolumeFlags &= ~VolumeFlags.Dirty;
+                }
+            }
+        }
     }
 }

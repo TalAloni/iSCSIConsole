@@ -27,7 +27,13 @@ namespace DiskAccessLibrary
 
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public RawDiskImage(string rawDiskImagePath) : base(rawDiskImagePath)
+        public RawDiskImage(string rawDiskImagePath) : this(rawDiskImagePath, false)
+        {
+        }
+
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public RawDiskImage(string rawDiskImagePath, bool isReadOnly) : base(rawDiskImagePath, isReadOnly)
         {
             m_bytesPerSector = DetectBytesPerSector(rawDiskImagePath);
             m_size = new FileInfo(rawDiskImagePath).Length;
@@ -35,7 +41,13 @@ namespace DiskAccessLibrary
 
         /// <exception cref="System.IO.IOException"></exception>
         /// <exception cref="System.UnauthorizedAccessException"></exception>
-        public RawDiskImage(string rawDiskImagePath, int bytesPerSector) : base(rawDiskImagePath)
+        public RawDiskImage(string rawDiskImagePath, int bytesPerSector) : this(rawDiskImagePath, bytesPerSector, false)
+        {
+        }
+
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        public RawDiskImage(string rawDiskImagePath, int bytesPerSector, bool isReadOnly) : base(rawDiskImagePath, isReadOnly)
         {
             m_bytesPerSector = bytesPerSector;
             m_size = new FileInfo(rawDiskImagePath).Length;
@@ -57,7 +69,7 @@ namespace DiskAccessLibrary
         }
 
 #if Win32
-        public bool ExclusiveLock(bool useOverlappedIO)
+        public override bool ExclusiveLock(bool useOverlappedIO)
         {
             if (!m_isExclusiveLock)
             {
