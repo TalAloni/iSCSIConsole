@@ -8,10 +8,12 @@ namespace ISCSIConsole
     public class VolumeDisk : Disk // a fake disk that serves a single volume
     {
         private Volume m_volume;
+        private bool m_isReadOnly;
         
-        public VolumeDisk(Volume volume)
+        public VolumeDisk(Volume volume, bool isReadOnly)
         {
             m_volume = volume;
+            m_isReadOnly = volume.IsReadOnly || isReadOnly;
         }
 
         public override byte[] ReadSectors(long sectorIndex, int sectorCount)
@@ -29,7 +31,7 @@ namespace ISCSIConsole
 
         public override int BytesPerSector
         {
-            get 
+            get
             {
                 return m_volume.BytesPerSector;
             }
@@ -37,9 +39,17 @@ namespace ISCSIConsole
 
         public override long Size
         {
-            get 
+            get
             {
                 return m_volume.Size;
+            }
+        }
+
+        public override bool IsReadOnly
+        {
+            get
+            {
+                return m_isReadOnly;
             }
         }
 

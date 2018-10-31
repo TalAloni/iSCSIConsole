@@ -123,7 +123,7 @@ namespace ISCSIConsole
             }
             if (chkReadOnly.Checked)
             {
-                selectedDisk.IsReadOnly = true;
+                selectedDisk = new PhysicalDisk(selectedDisk.PhysicalDiskIndex, true);
             }
             m_selectedDisk = selectedDisk;
             this.DialogResult = DialogResult.OK;

@@ -92,11 +92,7 @@ namespace ISCSIConsole
             DialogResult result = selectVolume.ShowDialog();
             if (result == DialogResult.OK)
             {
-                VolumeDisk volumeDisk = new VolumeDisk(selectVolume.SelectedVolume);
-                if (selectVolume.IsReadOnly)
-                {
-                    volumeDisk.IsReadOnly = true;
-                }
+                VolumeDisk volumeDisk = new VolumeDisk(selectVolume.SelectedVolume, selectVolume.IsReadOnly);
                 AddDisk(volumeDisk);
             }
 #endif

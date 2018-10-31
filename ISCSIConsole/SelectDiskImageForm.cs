@@ -35,7 +35,7 @@ namespace ISCSIConsole
             DiskImage diskImage;
             try
             {
-                diskImage = DiskImage.GetDiskImage(path);
+                diskImage = DiskImage.GetDiskImage(path, chkReadOnly.Checked);
             }
             catch (IOException ex)
             {
@@ -53,7 +53,6 @@ namespace ISCSIConsole
                 return;
             }
 
-            diskImage.IsReadOnly = chkReadOnly.Checked;
             bool isLocked = false;
             try
             {
