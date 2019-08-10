@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -26,7 +26,6 @@ namespace ISCSI.Client
         private int m_targetPort;
         private bool m_isConnected;
         private Socket m_clientSocket;
-        private IAsyncResult m_currentAsyncResult;
         
         private object m_incomingQueueLock = new object();
         private List<ISCSIPDU> m_incomingQueue = new List<ISCSIPDU>();
@@ -57,7 +56,7 @@ namespace ISCSI.Client
                 }
                 ConnectionState state = new ConnectionState();
                 ISCSIConnectionReceiveBuffer buffer = state.ReceiveBuffer;
-                m_currentAsyncResult = m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
+                m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
                 m_isConnected = true;
             }
             return m_isConnected;
@@ -290,13 +289,6 @@ namespace ISCSI.Client
 
         private void OnClientSocketReceive(IAsyncResult ar)
         {
-            if (ar != m_currentAsyncResult)
-            {
-                // We ignore calls for old sockets which we no longer use
-                // See: http://rajputyh.blogspot.co.il/2010/04/solve-exception-message-iasyncresult.html
-                return;
-            }
-
             ConnectionState state = (ConnectionState)ar.AsyncState;
 
             if (!m_clientSocket.Connected)
@@ -308,6 +300,10 @@ namespace ISCSI.Client
             try
             {
                 numberOfBytesReceived = m_clientSocket.EndReceive(ar);
+            }
+            catch (ArgumentException) // The IAsyncResult object was not returned from the corresponding synchronous method on this class.
+            {
+                return;
             }
             catch (ObjectDisposedException)
             {
@@ -332,7 +328,7 @@ namespace ISCSI.Client
 
                 try
                 {
-                    m_currentAsyncResult = m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
+                    m_clientSocket.BeginReceive(buffer.Buffer, buffer.WriteOffset, buffer.AvailableLength, SocketFlags.None, new AsyncCallback(OnClientSocketReceive), state);
                 }
                 catch (ObjectDisposedException)
                 {
