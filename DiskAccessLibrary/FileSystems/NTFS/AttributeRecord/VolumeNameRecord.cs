@@ -5,9 +5,7 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.Text;
-using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
@@ -20,7 +18,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         private string m_volumeName;
 
-        public VolumeNameRecord(string name, ushort instance) : base(AttributeType.VolumeName, name, instance)
+        public VolumeNameRecord(string name) : base(AttributeType.VolumeName, name)
         {
             m_volumeName = String.Empty;
         }

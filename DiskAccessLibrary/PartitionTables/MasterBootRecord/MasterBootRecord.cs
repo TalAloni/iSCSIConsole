@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,20 +6,20 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using Utilities;
 
 namespace DiskAccessLibrary
 {
     public class MasterBootRecord
     {
-        public const ushort ValidMBRSignature = 0xAA55;
+        public const ushort MBRSignature = 0xAA55;
         public const int NumberOfPartitionEntries = 4;
 
         public byte[] Code = new byte[440];
         public uint DiskSignature;
         public PartitionTableEntry[] PartitionTable = new PartitionTableEntry[4];
-        public ushort MBRSignature;
+        // ushort Signature;
 
         public MasterBootRecord()
         {
@@ -39,7 +39,11 @@ namespace DiskAccessLibrary
                 PartitionTable[index] = new PartitionTableEntry(buffer, offset);
                 offset += 16;
             }
-            MBRSignature = LittleEndianConverter.ToUInt16(buffer, 510);
+            ushort signature = LittleEndianConverter.ToUInt16(buffer, 510);
+            if (signature != MBRSignature)
+            {
+                throw new InvalidDataException("Invalid MBR signature");
+            }
         }
 
         public byte[] GetBytes(int sectorSize)
@@ -72,7 +76,7 @@ namespace DiskAccessLibrary
         {
             byte[] buffer = disk.ReadSector(0);
             ushort signature = LittleEndianConverter.ToUInt16(buffer, 510);
-            if (signature == ValidMBRSignature)
+            if (signature == MBRSignature)
             {
                 return new MasterBootRecord(buffer);
             }

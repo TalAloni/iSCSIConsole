@@ -5,7 +5,6 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.Text;
 using Utilities;
 
@@ -76,6 +75,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ByteWriter.WriteBytes(buffer, 0x42, Encoding.Unicode.GetBytes(FileName));
 
             return buffer;
+        }
+
+        public FileNameRecord Clone()
+        {
+            FileNameRecord clone = (FileNameRecord)this.MemberwiseClone();
+            clone.ParentDirectory = this.ParentDirectory.Clone();
+            return clone;
         }
 
         /// <param name="fileNameNamespace">POSIX or Win32 or DOS, multiple flags are not supported</param>

@@ -4,8 +4,6 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -39,6 +37,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt32(buffer, offset + 0x04, TotalLength);
             LittleEndianWriter.WriteUInt32(buffer, offset + 0x08, AllocatedLength);
             ByteWriter.WriteByte(buffer, offset + 0x0C, (byte)IndexFlags);
+        }
+
+        public IndexHeader Clone()
+        {
+            return (IndexHeader)this.MemberwiseClone();
         }
 
         public bool IsParentNode

@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary
@@ -102,7 +101,6 @@ namespace DiskAccessLibrary
             mbr.PartitionTable[0].PartitionTypeName = PartitionTypeName.EFIGPT;
             mbr.PartitionTable[0].FirstSectorLBA = 1;
             mbr.PartitionTable[0].SectorCountLBA = (uint)Math.Min(disk.TotalSectors - firstUsableLBA, UInt32.MaxValue);
-            mbr.MBRSignature = 0xAA55;
             MasterBootRecord.WriteToDisk(disk, mbr);
 
             const int DefaultNumberOfEntries = 128;

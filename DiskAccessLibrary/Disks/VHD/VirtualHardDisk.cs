@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2020 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -6,8 +6,6 @@
  */
 using System;
 using System.IO;
-using System.Collections.Generic;
-using Utilities;
 using DiskAccessLibrary.VHD;
 
 namespace DiskAccessLibrary
@@ -91,12 +89,10 @@ namespace DiskAccessLibrary
             return m_file.ExclusiveLock();
         }
 
-#if Win32
         public override bool ExclusiveLock(bool useOverlappedIO)
         {
             return m_file.ExclusiveLock(useOverlappedIO);
         }
-#endif
 
         public override bool ReleaseLock()
         {

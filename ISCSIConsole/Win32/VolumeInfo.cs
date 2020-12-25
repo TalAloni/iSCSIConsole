@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using DiskAccessLibrary;
 using DiskAccessLibrary.LogicalDiskManager;
+using DiskAccessLibrary.Win32;
 
 namespace ISCSIConsole
 {

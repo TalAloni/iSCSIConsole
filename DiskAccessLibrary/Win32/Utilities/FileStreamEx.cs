@@ -43,23 +43,16 @@ namespace DiskAccessLibrary
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool SetFileValidData(SafeFileHandle handle, long validDataLength);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetOverlappedResult(SafeFileHandle handle, IntPtr lpOverlapped, out uint lpNumberOfBytesTransferred, bool bWait);
+
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
         private struct OVERLAPPED
         {
             public UIntPtr Internal;
             public UIntPtr InternalHigh;
-            public uint OffsetLow;
-            public uint OffsetHigh;
+            public long Offset;
             public IntPtr hEvent;
-
-            public long Offset
-            {
-                set
-                {
-                    OffsetLow = (uint)value;
-                    OffsetHigh = (uint)(value >> 32);
-                }
-            }
         }
 
         private SafeFileHandle m_handle;
@@ -91,18 +84,14 @@ namespace DiskAccessLibrary
                 Array.Copy(buffer, 0, array, offset, buffer.Length);
             }
 
-            if (numberOfBytesRead == count)
-            {
-                m_position += count;
-                return (int)numberOfBytesRead;
-            }
-            else
+            if (numberOfBytesRead != count)
             {
                 int errorCode = Marshal.GetLastWin32Error();
                 string message = String.Format("Failed to read from position {0} the requested number of bytes ({1}).", this.Position, count);
                 IOExceptionHelper.ThrowIOError(errorCode, message);
-                return 0; // this line will not be reached
             }
+            m_position += count;
+            return (int)numberOfBytesRead;
         }
 
         public override void Write(byte[] array, int offset, int count)
@@ -119,16 +108,13 @@ namespace DiskAccessLibrary
                 WriteFile(m_handle, buffer, (uint)count, out numberOfBytesWritten, IntPtr.Zero);
             }
 
-            if (numberOfBytesWritten == count)
-            {
-                m_position += count;
-            }
-            else
+            if (numberOfBytesWritten != count)
             {
                 int errorCode = Marshal.GetLastWin32Error();
                 string message = String.Format("Failed to write to position {0} the requested number of bytes ({1}).", this.Position, count);
                 IOExceptionHelper.ThrowIOError(errorCode, message);
             }
+            m_position += count;
         }
 
         /// <remarks>
@@ -144,17 +130,24 @@ namespace DiskAccessLibrary
             IntPtr lpOverlapped = Marshal.AllocHGlobal(Marshal.SizeOf(overlapped));
             Marshal.StructureToPtr(overlapped, lpOverlapped, false);
             bool success;
+            byte[] buffer = null;
+            // We MUST pin the buffer being passed to ReadFile until the operation is complete!
+            // Otherwise it will only be pinned for the duration of the P/Invoke and the GC may move it to another
+            // memory location before the callee completes the operation and writes to the original location.
+            GCHandle bufferHandle;
             if (offset == 0)
             {
+                bufferHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
                 success = ReadFile(m_handle, array, (uint)count, out temp, lpOverlapped);
             }
             else
             {
-                byte[] buffer = new byte[count];
+                buffer = new byte[count];
+                bufferHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 success = ReadFile(m_handle, buffer, (uint)buffer.Length, out temp, lpOverlapped);
-                Array.Copy(buffer, 0, array, offset, buffer.Length);
             }
 
+            uint numberOfBytesRead = 0;
             if (!success)
             {
                 int errorCode = Marshal.GetLastWin32Error();
@@ -163,10 +156,24 @@ namespace DiskAccessLibrary
                     string message = String.Format("Failed to read from position {0} the requested number of bytes ({1}).", position, count);
                     IOExceptionHelper.ThrowIOError(errorCode, message);
                 }
-                bool completed = completionEvent.WaitOne();
+                bool completed = GetOverlappedResult(m_handle, lpOverlapped, out numberOfBytesRead, true);
             }
+            bufferHandle.Free();
+            completionEvent.Close();
             Marshal.FreeHGlobal(lpOverlapped);
-            return count;
+
+            if (numberOfBytesRead != count)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Failed to read from position {0} the requested number of bytes ({1}).", position, count);
+                IOExceptionHelper.ThrowIOError(errorCode, message);
+            }
+
+            if (offset != 0)
+            {
+                Array.Copy(buffer, 0, array, offset, numberOfBytesRead);
+            }
+            return (int)numberOfBytesRead;
         }
 
         /// <remarks>
@@ -181,18 +188,23 @@ namespace DiskAccessLibrary
             overlapped.hEvent = completionEvent.SafeWaitHandle.DangerousGetHandle();
             IntPtr lpOverlapped = Marshal.AllocHGlobal(Marshal.SizeOf(overlapped));
             Marshal.StructureToPtr(overlapped, lpOverlapped, false);
+            // We MUST pin the buffer being passed to WriteFile until the operation is complete!
+            GCHandle bufferHandle;
             bool success;
             if (offset == 0)
             {
+                bufferHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
                 success = WriteFile(m_handle, array, (uint)count, out temp, lpOverlapped);
             }
             else
             {
                 byte[] buffer = new byte[count];
                 Array.Copy(array, offset, buffer, 0, buffer.Length);
+                bufferHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 success = WriteFile(m_handle, buffer, (uint)buffer.Length, out temp, lpOverlapped);
             }
 
+            uint numberOfBytesWritten = 0;
             if (!success)
             {
                 int errorCode = Marshal.GetLastWin32Error();
@@ -201,9 +213,18 @@ namespace DiskAccessLibrary
                     string message = String.Format("Failed to write to position {0} the requested number of bytes ({1}).", position, count);
                     IOExceptionHelper.ThrowIOError(errorCode, message);
                 }
-                bool completed = completionEvent.WaitOne();
+                bool completed = GetOverlappedResult(m_handle, lpOverlapped, out numberOfBytesWritten, true); 
             }
+            bufferHandle.Free();
+            completionEvent.Close();
             Marshal.FreeHGlobal(lpOverlapped);
+
+            if (numberOfBytesWritten != count)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                string message = String.Format("Failed to write to position {0} the requested number of bytes ({1}).", position, count);
+                IOExceptionHelper.ThrowIOError(errorCode, message);
+            }
         }
 
         public override void Flush()

@@ -21,6 +21,10 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
         }
 
+        public DataRunSequence(int capacity) : base(capacity)
+        {
+        }
+
         public DataRunSequence(byte[] buffer, int offset, int length) : base()
         {
             int position = offset;
@@ -198,6 +202,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
 
             throw new InvalidDataException("Invalid cluster VCN");
+        }
+
+        public DataRunSequence Clone()
+        {
+            DataRunSequence clone = new DataRunSequence(this.Count);
+            foreach (DataRun run in this)
+            {
+                clone.Add(run.Clone());
+            }
+            return clone;
         }
 
         public override string ToString()

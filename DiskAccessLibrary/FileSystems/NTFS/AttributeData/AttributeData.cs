@@ -1,11 +1,10 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -213,15 +212,24 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     {
                         throw new DiskFullException();
                     }
-                    NonResidentAttributeRecord attributeRecord = NonResidentAttributeRecord.Create(m_attributeRecord.AttributeType, m_attributeRecord.Name, m_attributeRecord.Instance);
+                    NonResidentAttributeRecord attributeRecord = NonResidentAttributeRecord.Create(m_attributeRecord.AttributeType, m_attributeRecord.Name);
                     NonResidentAttributeData attributeData = new NonResidentAttributeData(m_volume, null, attributeRecord);
                     attributeData.Extend(finalDataLength);
+                    if (data.Length % m_volume.BytesPerCluster > 0)
+                    {
+                        int fillDataLength = m_volume.BytesPerCluster - (data.Length % m_volume.BytesPerCluster);
+                        if ((uint)data.Length + (uint)fillDataLength < finalDataLength)
+                        {
+                            // Only the last cluster can be partially used, if this is not the last cluster, zero-fill it
+                            data = ByteUtils.Concatenate(data, new byte[fillDataLength]);
+                        }
+                    }
                     attributeData.WriteClusters(0, data);
                     // Note that we overwrite the old attribute only after writing the non-resident data
                     if (m_fileRecord != null)
                     {
                         m_fileRecord.RemoveAttributeRecord(m_attributeRecord.AttributeType, m_attributeRecord.Name);
-                        m_fileRecord.Attributes.Add(attributeRecord);
+                        FileRecordHelper.InsertSorted(m_fileRecord.Attributes, attributeRecord);
                     }
                     m_attributeRecord = attributeRecord;
                 }
@@ -329,6 +337,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             get
             {
                 return m_attributeRecord;
+            }
+        }
+
+        public string AttributeName
+        {
+            get
+            {
+                return m_attributeRecord.Name;
             }
         }
     }

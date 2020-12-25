@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -15,9 +15,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// FILE_RECORD_SEGMENT_HEADER: https://msdn.microsoft.com/de-de/windows/desktop/bb470124
     /// </summary>
     /// <remarks>
-    /// Attributes MUST be ordered by increasing attribute type code when written to disk.
+    /// Attributes MUST be ordered by increasing attribute type code (with a secondary ordering by name) when written to disk.
     /// </remarks>
-    public class FileRecordSegment
+    internal class FileRecordSegment
     {
         private const string ValidSignature = "FILE";
         private const int NTFS30UpdateSequenceArrayOffset = 0x2A; // NTFS v3.0 and earlier (up to Windows 2000)
@@ -76,6 +76,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_segmentNumberOnDisk = LittleEndianConverter.ToUInt32(buffer, offset + 0x2C);
             UpdateSequenceNumber = LittleEndianConverter.ToUInt16(buffer, offset + multiSectorHeader.UpdateSequenceArrayOffset);
 
+            if (firstAttributeOffset % 8 > 0)
+            {
+                throw new InvalidDataException("Corrupt file record segment, first attribute not aligned to 8-byte boundary");
+            }
+
             // Read attributes
             int position = offset + firstAttributeOffset;
             while (!IsEndMarker(buffer, position))
@@ -93,7 +98,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_segmentNumber = segmentNumber;
         }
 
-        public byte[] GetBytes(int bytesPerFileRecordSegment, ushort minorNTFSVersion, bool applyUsaProtection)
+        public byte[] GetBytes(int bytesPerFileRecordSegment, byte minorNTFSVersion, bool applyUsaProtection)
         {
             int strideCount = bytesPerFileRecordSegment / MultiSectorHelper.BytesPerStride;
             ushort updateSequenceArraySize = (ushort)(1 + strideCount);
@@ -153,7 +158,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public AttributeRecord CreateAttributeRecord(AttributeType type, string name)
         {
-            AttributeRecord attribute = AttributeRecord.Create(type, name, NextAttributeInstance);
+            bool isResident = (type != AttributeType.IndexAllocation);
+            return CreateAttributeRecord(type, name, isResident);
+        }
+
+        internal AttributeRecord CreateAttributeRecord(AttributeType type, string name, bool isResident)
+        {
+            AttributeRecord attribute = AttributeRecord.Create(type, name, isResident);
+            attribute.Instance = NextAttributeInstance;
             NextAttributeInstance++;
             FileRecordHelper.InsertSorted(m_immediateAttributes, attribute);
             return attribute;
@@ -161,18 +173,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public AttributeRecord CreateAttributeListRecord(bool isResident)
         {
-            AttributeRecord attribute;
-            if (isResident)
-            {
-                attribute = AttributeRecord.Create(AttributeType.AttributeList, String.Empty, NextAttributeInstance);
-            }
-            else
-            {
-                attribute = NonResidentAttributeRecord.Create(AttributeType.AttributeList, String.Empty, NextAttributeInstance);
-            }
-            NextAttributeInstance++;
-            FileRecordHelper.InsertSorted(m_immediateAttributes, attribute);
-            return attribute;
+            return CreateAttributeRecord(AttributeType.AttributeList, String.Empty, isResident);
         }
 
         public AttributeRecord GetImmediateAttributeRecord(AttributeType type, string name)
@@ -188,6 +189,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return null;
         }
 
+        /// <summary>
+        /// This method should only be used to add attributes that have already been sorted
+        /// </summary>
+        public void AddAttributeRecord(AttributeRecord attribute)
+        {
+            attribute.Instance = NextAttributeInstance;
+            NextAttributeInstance++;
+            ImmediateAttributes.Add(attribute);
+        }
+
         public void RemoveAttributeRecord(AttributeType type, string name)
         {
             for (int index = 0; index < m_immediateAttributes.Count; index++)
@@ -200,7 +211,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public int GetNumberOfBytesInUse(int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public int GetNumberOfBytesInUse(int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int length = GetFirstAttributeOffset(bytesPerFileRecordSegment, minorNTFSVersion);
             foreach (AttributeRecord attribute in m_immediateAttributes)
@@ -211,7 +222,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return length;
         }
 
-        public int GetNumberOfBytesFree(int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public int GetNumberOfBytesFree(int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int length = GetNumberOfBytesInUse(bytesPerFileRecordSegment, minorNTFSVersion);
             return bytesPerFileRecordSegment - length;
@@ -254,6 +265,44 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 else
                 {
                     m_flags &= ~FileRecordFlags.IsDirectory;
+                }
+            }
+        }
+
+        public bool IsExtension
+        {
+            get
+            {
+                return (m_flags & FileRecordFlags.IsExtension) != 0;
+            }
+            set
+            {
+                if (value)
+                {
+                    m_flags |= FileRecordFlags.IsExtension;
+                }
+                else
+                {
+                    m_flags &= ~FileRecordFlags.IsExtension;
+                }
+            }
+        }
+
+        public bool IsSpecialIndex
+        {
+            get
+            {
+                return (m_flags & FileRecordFlags.IsSpecialIndex) != 0;
+            }
+            set
+            {
+                if (value)
+                {
+                    m_flags |= FileRecordFlags.IsSpecialIndex;
+                }
+                else
+                {
+                    m_flags &= ~FileRecordFlags.IsSpecialIndex;
                 }
             }
         }
@@ -317,7 +366,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return (type == AttributesEndMarker);
         }
 
-        public static ushort GetFirstAttributeOffset(int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public static ushort GetFirstAttributeOffset(int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int strideCount = bytesPerFileRecordSegment / MultiSectorHelper.BytesPerStride;
             ushort updateSequenceArraySize = (ushort)(1 + strideCount);
@@ -332,28 +381,36 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 updateSequenceArrayOffset = NTFS31UpdateSequenceArrayOffset;
             }
 
-            // Aligned to 8 byte boundary
-            // Note: I had an issue with 4 byte boundary under Windows 7 using disk with 2048 bytes per sector.
-            //       Windows used an 8 byte boundary.
+            // FirstAttributeOffset MUST be aligned to 8-byte boundary
             ushort firstAttributeOffset = (ushort)(Math.Ceiling((double)(updateSequenceArrayOffset + updateSequenceArraySize * 2) / 8) * 8);
             return firstAttributeOffset;
         }
 
-        public static int GetNumberOfBytesAvailable(int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public static int GetNumberOfBytesAvailable(int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int firstAttributeOffset = FileRecordSegment.GetFirstAttributeOffset(bytesPerFileRecordSegment, minorNTFSVersion);
             return bytesPerFileRecordSegment - firstAttributeOffset - AttributesEndMarkerLength;
         }
 
-        public static bool ContainsFileRecordSegment(byte[] recordBytes)
+        public static bool ContainsFileRecordSegment(byte[] segmentBytes)
         {
-            return ContainsFileRecordSegment(recordBytes, 0);
+            return ContainsFileRecordSegment(segmentBytes, 0);
         }
 
-        public static bool ContainsFileRecordSegment(byte[] recordBytes, int offset)
+        public static bool ContainsFileRecordSegment(byte[] segmentBytes, int offset)
         {
-            string fileSignature = ByteReader.ReadAnsiString(recordBytes, offset, 4);
+            string fileSignature = ByteReader.ReadAnsiString(segmentBytes, offset, 4);
             return (fileSignature == ValidSignature);
+        }
+
+        public static ushort GetSequenceNumber(byte[] segmentBytes)
+        {
+            return GetSequenceNumber(segmentBytes, 0);
+        }
+
+        public static ushort GetSequenceNumber(byte[] segmentBytes, int offset)
+        {
+            return LittleEndianConverter.ToUInt16(segmentBytes, offset + 0x10);
         }
 
         public static bool ContainsSegmentNumber(List<FileRecordSegment> list, long segmentNumber)

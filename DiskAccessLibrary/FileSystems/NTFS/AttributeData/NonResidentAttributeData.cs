@@ -1,3 +1,9 @@
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.Collections.Generic;
 using Utilities;
@@ -12,12 +18,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         private NTFSVolume m_volume;
         private FileRecord m_fileRecord;
         private NonResidentAttributeRecord m_attributeRecord;
+        private ContentType m_contentType;
 
         public NonResidentAttributeData(NTFSVolume volume, FileRecord fileRecord, NonResidentAttributeRecord attributeRecord)
         {
             m_volume = volume;
             m_fileRecord = fileRecord;
             m_attributeRecord = attributeRecord;
+            m_contentType = GetContentType(fileRecord, attributeRecord.AttributeType);
         }
 
         /// <param name="clusterVCN">Cluster index</param>
@@ -68,7 +76,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 long bytesRead = 0;
                 foreach (KeyValuePair<long, int> run in sequence)
                 {
-                    byte[] data = m_volume.ReadSectors(run.Key, run.Value);
+                    byte[] data = m_volume.ReadSectors(run.Key, run.Value, m_contentType);
                     Array.Copy(data, 0, result, bytesRead, data.Length);
                     bytesRead += data.Length;
                 }
@@ -164,7 +172,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 byte[] sectors = new byte[run.Value * bytesPerSector];
                 Array.Copy(data, bytesWritten, sectors, 0, sectors.Length);
-                m_volume.WriteSectors(run.Key, sectors);
+                m_volume.WriteSectors(run.Key, sectors, m_contentType);
                 bytesWritten += sectors.Length;
             }
 
@@ -185,7 +193,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 ulong bytesToAllocate = additionalLengthInBytes - freeBytesInCurrentAllocation;
                 long clustersToAllocate = (long)Math.Ceiling((double)bytesToAllocate / m_volume.BytesPerCluster);
-                if (clustersToAllocate > m_volume.NumberOfFreeClusters)
+                // We might need to allocate an additional FileRecordSegment so we have to make sure we can extend the MFT if it is full
+                if (clustersToAllocate + m_volume.NumberOfClustersRequiredToExtendMft > m_volume.NumberOfFreeClusters)
                 {
                     throw new DiskFullException();
                 }
@@ -195,6 +204,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_attributeRecord.FileSize += additionalLengthInBytes;
             if (m_fileRecord != null)
             {
+                if (m_attributeRecord.AttributeType == AttributeType.Data && m_attributeRecord.Name == String.Empty)
+                {
+                    // Windows NTFS v5.1 driver updates the value of the AllocatedLength field but does not usually update the value of
+                    // the FileSize field belonging to the FileNameRecords that are stored in the FileRecord, which is likely to be 0.
+                    List<FileNameRecord> fileNameRecords = m_fileRecord.FileNameRecords;
+                    foreach (FileNameRecord fileNameRecord in fileNameRecords)
+                    {
+                        fileNameRecord.AllocatedLength = m_attributeRecord.AllocatedLength;
+                    }
+                }
                 m_volume.UpdateFileRecord(m_fileRecord);
             }
         }
@@ -265,6 +284,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             if (m_fileRecord != null)
             {
+                if (m_attributeRecord.AttributeType == AttributeType.Data && m_attributeRecord.Name == String.Empty)
+                {
+                    // Windows NTFS v5.1 driver updates the value of the AllocatedLength field but does not usually update the value of
+                    // the FileSize field belonging to the FileNameRecords that are stored in the FileRecord, which is likely to be 0.
+                    List<FileNameRecord> fileNameRecords = m_fileRecord.FileNameRecords;
+                    foreach (FileNameRecord fileNameRecord in fileNameRecords)
+                    {
+                        fileNameRecord.AllocatedLength = m_attributeRecord.AllocatedLength;
+                    }
+                }
                 m_volume.UpdateFileRecord(m_fileRecord);
             }
         }
@@ -322,6 +351,47 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             get
             {
                 return m_attributeRecord;
+            }
+        }
+
+        public static ContentType GetContentType(FileRecord fileRecord, AttributeType attributeType)
+        {
+            if (fileRecord != null)
+            {
+                long baseSegmentNumber = fileRecord.BaseSegmentNumber;
+                if (baseSegmentNumber == MasterFileTable.MasterFileTableSegmentNumber || baseSegmentNumber == MasterFileTable.MftMirrorSegmentNumber)
+                {
+                    return (attributeType == AttributeType.Data) ? ContentType.MftData : ContentType.MftBitmap;
+                }
+                else if (baseSegmentNumber == MasterFileTable.LogFileSegmentNumber)
+                {
+                    return ContentType.LogFileData;
+                }
+                else if (baseSegmentNumber == MasterFileTable.VolumeSegmentNumber)
+                {
+                    return ContentType.VolumeBitmap;
+                }
+            }
+            return GetContentType(attributeType);
+        }
+
+        public static ContentType GetContentType(AttributeType attributeType)
+        {
+            if (attributeType == AttributeType.AttributeList)
+            {
+                return ContentType.MftData;
+            }
+            else if (attributeType == AttributeType.IndexAllocation)
+            {
+                return ContentType.IndexData;
+            }
+            else if (attributeType == AttributeType.Bitmap)
+            {
+                return ContentType.IndexBitmap;
+            }
+            else
+            {
+                return ContentType.FileData;
             }
         }
     }

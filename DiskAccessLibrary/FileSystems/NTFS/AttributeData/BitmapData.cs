@@ -1,11 +1,10 @@
-/* Copyright (C) 2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2018-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
@@ -18,7 +17,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// </remarks>
     public class BitmapData : AttributeData
     {
-        private const int ExtendGranularity = 8; // The number of bytes added to the bitmap when extending it, MUST be multiple of 8.
+        internal static readonly int ExtendGranularity = 8; // The number of bytes added to the bitmap when extending it, MUST be multiple of 8.
 
         private long m_searchStartIndex = 0;
         private long m_numberOfUsableBits;
@@ -76,7 +75,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                         BitmapRange bitmapRange = new BitmapRange((uint)bitOffsetInCluster, 1);
                         byte[] operationData = bitmapRange.GetBytes();
                         ulong streamOffset = (ulong)(currentVCN * Volume.BytesPerCluster);
-                        Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, transactionID);
+                        Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, Volume.BytesPerCluster, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, transactionID);
                     }
                     SetBit(bufferedClusterBytes, bitOffsetInCluster);
                     WriteCluster(currentVCN, bufferedClusterBytes);
@@ -99,7 +98,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     BitmapRange bitmapRange = new BitmapRange((uint)bitOffsetInCluster, 1);
                     byte[] operationData = bitmapRange.GetBytes();
                     ulong streamOffset = (ulong)(currentVCN * Volume.BytesPerCluster);
-                    Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, transactionID);
+                    Volume.LogClient.WriteLogRecord(FileRecord.BaseSegmentReference, this.AttributeRecord, streamOffset, Volume.BytesPerCluster, NTFSLogOperation.ClearBitsInNonResidentBitMap, operationData, NTFSLogOperation.SetBitsInNonResidentBitMap, operationData, transactionID);
                 }
                 ClearBit(clusterBytes, bitOffsetInCluster);
                 WriteCluster(currentVCN, clusterBytes);
@@ -111,15 +110,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ExtendBitmap(numberOfBits, false);
         }
 
-        /// <param name="prewriteBytes">True to zero out the extension in advance, False to rely on ValidDataLength</param>
-        internal void ExtendBitmap(long numberOfBits, bool prewriteBytes)
+        /// <param name="zeroOutExtensionInAdvance">True to zero out the extension in advance, False to rely on ValidDataLength</param>
+        internal void ExtendBitmap(long numberOfBits, bool zeroOutExtensionInAdvance)
         {
             long numberOfUnusedBits = (long)(this.Length * 8 - (ulong)m_numberOfUsableBits);
             if (numberOfBits > numberOfUnusedBits)
             {
                 long additionalBits = numberOfBits - numberOfUnusedBits;
-                ulong additionalBytes = (ulong)Math.Ceiling((double)additionalBits / (ExtendGranularity * 8)) * ExtendGranularity;
-                if (prewriteBytes)
+                ulong additionalBytes = (ulong)(Math.Ceiling((double)additionalBits / (ExtendGranularity * 8)) * ExtendGranularity);
+                if (zeroOutExtensionInAdvance)
                 {
                     this.WriteBytes(this.Length, new byte[additionalBytes]);
                 }
@@ -134,30 +133,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public void TruncateBitmap(long newLengthInBits)
         {
             m_numberOfUsableBits = newLengthInBits;
-            ulong newLengthInBytes = (ulong)Math.Ceiling((double)newLengthInBits / (ExtendGranularity * 8)) * ExtendGranularity;
+            ulong newLengthInBytes = (ulong)(Math.Ceiling((double)newLengthInBits / (ExtendGranularity * 8)) * ExtendGranularity);
             this.Truncate(newLengthInBytes);
-        }
-
-        private static bool IsBitClear(byte[] bitmap, int bitOffsetInBitmap)
-        {
-            int byteOffset = bitOffsetInBitmap / 8;
-            int bitOffsetInByte = bitOffsetInBitmap % 8;
-            bool isInUse = ((bitmap[byteOffset] >> bitOffsetInByte) & 0x01) != 0;
-            return !isInUse;
-        }
-
-        private static void SetBit(byte[] bitmap, int bitOffsetInBitmap)
-        {
-            int byteOffset = bitOffsetInBitmap / 8;
-            int bitOffsetInByte = bitOffsetInBitmap % 8;
-            bitmap[byteOffset] |= (byte)(0x01 << bitOffsetInByte);
-        }
-
-        private static void ClearBit(byte[] bitmap, int bitOffsetInBitmap)
-        {
-            int byteOffset = bitOffsetInBitmap / 8;
-            int bitOffsetInByte = bitOffsetInBitmap % 8;
-            bitmap[byteOffset] &= (byte)(~(0x01 << bitOffsetInByte));
         }
 
         public long NumberOfUsableBits
@@ -166,6 +143,28 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 return m_numberOfUsableBits;
             }
+        }
+
+        internal static bool IsBitClear(byte[] bitmap, int bitOffsetInBitmap)
+        {
+            int byteOffset = bitOffsetInBitmap / 8;
+            int bitOffsetInByte = bitOffsetInBitmap % 8;
+            bool isInUse = ((bitmap[byteOffset] >> bitOffsetInByte) & 0x01) != 0;
+            return !isInUse;
+        }
+
+        internal static void SetBit(byte[] bitmap, int bitOffsetInBitmap)
+        {
+            int byteOffset = bitOffsetInBitmap / 8;
+            int bitOffsetInByte = bitOffsetInBitmap % 8;
+            bitmap[byteOffset] |= (byte)(0x01 << bitOffsetInByte);
+        }
+
+        internal static void ClearBit(byte[] bitmap, int bitOffsetInBitmap)
+        {
+            int byteOffset = bitOffsetInBitmap / 8;
+            int bitOffsetInByte = bitOffsetInBitmap % 8;
+            bitmap[byteOffset] &= (byte)(~(0x01 << bitOffsetInByte));
         }
     }
 }

@@ -1,3 +1,9 @@
+/* Copyright (C) 2012-2020 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.IO;
 using System.Text;
@@ -114,6 +120,24 @@ namespace Utilities
             MemoryStream temp = new MemoryStream();
             ByteUtils.CopyStream(stream, temp);
             return temp.ToArray();
+        }
+
+        public static string ReadAnsiString(Stream stream, int length)
+        {
+            byte[] buffer = ReadBytes(stream, length);
+            return ASCIIEncoding.GetEncoding(28591).GetString(buffer);
+        }
+
+        public static string ReadNullTerminatedAnsiString(Stream stream)
+        {
+            StringBuilder builder = new StringBuilder();
+            char c = (char)stream.ReadByte();
+            while (c != '\0')
+            {
+                builder.Append(c);
+                c = (char)stream.ReadByte();
+            }
+            return builder.ToString();
         }
     }
 }

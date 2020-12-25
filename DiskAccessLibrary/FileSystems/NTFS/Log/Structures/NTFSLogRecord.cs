@@ -22,7 +22,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         // ushort RedoLength;
         // ushort UndoOffset; // Offset MUST be aligned to 8 byte boundary
         // ushort UndoLength;
-        public ushort TargetAttributeOffset; // Offset of the attribute in the open attribute table, 0 is a valid value for for operations that do not require TargetAttribute (see IsTargetAttributeRequired() method)
+        public ushort TargetAttributeOffset; // Offset of the attribute in the open attribute table, 0 is a valid value for operations that do not require TargetAttribute (see IsTargetAttributeRequired() method)
         // ushort LCNsToFollow;
         public ushort RecordOffset;
         public ushort AttributeOffset;

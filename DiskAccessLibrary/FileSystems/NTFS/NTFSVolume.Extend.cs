@@ -30,12 +30,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             // Update boot sector
             byte[] bootRecordBytes = m_bootRecord.GetBytes();
-            WriteSectors(0, bootRecordBytes);
+            WriteSectors(0, bootRecordBytes, ContentType.FileData);
 
             // Recreate the backup boot sector at the new end of the raw volume
             // Note: The backup boot sector does not count as part of the NTFS volume
             long backupBootSectorIndex = originalNumberOfSectors + numberOfAdditionalSectors;
-            WriteSectors(backupBootSectorIndex, bootRecordBytes);
+            WriteSectors(backupBootSectorIndex, bootRecordBytes, ContentType.FileData);
         }
     }
 }

@@ -1,3 +1,9 @@
+/* Copyright (C) 2012-2020 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.IO;
 
@@ -52,7 +58,7 @@ namespace Utilities
             return BigEndianConverter.ToUInt64(buffer, offset - 8);
         }
 
-        public static Guid ReadGuidBytes(byte[] buffer, ref int offset)
+        public static Guid ReadGuid(byte[] buffer, ref int offset)
         {
             offset += 16;
             return BigEndianConverter.ToGuid(buffer, offset - 16);
@@ -107,7 +113,7 @@ namespace Utilities
             return BigEndianConverter.ToUInt64(buffer, 0);
         }
 
-        public static Guid ReadGuidBytes(Stream stream)
+        public static Guid ReadGuid(Stream stream)
         {
             byte[] buffer = new byte[16];
             stream.Read(buffer, 0, 16);

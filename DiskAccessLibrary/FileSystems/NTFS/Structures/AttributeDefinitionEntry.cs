@@ -4,8 +4,6 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -28,6 +26,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
         public AttributeDefinitionEntry()
         {
+        }
+
+        public AttributeDefinitionEntry(string attributeName, AttributeType attributeType, AttributeDefinitionFlags flags, ulong minimumLength, ulong maximumLength)
+        {
+            AttributeName = attributeName;
+            AttributeType = attributeType;
+            Flags = flags;
+            MinimumLength = minimumLength;
+            MaximumLength = maximumLength;
         }
 
         public AttributeDefinitionEntry(byte[] buffer, int offset)

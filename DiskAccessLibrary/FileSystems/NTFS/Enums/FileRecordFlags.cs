@@ -10,5 +10,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     {
         InUse = 0x0001,       // FILE_RECORD_SEGMENT_IN_USE
         IsDirectory = 0x0002, // FILE_FILE_NAME_INDEX_PRESENT
+        IsExtension = 0x0004,
+        IsSpecialIndex = 0x0008,
     }
 }

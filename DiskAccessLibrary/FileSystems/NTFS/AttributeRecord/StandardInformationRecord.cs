@@ -5,7 +5,6 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -31,7 +30,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ulong QuotaCharged; // NTFS v3.0+
         public ulong UpdateSequenceNumber; // a.k.a. USN, NTFS v3.0+
 
-        public StandardInformationRecord(string name, ushort instance) : base(AttributeType.StandardInformation, name, instance)
+        public StandardInformationRecord(string name) : base(AttributeType.StandardInformation, name)
         {
         }
 

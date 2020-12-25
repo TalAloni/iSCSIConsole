@@ -38,6 +38,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x06, SequenceNumber);
         }
 
+        public MftSegmentReference Clone()
+        {
+            return (MftSegmentReference)this.MemberwiseClone();
+        }
+
         public override bool Equals(object obj)
         {
             if (obj is MftSegmentReference)

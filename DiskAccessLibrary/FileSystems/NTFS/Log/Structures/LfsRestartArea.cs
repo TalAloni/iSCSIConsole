@@ -15,17 +15,17 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// </summary>
     public class LfsRestartArea
     {
-        public const int FixedLengthNTFS12 = 0x30; // Note: Windows NT 4.0 uses 0x30, Windows NT 3.51 uses 0x28
-        public const int FixedLengthNTFS31 = 0x40;
+        private const int FixedLengthNTFS12 = 0x30; // Note: Windows NT 4.0 uses 0x30, Windows NT 3.51 uses 0x28
+        private const int FixedLengthNTFS30 = 0x40; // NTFS v3.0 and v3.1
         public const ushort NoClient = 0xFFFF;
 
-        public ulong CurrentLsn;
+        public ulong CurrentLsn;       // The last LSN that was written before writing the restart page, also used to determine which of the two restart pages is more recent
         // ushort LogClients;
         public ushort ClientFreeList;  // The index of the first free log client record in the array
         public ushort ClientInUseList; // The index of the first in-use log client record in the array
         public LfsRestartFlags Flags;
         public uint SeqNumberBits;
-        public ushort RestartAreaLength;
+        // ushort RestartAreaLength;
         // ushort ClientArrayOffset;
         public ulong FileSize;
         public uint LastLsnDataLength; // Not including the LFS_RECORD_HEADER
@@ -47,7 +47,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ClientInUseList = LittleEndianConverter.ToUInt16(buffer, offset + 0x0C);
             Flags = (LfsRestartFlags)LittleEndianConverter.ToUInt16(buffer, offset + 0x0E);
             SeqNumberBits = LittleEndianConverter.ToUInt32(buffer, offset + 0x10);
-            RestartAreaLength = LittleEndianConverter.ToUInt16(buffer, offset + 0x14);
+            ushort restartAreaLength = LittleEndianConverter.ToUInt16(buffer, offset + 0x14);
             ushort clientArrayOffset = LittleEndianConverter.ToUInt16(buffer, offset + 0x16);
             FileSize = LittleEndianConverter.ToUInt32(buffer, offset + 0x18);
             LastLsnDataLength = LittleEndianConverter.ToUInt32(buffer, offset + 0x20);
@@ -62,13 +62,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             {
                 LfsClientRecord clientRecord = new LfsClientRecord(buffer, position);
                 LogClientArray.Add(clientRecord);
-                position += clientRecord.Length;
+                position += LfsClientRecord.Length;
             }
         }
 
         public void WriteBytes(byte[] buffer, int offset)
         {
-            int clientArrayOffset = FixedLengthNTFS31;
+            int clientArrayOffset = FixedLengthNTFS30;
 
             LittleEndianWriter.WriteUInt64(buffer, offset + 0x00, CurrentLsn);
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x08, (ushort)LogClientArray.Count);
@@ -76,7 +76,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x0C, ClientInUseList);
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x0E, (ushort)Flags);
             LittleEndianWriter.WriteUInt32(buffer, offset + 0x10, SeqNumberBits);
-            LittleEndianWriter.WriteUInt16(buffer, offset + 0x14, RestartAreaLength);
+            LittleEndianWriter.WriteUInt16(buffer, offset + 0x14, (ushort)this.Length);
             LittleEndianWriter.WriteUInt16(buffer, offset + 0x16, (ushort)clientArrayOffset);
             LittleEndianWriter.WriteUInt64(buffer, offset + 0x18, FileSize);
             LittleEndianWriter.WriteUInt32(buffer, offset + 0x20, LastLsnDataLength);
@@ -87,7 +87,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             foreach (LfsClientRecord clientRecord in LogClientArray)
             {
                 clientRecord.WriteBytes(buffer, position);
-                position += clientRecord.Length;
+                position += LfsClientRecord.Length;
             }
         }
 
@@ -146,13 +146,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                int length = FixedLengthNTFS31;
-                foreach (LfsClientRecord clientRecord in LogClientArray)
-                {
-                    length += clientRecord.Length;
-                }
-                return length;
+                return FixedLengthNTFS30 + LogClientArray.Count * LfsClientRecord.Length;
             }
+        }
+
+        internal static int CalculateFileSizeBits(long fileSize)
+        {
+            int fileSizeBits = 0;
+            while (fileSize > 0)
+            {
+                fileSize = fileSize / 2;
+                fileSizeBits++;
+            }
+            return fileSizeBits;
         }
     }
 }

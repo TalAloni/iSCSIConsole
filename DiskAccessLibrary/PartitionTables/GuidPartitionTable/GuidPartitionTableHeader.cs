@@ -65,7 +65,7 @@ namespace DiskAccessLibrary
             LittleEndianWriter.WriteUInt64(buffer, 32, BackupLBA);
             LittleEndianWriter.WriteUInt64(buffer, 40, FirstUsableLBA);
             LittleEndianWriter.WriteUInt64(buffer, 48, LastUsableLBA);
-            LittleEndianWriter.WriteGuidBytes(buffer, 56, DiskGuid);
+            LittleEndianWriter.WriteGuid(buffer, 56, DiskGuid);
             LittleEndianWriter.WriteUInt64(buffer, 72, PartitionEntriesLBA);
             LittleEndianWriter.WriteUInt32(buffer, 80, NumberOfPartitionEntries);
             LittleEndianWriter.WriteUInt32(buffer, 84, SizeOfPartitionEntry);

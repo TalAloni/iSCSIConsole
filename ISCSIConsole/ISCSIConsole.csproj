@@ -126,7 +126,11 @@
     <Content Include="RevisionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj">
+    <ProjectReference Include="..\DiskAccessLibrary.Win32\DiskAccessLibrary.Win32.VS2005.csproj">
+      <Project>{5D20BF8C-412F-43C5-8438-971CA8C3EA7D}</Project>
+      <Name>DiskAccessLibrary.Win32.VS2005</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.VS2005.csproj">
       <Project>{000D0367-63A1-475D-982D-67A0B93BABEB}</Project>
       <Name>DiskAccessLibrary</Name>
     </ProjectReference>
@@ -134,21 +138,14 @@
       <Project>{225ABFC2-FCA5-4C23-B7E3-0874E9A60548}</Project>
       <Name>ISCSI</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Utilities\Utilities.csproj">
+    <ProjectReference Include="..\Utilities\Utilities.VS2005.csproj">
       <Project>{6E0F2D1E-6167-4032-BA90-DEE3A99207D0}</Project>
       <Name>Utilities</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
   <PropertyGroup>
     <PostBuildEvent>if $(ConfigurationName) == Release CD "$(ProjectDir)ILMerge\"
-if $(ConfigurationName) == Release "$(ProjectDir)ILMerge\ILMerge.bat"</PostBuildEvent>
+if $(ConfigurationName) == Release "$(ProjectDir)ILMerge\ILMerge.VS2005.bat"</PostBuildEvent>
   </PropertyGroup>
 </Project>

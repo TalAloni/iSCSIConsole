@@ -6,7 +6,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -14,99 +13,137 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     public class NTFSBootRecord
     {
         public const string ValidSignature = "NTFS    ";
+        public const int JumpLength = 3;
+        public const int SignatureLength = 8;
+        public const int CodeLength = 426; // 510 - 0x54
+        public const int Length = 512;
 
-        public byte[] Jump = new byte[3];
+        public byte[] Jump = new byte[JumpLength];
         public string OEMID = String.Empty;
 
         // BIOS parameter block:
-        public ushort BytesPerSector = 512; // provides default until actual values are read
-        public byte SectorsPerCluster = 8;  // provides default until actual values are read
+        public ushort BytesPerSector = 512;
+        public byte SectorsPerCluster = 8;
         // public ushort ReservedSectors         // always 0
         // public byte NumberOfFATs              // always 0
         // public ushort MaxRootDirectoryEntries // always 0 for NTFS
         // public ushort SmallSectorsCount       // always 0 for NTFS
-        public byte MediaDescriptor = 0xF8; // always F8 (Fixed Disk)
-        // public ushort SectorsPerFAT       // always 0 for NTFS
+        public byte MediaDescriptor;             // always 0xF8 (Fixed Disk)
+        // public ushort SectorsPerFAT           // always 0 for NTFS
         public ushort SectorsPerTrack;
         public ushort NumberOfHeads;
         public uint NumberOfHiddenSectors; // Offset to the start of the partition relative to the disk in sectors
-        //public uint LargeSectorsCount; // always 0 for NTFS
+        //public uint LargeSectorsCount;   // always 0 for NTFS
 
         // Extended BIOS parameter block:
-        public byte PhysicalDriveNumber = 0x80;   // 0x00 floppy, 0x80 hard disk
-        // public byte CurrentHead; // always 0
-        public byte ExtendedBootSignature = 0x80; // always set to 0x80
-        public ulong TotalSectors;      // Excluding backup boot sector at the end of the volume.
+        public byte PhysicalDriveNumber;   // 0x00 floppy, 0x80 hard disk
+        // public byte CurrentHead;        // always 0
+        public byte ExtendedBootSignature; // always set to 0x80
+        public ulong TotalSectors;         // Excluding backup boot sector at the end of the volume.
         public ulong MftStartLCN;
         public ulong MftMirrorStartLCN;
         public sbyte RawClustersPerFileRecordSegment; // signed
-        public sbyte RawClustersPerIndexRecord; // signed
+        public sbyte RawClustersPerIndexRecord;       // signed
         public ulong VolumeSerialNumber;
-        public uint Checksum;
+        public uint Checksum;                         // Not used
+        public byte[] Code = new byte[CodeLength];    // 510 - 0x54
+        public ushort BootRecordSignature;
 
-        public byte[] Code = new byte[428]; // 512 - 0x54
+        public NTFSBootRecord()
+        {
+            OEMID = ValidSignature;
+            BytesPerSector = 512;
+            SectorsPerCluster = 8;
+            MediaDescriptor = 0xF8; // Fixed Disk
+            PhysicalDriveNumber = 0x80;
+            ExtendedBootSignature = 0x80;
+            BootRecordSignature = 0xAA55;
+        }
 
         /// <summary>
         /// boot record is the first sector of the partition (not to be confused with the master boot record which is the first sector of the disk)
         /// </summary>
         public NTFSBootRecord(byte[] buffer)
         {
-            Array.Copy(buffer, 0x00, Jump, 0, 3);
-            OEMID = ASCIIEncoding.ASCII.GetString(buffer, 0x03, 8);
+            Jump = ByteReader.ReadBytes(buffer, 0x00, JumpLength);
+            OEMID = ByteReader.ReadAnsiString(buffer, 0x03, SignatureLength);
             
             BytesPerSector = LittleEndianConverter.ToUInt16(buffer, 0x0B);
-            SectorsPerCluster = buffer[0x0D];
-            MediaDescriptor = buffer[0x15];
+            SectorsPerCluster = ByteReader.ReadByte(buffer, 0x0D);
+            MediaDescriptor = ByteReader.ReadByte(buffer, 0x15);
             SectorsPerTrack = LittleEndianConverter.ToUInt16(buffer, 0x18);
             NumberOfHeads = LittleEndianConverter.ToUInt16(buffer, 0x1A);
             NumberOfHiddenSectors = LittleEndianConverter.ToUInt32(buffer, 0x1C);
 
-            PhysicalDriveNumber = buffer[0x24];
-            ExtendedBootSignature = buffer[0x26];
+            PhysicalDriveNumber = ByteReader.ReadByte(buffer, 0x24);
+            ExtendedBootSignature = ByteReader.ReadByte(buffer, 0x26);
             TotalSectors = LittleEndianConverter.ToUInt64(buffer, 0x28);
             MftStartLCN = LittleEndianConverter.ToUInt64(buffer, 0x30);
             MftMirrorStartLCN = LittleEndianConverter.ToUInt64(buffer, 0x38);
-            RawClustersPerFileRecordSegment = (sbyte)buffer[0x40];
-            RawClustersPerIndexRecord = (sbyte)buffer[0x44];
+            RawClustersPerFileRecordSegment = (sbyte)ByteReader.ReadByte(buffer, 0x40);
+            RawClustersPerIndexRecord = (sbyte)ByteReader.ReadByte(buffer, 0x44);
             VolumeSerialNumber = LittleEndianConverter.ToUInt64(buffer, 0x48);
             Checksum = LittleEndianConverter.ToUInt32(buffer, 0x50);
-
-            Array.Copy(buffer, 0x54, Code, 0, Code.Length);
+            Code = ByteReader.ReadBytes(buffer, 0x54, CodeLength);
+            BootRecordSignature = LittleEndianConverter.ToUInt16(buffer, 0x1FE);
         }
 
         public byte[] GetBytes()
         {
             byte[] buffer = new byte[BytesPerSector];
-            Array.Copy(Jump, 0, buffer, 0x00, 3);
-            ByteWriter.WriteAnsiString(buffer, 0x03, OEMID, 8);
+            ByteWriter.WriteBytes(buffer, 0x00, Jump, Math.Min(Jump.Length, JumpLength));
+            ByteWriter.WriteAnsiString(buffer, 0x03, OEMID, Math.Min(OEMID.Length, SignatureLength));
 
             LittleEndianWriter.WriteUInt16(buffer, 0x0B, BytesPerSector);
-            buffer[0x0D] = SectorsPerCluster;
-            buffer[0x15] = MediaDescriptor;
+            ByteWriter.WriteByte(buffer, 0x0D, SectorsPerCluster);
+            ByteWriter.WriteByte(buffer, 0x15, MediaDescriptor);
             LittleEndianWriter.WriteUInt16(buffer, 0x18, SectorsPerTrack);
             LittleEndianWriter.WriteUInt16(buffer, 0x1A, NumberOfHeads);
             LittleEndianWriter.WriteUInt32(buffer, 0x1C, NumberOfHiddenSectors);
 
-            buffer[0x24] = PhysicalDriveNumber;
-            buffer[0x26] = ExtendedBootSignature;
+            ByteWriter.WriteByte(buffer, 0x24, PhysicalDriveNumber);
+            ByteWriter.WriteByte(buffer, 0x26, ExtendedBootSignature);
             LittleEndianWriter.WriteUInt64(buffer, 0x28, TotalSectors);
             LittleEndianWriter.WriteUInt64(buffer, 0x30, MftStartLCN);
             LittleEndianWriter.WriteUInt64(buffer, 0x38, MftMirrorStartLCN);
-            buffer[0x40] = (byte)RawClustersPerFileRecordSegment;
-            buffer[0x44] = (byte)RawClustersPerIndexRecord;
+            ByteWriter.WriteByte(buffer, 0x40, (byte)RawClustersPerFileRecordSegment);
+            ByteWriter.WriteByte(buffer, 0x44, (byte)RawClustersPerIndexRecord);
             LittleEndianWriter.WriteUInt64(buffer, 0x48, VolumeSerialNumber);
             LittleEndianWriter.WriteUInt32(buffer, 0x50, Checksum);
-
-            Array.Copy(Code, 0, buffer, 0x54, Code.Length);
+            ByteWriter.WriteBytes(buffer, 0x54, Code, Math.Min(Code.Length, CodeLength));
+            LittleEndianWriter.WriteUInt16(buffer, 0x1FE, BootRecordSignature);
             return buffer;
+        }
+
+        private int ConvertClustersToBytes(int rawClustersPerFileRecord)
+        {
+            if (rawClustersPerFileRecord < 0)
+            {
+                return 1 << (-rawClustersPerFileRecord);
+            }
+            else
+            {
+                return rawClustersPerFileRecord * BytesPerCluster;
+            }
+        }
+
+        private sbyte ConvertBytesToClusters(int numberOfBytes)
+        {
+            if (numberOfBytes >= BytesPerCluster)
+            {
+                return (sbyte)(numberOfBytes / BytesPerCluster);
+            }
+            else
+            {
+                return (sbyte)(-(int)Math.Log(numberOfBytes, 2));
+            }
         }
         
         public int BytesPerCluster
         {
             get
             {
-                int clusterSize = SectorsPerCluster * BytesPerSector;
-                return clusterSize;
+                return SectorsPerCluster * BytesPerSector;
             }
         }
 
@@ -114,7 +151,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                return CalcRecordSize(RawClustersPerFileRecordSegment);
+                return ConvertClustersToBytes(RawClustersPerFileRecordSegment);
+            }
+            set
+            {
+                RawClustersPerFileRecordSegment = ConvertBytesToClusters(value);
             }
         }
 
@@ -122,7 +163,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             get
             {
-                return CalcRecordSize(RawClustersPerIndexRecord);
+                return ConvertClustersToBytes(RawClustersPerIndexRecord);
+            }
+            set
+            {
+                RawClustersPerIndexRecord = ConvertBytesToClusters(value);
             }
         }
 
@@ -145,21 +190,9 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        internal int CalcRecordSize(int rawClustersPerFileRecord)
-        {
-            if (rawClustersPerFileRecord < 0)
-            {
-                return 1 << (-rawClustersPerFileRecord);
-            }
-            else
-            {
-                return rawClustersPerFileRecord * SectorsPerCluster * BytesPerSector;
-            }
-        }
-
         public static NTFSBootRecord ReadRecord(byte[] buffer)
         {
-            string OEMID = ASCIIEncoding.ASCII.GetString(buffer, 0x03, 8);
+            string OEMID = ByteReader.ReadAnsiString(buffer, 0x03, SignatureLength);
             bool isValid = String.Equals(OEMID, ValidSignature);
             if (isValid)
             {

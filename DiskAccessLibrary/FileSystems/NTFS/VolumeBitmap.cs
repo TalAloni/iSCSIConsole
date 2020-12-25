@@ -20,7 +20,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         private long? m_numberOfFreeClusters;
         private long m_searchStartIndex = 0;
         private long m_numberOfClustersInVolume; // This will correctly reflect the current number of clusters in the volume when extending the bitmap.
-        private readonly int ExtendGranularity = 8; // The number of bytes added to the bitmap when extending it, MUST be multiple of 8.
+        internal static readonly int ExtendGranularity = 8; // The number of bytes added to the bitmap when extending it, MUST be multiple of 8.
 
         public VolumeBitmap(NTFSVolume volume) : base(volume, MasterFileTable.BitmapSegmentReference)
         {
@@ -319,7 +319,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        private static bool IsBitClear(byte[] bitmap, int bitOffsetInBitmap)
+        internal static bool IsBitClear(byte[] bitmap, int bitOffsetInBitmap)
         {
             int byteOffset = bitOffsetInBitmap / 8;
             int bitOffsetInByte = bitOffsetInBitmap % 8;
@@ -327,14 +327,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return !isInUse;
         }
 
-        private static void SetBit(byte[] bitmap, int bitOffsetInBitmap)
+        internal static void SetBit(byte[] bitmap, int bitOffsetInBitmap)
         {
             int byteOffset = bitOffsetInBitmap / 8;
             int bitOffsetInByte = bitOffsetInBitmap % 8;
             bitmap[byteOffset] |= (byte)(0x01 << bitOffsetInByte);
         }
 
-        private static void ClearBit(byte[] bitmap, int bitOffsetInBitmap)
+        internal static void ClearBit(byte[] bitmap, int bitOffsetInBitmap)
         {
             int byteOffset = bitOffsetInBitmap / 8;
             int bitOffsetInByte = bitOffsetInBitmap % 8;

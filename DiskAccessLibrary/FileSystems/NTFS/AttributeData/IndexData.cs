@@ -1,10 +1,9 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
 using System.Collections.Generic;
 using System.IO;
 using Utilities;
@@ -13,7 +12,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 {
     public partial class IndexData
     {
-        private const int ExtendGranularity = 16; // Number of IndexRecord slots to allocate during each time we extend the data, we wish to avoid the data being too fragmented.
+        internal const int ExtendGranularity = 16; // Number of IndexRecord slots to allocate during each time we extend the data, we wish to avoid the data being too fragmented.
 
         private NTFSVolume m_volume;
         private FileRecord m_fileRecord;
@@ -171,14 +170,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             IndexRecord childRecord = new IndexRecord();
             childRecord.IsParentNode = m_rootRecord.IsParentNode;
-            childRecord.IndexEntries = new List<IndexEntry>(m_rootRecord.IndexEntries);
+            childRecord.IndexEntries.AddRange(m_rootRecord.IndexEntries);
             long childRecordIndex = AllocateIndexRecord();
             childRecord.RecordVBN = ConvertToVirtualBlockNumber(childRecordIndex);
             WriteIndexRecord(childRecordIndex, childRecord);
 
             IndexEntry rootEntry = new IndexEntry();
-            rootEntry.SubnodeVBN = childRecord.RecordVBN;
             rootEntry.ParentNodeForm = true;
+            rootEntry.SubnodeVBN = childRecord.RecordVBN;
 
             m_rootRecord.IndexEntries.Clear();
             m_rootRecord.IsParentNode = true;
@@ -299,7 +298,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     if (leaf.IndexEntries.Count == 0)
                     {
                         int indexOfLeafPointer = pathToLeaf[pathToLeaf.Count - 1].Key;
-                        RemovePointer(pathToLeaf.GetRange(0, pathToLeaf.Count - 1), indexOfLeafPointer);
+                        if (pathToLeaf.Count > 1)
+                        {
+                            RemovePointer(pathToLeaf.GetRange(0, pathToLeaf.Count - 1), indexOfLeafPointer);
+                        }
+                        else
+                        {
+                            RemovePointerFromRoot(indexOfLeafPointer);
+                        }
                         DeallocateIndexRecord(leafRecordIndex);
                     }
                 }
@@ -316,8 +322,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     }
                     else
                     {
-                        path.RemoveAt(path.Count - 1);
-                        RemovePointer(path, indexInParentRecord);
+                        if (path.Count > 1)
+                        {
+                            path.RemoveAt(path.Count - 1);
+                            RemovePointer(path, indexInParentRecord);
+                        }
+                        else
+                        {
+                            RemovePointerFromRoot(indexInParentRecord);
+                        }
                         DeallocateIndexRecord(recordIndex);
                     }
                 }
@@ -538,7 +551,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             // TODO: We may truncate the IndexAllocation attribute data and bitmap
         }
 
-        private IndexRecord ReadIndexRecord(long subnodeVBN)
+        internal IndexRecord ReadIndexRecord(long subnodeVBN)
         {
             long sectorIndex = ConvertToSectorIndex(subnodeVBN);
             byte[] recordBytes = m_indexAllocationData.ReadSectors(sectorIndex, this.SectorsPerIndexRecord);
@@ -565,6 +578,19 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             else
             {
                 return recordVBN * IndexRecord.BytesPerIndexRecordBlock / m_volume.BytesPerSector;
+            }
+        }
+
+        internal long ConvertToDataOffset(long recordVBN)
+        {
+            if (m_rootRecord.BytesPerIndexRecord >= m_volume.BytesPerCluster)
+            {
+                // The VBN is a VCN
+                return recordVBN * m_volume.BytesPerCluster;
+            }
+            else
+            {
+                return recordVBN * IndexRecord.BytesPerIndexRecordBlock;
             }
         }
 

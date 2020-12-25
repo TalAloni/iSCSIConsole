@@ -5,7 +5,6 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Utilities;
 
@@ -28,7 +27,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ushort PageCount; // Number of pages written as part of the IO transfer. a MultiPage record is likely to be written in two separate IO transfers (since the last page may have room for more records that will be written in a later transfer)
         public ushort PagePosition; // One-based
         /* Start of LFS_PACKED_RECORD_PAGE */
-        public ushort NextRecordOffset; // The offset of the free space in the page, if the last record has MultiPage flag set this value is not incremented and will point to the start of the record.
+        public ushort NextRecordOffset; // The offset of the free space in the page, if the last record does not end on this page then this value is not incremented and will point to the start of the record.
         // ushort WordAlign
         // uint DWordAlign
         public ulong LastEndLsn; // Last LSN that ends on this page

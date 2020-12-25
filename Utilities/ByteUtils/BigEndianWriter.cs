@@ -1,3 +1,9 @@
+/* Copyright (C) 2012-2020 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+ * 
+ * You can redistribute this program and/or modify it under the terms of
+ * the GNU Lesser Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ */
 using System;
 using System.IO;
 
@@ -89,15 +95,15 @@ namespace Utilities
             offset += 8;
         }
 
-        public static void WriteGuidBytes(byte[] buffer, int offset, Guid value)
+        public static void WriteGuid(byte[] buffer, int offset, Guid value)
         {
             byte[] bytes = BigEndianConverter.GetBytes(value);
             Array.Copy(bytes, 0, buffer, offset, bytes.Length);
         }
 
-        public static void WriteGuidBytes(byte[] buffer, ref int offset, Guid value)
+        public static void WriteGuid(byte[] buffer, ref int offset, Guid value)
         {
-            WriteGuidBytes(buffer, offset, value);
+            WriteGuid(buffer, offset, value);
             offset += 16;
         }
 
@@ -143,7 +149,7 @@ namespace Utilities
             stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteGuidBytes(Stream stream, Guid value)
+        public static void WriteGuid(Stream stream, Guid value)
         {
             byte[] bytes = BigEndianConverter.GetBytes(value);
             stream.Write(bytes, 0, bytes.Length);

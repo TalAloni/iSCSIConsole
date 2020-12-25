@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>DiskAccessLibrary.Win32</AssemblyName>
+    <Version>1.5.9</Version>
+    <NoWarn>1573;1591</NoWarn>
+    <RootNamespace>DiskAccessLibrary.Win32</RootNamespace>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Authors>Tal Aloni</Authors>
+    <PackageDescription>DiskAccessLibrary.Win32 extends DiskAccessLibrary with Windows specific capabilities</PackageDescription>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/TalAloni/DynamicDiskPartitioner</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TalAloni/DynamicDiskPartitioner</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Configurations>Debug;Release;Publish</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' != 'Publish'">  
+      <ProjectReference Include="..\Utilities\Utilities.csproj" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Win32.Registry">
+      <Version>5.0.0</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="RemoveMergedReferences" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup Condition="'$(Configuration)' == 'Publish'">
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(FileName)' == 'Utilities'" />
+    </ItemGroup>
+  </Target>
+</Project>

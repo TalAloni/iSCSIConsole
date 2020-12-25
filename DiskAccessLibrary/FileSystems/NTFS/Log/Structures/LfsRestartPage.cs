@@ -1,11 +1,10 @@
-/* Copyright (C) 2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2018-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Utilities;
 
@@ -32,11 +31,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ushort UpdateSequenceNumber; // a.k.a. USN
         // byte[] UpdateSequenceReplacementData
         /* End of LFS_RESTART_PAGE_HEADER */
-        public LfsRestartArea LogRestartArea;
+        public LfsRestartArea RestartArea;
 
         public LfsRestartPage()
         {
-            LogRestartArea = new LfsRestartArea();
+            RestartArea = new LfsRestartArea();
             MinorVersion = 1;
             MajorVersion = 1;
         }
@@ -55,7 +54,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             MinorVersion = LittleEndianConverter.ToInt16(buffer, offset + 0x1A);
             MajorVersion = LittleEndianConverter.ToInt16(buffer, offset + 0x1C);
             UpdateSequenceNumber = LittleEndianConverter.ToUInt16(buffer, offset + multiSectorHeader.UpdateSequenceArrayOffset);
-            LogRestartArea = new LfsRestartArea(buffer, offset + restartOffset);
+            RestartArea = new LfsRestartArea(buffer, offset + restartOffset);
         }
 
         public byte[] GetBytes(int bytesPerSystemPage, bool applyUsaProtection)
@@ -75,7 +74,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             LittleEndianWriter.WriteInt16(buffer, 0x1A, MinorVersion);
             LittleEndianWriter.WriteInt16(buffer, 0x1C, MajorVersion);
             LittleEndianWriter.WriteUInt16(buffer, UpdateSequenceArrayOffset, UpdateSequenceNumber);
-            LogRestartArea.WriteBytes(buffer, restartOffset);
+            RestartArea.WriteBytes(buffer, restartOffset);
 
             if (applyUsaProtection)
             {
@@ -84,17 +83,52 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return buffer;
         }
 
-        public static uint GetSystemPageSize(byte[] buffer, int offset)
-        {
-            return LittleEndianConverter.ToUInt32(buffer, offset + 0x10);
-        }
-
         public uint SystemPageSize
         {
             get
             {
                 return m_systemPageSize;
             }
+        }
+
+        public static bool IsRestartPage(byte[] buffer, int offset)
+        {
+            string signature = ByteReader.ReadAnsiString(buffer, offset + 0x00, MultiSectorHeader.SignatureLength);
+            return (signature == ValidSignature || signature == ModifiedSignature);
+        }
+
+        public static uint GetSystemPageSize(byte[] buffer, int offset)
+        {
+            return LittleEndianConverter.ToUInt32(buffer, offset + 0x10);
+        }
+
+        public static LfsRestartPage Create(long fileSize, int bytesPerSystemPage, int bytesPerLogPage, params LfsClientRecord[] clients)
+        {
+            LfsRestartPage restartPage = new LfsRestartPage();
+            restartPage.LogPageSize = (uint)bytesPerLogPage;
+            restartPage.RestartArea.CurrentLsn = 0;
+            restartPage.RestartArea.LastLsnDataLength = 0;
+            restartPage.RestartArea.ClientFreeList = LfsRestartArea.NoClient;
+            restartPage.RestartArea.ClientInUseList = (clients.Length > 0) ? (ushort)0 : LfsRestartArea.NoClient;
+            restartPage.RestartArea.Flags = LfsRestartFlags.CleanDismount;
+            restartPage.RestartArea.FileSize = (ulong)fileSize;
+            restartPage.RestartArea.FileSizeBits = LfsRestartArea.CalculateFileSizeBits(fileSize);
+            restartPage.RestartArea.LogPageDataOffset = (ushort)LfsRecordPage.GetDataOffset(bytesPerLogPage);
+
+            if (clients.Length > 0)
+            {
+                clients[0].PrevClient = LfsRestartArea.NoClient;
+                clients[clients.Length - 1].NextClient = LfsRestartArea.NoClient;
+            }
+
+            for (int index = 1; index < clients.Length; index++)
+            {
+                clients[index].PrevClient = (ushort)(index - 1);
+            }
+
+            restartPage.RestartArea.LogClientArray.AddRange(clients);
+
+            return restartPage;
         }
     }
 }

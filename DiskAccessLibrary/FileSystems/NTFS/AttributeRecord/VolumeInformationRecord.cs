@@ -4,9 +4,6 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -23,7 +20,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public byte MinorVersion;
         public VolumeFlags VolumeFlags;
 
-        public VolumeInformationRecord(string name, ushort instance) : base(AttributeType.VolumeInformation, name, instance)
+        public VolumeInformationRecord(string name) : base(AttributeType.VolumeInformation, name)
         {
             MajorVersion = 3;
             MinorVersion = 1;

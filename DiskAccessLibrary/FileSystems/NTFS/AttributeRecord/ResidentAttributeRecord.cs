@@ -1,11 +1,10 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Utilities;
 
@@ -22,7 +21,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         private ResidentForm m_residentForm;
         private byte m_reserved;
 
-        public ResidentAttributeRecord(AttributeType attributeType, string name, ushort instance) : base(attributeType, name, true, instance)
+        public ResidentAttributeRecord(AttributeType attributeType, string name) : base(attributeType, name, true)
         {
             Data = new byte[0];
         }
@@ -36,7 +35,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
 
             if (dataOffset + dataLength > this.RecordLengthOnDisk)
             {
-                throw new InvalidDataException("Corrupt attribute, data outside of attribute record");
+                throw new InvalidDataException("Corrupt resident attribute, data outside of attribute record");
+            }
+
+            if (dataOffset % 8 > 0)
+            {
+                throw new InvalidDataException("Corrupt resident attribute, data not aligned to 8-byte boundary");
             }
 
             Data = ByteReader.ReadBytes(buffer, offset + dataOffset, (int)dataLength);
@@ -47,7 +51,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             byte[] buffer = new byte[this.RecordLength];
             WriteHeader(buffer, HeaderLength);
             uint dataLength = (uint)Data.Length;
-            ushort dataOffset = (ushort)(HeaderLength + Name.Length * 2);
+            ushort dataOffset = (ushort)(Math.Ceiling((double)(HeaderLength + Name.Length * 2) / 8) * 8);
 
             LittleEndianWriter.WriteUInt32(buffer, 0x10, dataLength);
             LittleEndianWriter.WriteUInt16(buffer, 0x14, dataOffset);
@@ -56,6 +60,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ByteWriter.WriteBytes(buffer, dataOffset, Data);
 
             return buffer;
+        }
+
+        public override AttributeRecord Clone()
+        {
+            ResidentAttributeRecord clone = (ResidentAttributeRecord)this.MemberwiseClone();
+            clone.Data = (byte[])this.Data.Clone();
+            return clone;
         }
 
         public override ulong DataLength
@@ -103,10 +114,32 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// </summary>
         public static int GetRecordLength(int nameLength, int dataLength)
         {
-            int length = HeaderLength + nameLength * 2 + dataLength;
+            // Data must be aligned to 8-byte boundary
+            int length = (int)Math.Ceiling((double)(HeaderLength + nameLength * 2) / 8) * 8;
             // Each record must be aligned to 8-byte boundary
-            length = (int)Math.Ceiling((double)length / 8) * 8;
+            length += (int)Math.Ceiling((double)dataLength / 8) * 8;
             return length;
+        }
+
+        public static ResidentAttributeRecord Create(AttributeType type, string name)
+        {
+            switch (type)
+            {
+                case AttributeType.StandardInformation:
+                    return new StandardInformationRecord(name);
+                case AttributeType.FileName:
+                    return new FileNameAttributeRecord(name);
+                case AttributeType.VolumeName:
+                    return new VolumeNameRecord(name);
+                case AttributeType.VolumeInformation:
+                    return new VolumeInformationRecord(name);
+                case AttributeType.IndexRoot:
+                    return new IndexRootRecord(name);
+                case AttributeType.IndexAllocation:
+                    throw new ArgumentException("IndexAllocation attribute is always non-resident");
+                default:
+                    return new ResidentAttributeRecord(type, name);
+            }
         }
     }
 }

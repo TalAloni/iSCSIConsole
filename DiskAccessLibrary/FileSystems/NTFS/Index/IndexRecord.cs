@@ -95,6 +95,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return (numberOfBytesInUse <= bytesPerIndexRecord);
         }
 
+        internal int GetEntryOffset(int bytesPerIndexRecord, int entryIndex)
+        {
+            int strideCount = bytesPerIndexRecord / MultiSectorHelper.BytesPerStride;
+            ushort updateSequenceArraySize = (ushort)(1 + strideCount);
+            int updateSequenceArrayPaddedLength = (int)Math.Ceiling((double)(updateSequenceArraySize * 2) / 8) * 8;
+
+            return IndexHeaderOffset + IndexHeader.Length + updateSequenceArrayPaddedLength + IndexEntry.GetEntryOffset(IndexEntries, entryIndex);
+        }
+
         public bool IsParentNode
         {
             get

@@ -1,11 +1,11 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
+using System.IO;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -15,7 +15,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     /// </summary>
     public abstract class AttributeRecord
     {
-        public const int AttributeRecordHeaderLength = 16; // The part that is common to both resident and non-resident attributes
+        public const int MaxAttributeNameLength = 255; // Unicode characters
+        internal const int AttributeRecordHeaderLength = 0x10; // The part that is common to both resident and non-resident attributes
 
         /* Start of ATTRIBUTE_RECORD_HEADER */
         private AttributeType m_attribueType;
@@ -24,16 +25,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         private byte m_nameLength; // number of characters
         // ushort NameOffset;
         public AttributeFlags Flags;
-        private ushort m_instance;
+        internal ushort Instance;
         /* End of ATTRIBUTE_RECORD_HEADER */
         private string m_name = String.Empty;
 
-        protected AttributeRecord(AttributeType attributeType, string name, bool isResident, ushort instance)
+        protected AttributeRecord(AttributeType attributeType, string name, bool isResident)
         {
             m_attribueType = attributeType;
             m_name = name;
             m_attributeForm = isResident ? AttributeForm.Resident : AttributeForm.NonResident;
-            m_instance = instance;
         }
 
         protected AttributeRecord(byte[] buffer, int offset)
@@ -44,10 +44,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             m_nameLength = ByteReader.ReadByte(buffer, offset + 0x09);
             ushort nameOffset = LittleEndianConverter.ToUInt16(buffer, offset + 0x0A);
             Flags = (AttributeFlags)LittleEndianConverter.ToUInt16(buffer, offset + 0x0C);
-            m_instance = LittleEndianConverter.ToUInt16(buffer, offset + 0x0E);
+            Instance = LittleEndianConverter.ToUInt16(buffer, offset + 0x0E);
             if (m_nameLength > 0)
             {
                 m_name = ByteReader.ReadUTF16String(buffer, offset + nameOffset, m_nameLength);
+            }
+
+            if (m_recordLengthOnDisk % 8 > 0)
+            {
+                throw new InvalidDataException("Corrupt attribute, record not aligned to 8-byte boundary");
             }
         }
 
@@ -64,13 +69,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             ByteWriter.WriteByte(buffer, 0x09, m_nameLength);
             LittleEndianWriter.WriteUInt16(buffer, 0x0A, nameOffset);
             LittleEndianWriter.WriteUInt16(buffer, 0x0C, (ushort)Flags);
-            LittleEndianWriter.WriteUInt16(buffer, 0x0E, m_instance);
+            LittleEndianWriter.WriteUInt16(buffer, 0x0E, Instance);
 
             if (m_nameLength > 0)
             {
                 ByteWriter.WriteUTF16String(buffer, nameOffset, Name);
             }
         }
+
+        public abstract AttributeRecord Clone();
 
         public AttributeType AttributeType
         {
@@ -85,14 +92,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             get
             {
                 return (m_attributeForm == AttributeForm.Resident);
-            }
-        }
-
-        public ushort Instance
-        {
-            get
-            {
-                return m_instance;
             }
         }
 
@@ -127,24 +126,15 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public static AttributeRecord Create(AttributeType type, string name, ushort instance)
+        public static AttributeRecord Create(AttributeType type, string name, bool isResident)
         {
-            switch (type)
+            if (isResident)
             {
-                case AttributeType.StandardInformation:
-                    return new StandardInformationRecord(name, instance);
-                case AttributeType.FileName:
-                    return new FileNameAttributeRecord(name, instance);
-                case AttributeType.VolumeName:
-                    return new VolumeNameRecord(name, instance);
-                case AttributeType.VolumeInformation:
-                    return new VolumeInformationRecord(name, instance);
-                case AttributeType.IndexRoot:
-                    return new IndexRootRecord(name, instance);
-                case AttributeType.IndexAllocation:
-                    return new IndexAllocationRecord(name, instance);
-                default:
-                    return new ResidentAttributeRecord(type, name, instance);
+                return ResidentAttributeRecord.Create(type, name);
+            }
+            else
+            {
+                return NonResidentAttributeRecord.Create(type, name);
             }
         }
 

@@ -1,0 +1,239 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{000D0367-63A1-475D-982D-67A0B93BABEB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DiskAccessLibrary</RootNamespace>
+    <AssemblyName>DiskAccessLibrary</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;Win32</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;Win32</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BaseClasses\Disk.cs" />
+    <Compile Include="BaseClasses\DiskExtent.cs" />
+    <Compile Include="BaseClasses\IDiskGeometry.cs" />
+    <Compile Include="BaseClasses\Volume.cs" />
+    <Compile Include="Disks\DiskImage.cs" />
+    <Compile Include="Disks\RAMDisk.cs" />
+    <Compile Include="Disks\RawDiskImage\RawDiskImage.cs" />
+    <Compile Include="Disks\VHD\BlockAllocationTable.cs" />
+    <Compile Include="Disks\VHD\DynamicDiskHeader.cs" />
+    <Compile Include="Disks\VHD\ParentLocatorEntry.cs" />
+    <Compile Include="Disks\VHD\VHDFooter.cs" />
+    <Compile Include="Disks\VHD\VirtualHardDisk.cs" />
+    <Compile Include="Disks\VHD\VirtualHardDisk.Dynamic.cs" />
+    <Compile Include="Disks\VHD\VirtualHardDiskType.cs" />
+    <Compile Include="Disks\VMDK\Enums\ExtentType.cs" />
+    <Compile Include="Disks\VMDK\Enums\SparseExtentCompression.cs" />
+    <Compile Include="Disks\VMDK\Enums\VirtualMachineDiskType.cs" />
+    <Compile Include="Disks\VMDK\SparseExtent.cs" />
+    <Compile Include="Disks\VMDK\SparseExtentHeader.cs" />
+    <Compile Include="Disks\VMDK\VirtualMachineDisk.cs" />
+    <Compile Include="Disks\VMDK\VirtualMachineDiskDescriptor.cs" />
+    <Compile Include="Disks\VMDK\VirtualMachineDiskExtentEntry.cs" />
+    <Compile Include="Exceptions\AlreadyExistsException.cs" />
+    <Compile Include="Exceptions\CyclicRedundancyCheckException.cs" />
+    <Compile Include="Exceptions\DeviceNotReadyException.cs" />
+    <Compile Include="Exceptions\DirectoryNotEmptyException.cs" />
+    <Compile Include="Exceptions\DiskFullException.cs" />
+    <Compile Include="Exceptions\InvalidNameException.cs" />
+    <Compile Include="Exceptions\InvalidPathException.cs" />
+    <Compile Include="Exceptions\SharingViolationException.cs" />
+    <Compile Include="FileSystems\FileSystemHelper.cs" />
+    <Compile Include="FileSystems\IExtendableFileSystem.cs" />
+    <Compile Include="FileSystems\NTFS\Adapters\NTFSFileStream.cs" />
+    <Compile Include="FileSystems\NTFS\Adapters\NTFSFileSystem.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\AttributeData.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\BitmapData.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\AttributeList.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\IndexData.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\IndexData.FileName.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeData\NonResidentAttributeData.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeDefinition.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\AttributeRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\FileNameAttributeRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\IndexAllocationRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\IndexRootRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\NonResidentAttributeRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\ResidentAttributeRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\StandardInformationRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\VolumeInformationRecord.cs" />
+    <Compile Include="FileSystems\NTFS\AttributeRecord\VolumeNameRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\AttributeDefinitionFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\AttributeFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\AttributeForm.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\AttributeType.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\CollationRule.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\ContentType.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\FileAttributes.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\FileNameFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\FileRecordFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\IndexEntryFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\IndexHeaderFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\ResidentForm.cs" />
+    <Compile Include="FileSystems\NTFS\Enums\VolumeFlags.cs" />
+    <Compile Include="FileSystems\NTFS\FileRecord\FileRecord.cs" />
+    <Compile Include="FileSystems\NTFS\FileRecord\FileRecordHelper.cs" />
+    <Compile Include="FileSystems\NTFS\FileRecord\FileRecordSegment.cs" />
+    <Compile Include="FileSystems\NTFS\FileRecord\MultiSectorHelper.cs" />
+    <Compile Include="FileSystems\NTFS\Index\CollationHelper.cs" />
+    <Compile Include="FileSystems\NTFS\Index\DosFileNameHelper.cs" />
+    <Compile Include="FileSystems\NTFS\Index\IndexEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Index\IndexHeader.cs" />
+    <Compile Include="FileSystems\NTFS\Index\IndexHelper.cs" />
+    <Compile Include="FileSystems\NTFS\Index\IndexRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\LfsRecordFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\LfsRecordPageFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\LfsRecordType.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\LfsRestartFlags.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\NTFSLogOperation.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Enums\TransactionState.cs" />
+    <Compile Include="FileSystems\NTFS\Log\LogFile.Analysis.cs" />
+    <Compile Include="FileSystems\NTFS\Log\LogFile.cs" />
+    <Compile Include="FileSystems\NTFS\Log\NTFSLogClient.Analysis.cs" />
+    <Compile Include="FileSystems\NTFS\Log\NTFSLogClient.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\AttributeNameEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\DirtyPageEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\OpenAttributeEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\RestartTableEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\RestartTableHeader.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\RestartTableHelper.cs" />
+    <Compile Include="FileSystems\NTFS\Log\RestartTables\TransactionEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\BitmapRange.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\LfsClientRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\LfsRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\LfsRecordPage.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\LfsRestartArea.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\LfsRestartPage.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\NTFSLogRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Log\Structures\NTFSRestartRecord.cs" />
+    <Compile Include="FileSystems\NTFS\MasterFileTable.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSBootRecord.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSFile.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSVolume.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSVolume.Extend.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSVolume.Recovery.cs" />
+    <Compile Include="FileSystems\NTFS\NTFSVolumeCreator.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\AttributeDefinitionEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\AttributeListEntry.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\DataRun.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\DataRunSequence.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\DuplicatedInformation.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\FileNameRecord.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\MftSegmentReference.cs" />
+    <Compile Include="FileSystems\NTFS\Structures\MultiSectorHeader.cs" />
+    <Compile Include="FileSystems\NTFS\VolumeBitmap.cs" />
+    <Compile Include="Helpers\BasicDiskHelper.cs" />
+    <Compile Include="Helpers\DiskExtentHelper.cs" />
+    <Compile Include="Helpers\DiskExtentsHelper.cs" />
+    <Compile Include="Helpers\ExtendHelper.Volume.cs" />
+    <Compile Include="Helpers\Settings.cs" />
+    <Compile Include="Helpers\VolumeHelper.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\ComponentRecord.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\DatabaseRecord.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\DatabaseRecordFragment.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\DiskGroupRecord.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\DiskRecord.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\ExtentRecord.cs" />
+    <Compile Include="LogicalDiskManager\DatabaseRecords\VolumeRecord.cs" />
+    <Compile Include="LogicalDiskManager\DiskGroupDatabase.cs" />
+    <Compile Include="LogicalDiskManager\DynamicDisk.cs" />
+    <Compile Include="LogicalDiskManager\DynamicDiskExtent.cs" />
+    <Compile Include="LogicalDiskManager\Enums\DatabaseHeaderUpdateStatus.cs" />
+    <Compile Include="LogicalDiskManager\Enums\DatabaseRecordUpdateStatus.cs" />
+    <Compile Include="LogicalDiskManager\Enums\ExtentLayoutName.cs" />
+    <Compile Include="LogicalDiskManager\Enums\KernelUpdateLogEntryStatus.cs" />
+    <Compile Include="LogicalDiskManager\Enums\ReadPolicyName.cs" />
+    <Compile Include="LogicalDiskManager\Enums\RecordType.cs" />
+    <Compile Include="LogicalDiskManager\Enums\VolumeFlags.cs" />
+    <Compile Include="LogicalDiskManager\Exceptions\MissingDatabaseRecordException.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskExtentsHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicDiskHelper.Extents.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\DynamicVolumeHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\PrivateRegionHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\PublicRegionHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\RetainHelper.cs" />
+    <Compile Include="LogicalDiskManager\Helpers\VolumeManagerDatabaseHelper.cs" />
+    <Compile Include="LogicalDiskManager\KernelUpdateLog\KernalUpdateLog.cs" />
+    <Compile Include="LogicalDiskManager\KernelUpdateLog\KernelUpdateLogPage.cs" />
+    <Compile Include="LogicalDiskManager\PrivateHeader.cs" />
+    <Compile Include="LogicalDiskManager\TOCBlock\TOCBlock.cs" />
+    <Compile Include="LogicalDiskManager\TOCBlock\TOCRegion.cs" />
+    <Compile Include="LogicalDiskManager\VolumeManagerDatabase.cs" />
+    <Compile Include="LogicalDiskManager\VolumeManagerDatabaseCopy.cs" />
+    <Compile Include="LogicalDiskManager\VolumeManagerDatabaseHeader.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\DynamicColumn.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\DynamicVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\MirroredVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\Raid5Volume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\SimpleVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\SpannedVolume.cs" />
+    <Compile Include="LogicalDiskManager\Volumes\StripedVolume.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionEntry.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionEntryCollection.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionTable.cs" />
+    <Compile Include="PartitionTables\GuidPartitionTable\GuidPartitionTableHeader.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\CHSAddress.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\MasterBootRecord.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\PartitionTableEntry.cs" />
+    <Compile Include="PartitionTables\MasterBootRecord\PartitionTypeName.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Volumes\GPTPartition.cs" />
+    <Compile Include="Volumes\MBRPartition.cs" />
+    <Compile Include="Volumes\Partition.cs" />
+    <Compile Include="Volumes\RemovableVolume.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Win32\Enums\Win32Error.cs" />
+    <Compile Include="Win32\Helpers\IOExceptionHelper.cs" />
+    <Compile Include="Win32\Utilities\FileStreamEx.cs" />
+    <Compile Include="Win32\Utilities\FileStreamUtils.cs" />
+    <Compile Include="Win32\Utilities\HandleUtils.cs" />
+    <Compile Include="Win32\Utilities\SecurityUtils.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="RevisionHistory.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DiskAccessLibrary.FileSystems.Abstractions\DiskAccessLibrary.FileSystems.Abstractions.VS2005.csproj">
+      <Project>{9119EC7E-AF78-4814-BF03-F3823A29A471}</Project>
+      <Name>DiskAccessLibrary.FileSystems.Abstractions.VS2005</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Utilities\Utilities.VS2005.csproj">
+      <Project>{6E0F2D1E-6167-4032-BA90-DEE3A99207D0}</Project>
+      <Name>Utilities.VS2005</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

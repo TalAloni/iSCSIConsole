@@ -4,7 +4,6 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
 using System.Collections.Generic;
 using Utilities;
 
@@ -25,7 +24,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         private IndexHeader m_indexHeader;
         public List<IndexEntry> IndexEntries;
 
-        public IndexRootRecord(string name, ushort instance) : base(AttributeType.IndexRoot, name, instance)
+        public IndexRootRecord(string name) : base(AttributeType.IndexRoot, name)
         {
             m_indexHeader = new IndexHeader();
             IndexEntries = new List<IndexEntry>();
@@ -59,6 +58,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             IndexEntry.WriteIndexEntries(this.Data, IndexHeaderOffset + IndexHeader.Length, IndexEntries);
 
             return base.GetBytes();
+        }
+
+        public override AttributeRecord Clone()
+        {
+            IndexRootRecord clone = (IndexRootRecord)base.Clone();
+            clone.m_indexHeader = m_indexHeader.Clone();
+            clone.IndexEntries = new List<IndexEntry>();
+            foreach (IndexEntry entry in IndexEntries)
+            {
+                clone.IndexEntries.Add(entry.Clone());
+            }
+            return clone;
         }
 
         public override ulong DataLength

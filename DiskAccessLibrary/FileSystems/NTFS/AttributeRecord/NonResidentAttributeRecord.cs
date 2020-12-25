@@ -1,11 +1,10 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Utilities;
 
@@ -33,7 +32,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         // ulong TotalAllocated;      // Presented for the first file record of a compressed stream.
         private DataRunSequence m_dataRunSequence;
 
-        public NonResidentAttributeRecord(AttributeType attributeType, string name, ushort instance) : base(attributeType, name, false, instance)
+        public NonResidentAttributeRecord(AttributeType attributeType, string name) : base(attributeType, name, false)
         {
             HighestVCN = -1; // This is the value that should be set when the attribute contains no data.
             m_dataRunSequence = new DataRunSequence();
@@ -49,6 +48,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             FileSize = LittleEndianConverter.ToUInt64(buffer, offset + 0x30);
             ValidDataLength = LittleEndianConverter.ToUInt64(buffer, offset + 0x38);
             m_dataRunSequence = new DataRunSequence(buffer, offset + mappingPairsOffset, (int)this.RecordLengthOnDisk - mappingPairsOffset);
+
+            if (CompressionUnit != 0)
+            {
+                throw new NotSupportedException("NTFS compression is not supported");
+            }
 
             if ((HighestVCN - LowestVCN + 1) != m_dataRunSequence.DataClusterCount)
             {
@@ -85,6 +89,13 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             long clusterCount = HighestVCN - LowestVCN + 1;
             KeyValuePairList<long, long> sequence = m_dataRunSequence.TranslateToLCN(0, clusterCount);
             return sequence;
+        }
+
+        public override AttributeRecord Clone()
+        {
+            NonResidentAttributeRecord clone = (NonResidentAttributeRecord)this.MemberwiseClone();
+            clone.m_dataRunSequence = m_dataRunSequence.Clone();
+            return clone;
         }
 
         /// <summary>
@@ -129,14 +140,24 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             }
         }
 
-        public static new NonResidentAttributeRecord Create(AttributeType type, string name, ushort instance)
+        public static NonResidentAttributeRecord Create(AttributeType type, string name)
         {
             switch (type)
             {
+                case AttributeType.StandardInformation:
+                    throw new ArgumentException("StandardInformation attribute is always resident");
+                case AttributeType.FileName:
+                    throw new ArgumentException("FileName attribute is always resident");
+                case AttributeType.VolumeName:
+                    throw new ArgumentException("VolumeName attribute is always resident");
+                case AttributeType.VolumeInformation:
+                    throw new ArgumentException("VolumeInformation attribute is always resident");
+                case AttributeType.IndexRoot:
+                    throw new ArgumentException("IndexRoot attribute is always resident");
                 case AttributeType.IndexAllocation:
-                    return new IndexAllocationRecord(name, instance);
+                    return new IndexAllocationRecord(name);
                 default:
-                    return new NonResidentAttributeRecord(type, name, instance);
+                    return new NonResidentAttributeRecord(type, name);
             }
         }
     }

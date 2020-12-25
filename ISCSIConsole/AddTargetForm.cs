@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using DiskAccessLibrary;
+using DiskAccessLibrary.Win32;
 using ISCSI.Server;
 using Utilities;
 

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using DiskAccessLibrary;
+using DiskAccessLibrary.Win32;
 
 namespace ISCSIConsole
 {

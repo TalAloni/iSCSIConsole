@@ -18,7 +18,9 @@ namespace DiskAccessLibrary
         ERROR_SHARING_VIOLATION = 0x0020,
         ERROR_DISK_FULL = 0x0070,
         ERROR_INSUFFICIENT_BUFFER = 0x007A,
+        ERROR_INVALID_NAME = 0x007B,
         ERROR_DIR_NOT_EMPTY = 0x0091,
+        ERROR_BAD_PATHNAME = 0x00A1,
         ERROR_ALREADY_EXISTS = 0x00B7,
         ERROR_MORE_DATA = 0x00EA, // buffer was not long enough
         ERROR_NO_MORE_ITEMS = 0x0103,

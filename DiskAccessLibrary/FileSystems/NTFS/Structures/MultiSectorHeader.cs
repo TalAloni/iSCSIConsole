@@ -1,11 +1,9 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -16,7 +14,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
     public class MultiSectorHeader
     {
         public const int Length = 8;
-        private const int SignatureLength = 4;
+        internal const int SignatureLength = 4;
 
         private string m_signature; // 4 bytes
         private ushort m_updateSequenceArrayOffset;

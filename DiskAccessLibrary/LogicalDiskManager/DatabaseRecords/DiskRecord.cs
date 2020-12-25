@@ -6,7 +6,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.LogicalDiskManager
@@ -50,8 +49,8 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
             else if (RecordRevision == 4)
             {
-                DiskGuid = BigEndianReader.ReadGuidBytes(this.Data, ref offset);
-                AltGuidRev4 = BigEndianReader.ReadGuidBytes(this.Data, ref offset);
+                DiskGuid = BigEndianReader.ReadGuid(this.Data, ref offset);
+                AltGuidRev4 = BigEndianReader.ReadGuid(this.Data, ref offset);
             }
             else
             {
@@ -88,8 +87,8 @@ namespace DiskAccessLibrary.LogicalDiskManager
             }
             else // RecordRevision == 4
             {
-                BigEndianWriter.WriteGuidBytes(data, ref offset, DiskGuid);
-                BigEndianWriter.WriteGuidBytes(data, ref offset, AltGuidRev4);
+                BigEndianWriter.WriteGuid(data, ref offset, DiskGuid);
+                BigEndianWriter.WriteGuid(data, ref offset, AltGuidRev4);
             }
             WriteVarString(data, ref offset, LastDeviceName);
             BigEndianWriter.WriteUInt32(data, ref offset, (uint)DiskFlags);

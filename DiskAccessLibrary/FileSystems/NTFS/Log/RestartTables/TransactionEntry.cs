@@ -1,12 +1,9 @@
-/* Copyright (C) 2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2018-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
 using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -24,8 +21,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         public ulong FirstLsn;   // First LSN for the transaction
         public ulong PreviousLsn;
         public ulong UndoNextLsn;
-        public uint UndoRecords; // Number of of undo log records pending abort
-        public int UndoBytes;    // Number of of bytes in undo log records pending abort
+        public uint UndoRecords; // Number of undo log records pending abort
+        public int UndoBytes;    // Number of bytes in undo log records pending abort
 
         public TransactionEntry()
         {

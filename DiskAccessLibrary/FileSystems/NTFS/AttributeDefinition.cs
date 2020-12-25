@@ -42,5 +42,18 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 return m_list;
             }
         }
+
+        public static byte[] GetBytes(List<AttributeDefinitionEntry> entries)
+        {
+            int length = entries.Count * AttributeDefinitionEntry.Length;
+            byte[] buffer = new byte[length];
+            int position = 0;
+            foreach (AttributeDefinitionEntry entry in entries)
+            {
+                entry.WriteBytes(buffer, position);
+                position += AttributeDefinitionEntry.Length;
+            }
+            return buffer;
+        }
     }
 }

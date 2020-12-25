@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -11,7 +11,7 @@ using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
-    public class FileRecordHelper
+    internal class FileRecordHelper
     {
         /// <remarks>
         /// Only non-resident attributes can be fragmented.
@@ -23,9 +23,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             List<AttributeRecord> result = new List<AttributeRecord>();
             // If two non-resident attributes have the same AttributeType and Name, then we need to assemble them back together.
-            // Additional fragments immediately follow after the initial fragment.
-            AttributeType currentAttributeType = AttributeType.None;
-            string currentAttributeName = String.Empty;
             List<NonResidentAttributeRecord> fragments = new List<NonResidentAttributeRecord>();
             foreach (FileRecordSegment segment in segments)
             {
@@ -36,44 +33,57 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                         continue;
                     }
 
-                    bool additionalFragment = (attribute is NonResidentAttributeRecord) && (fragments.Count > 0) &&
-                                              (attribute.AttributeType == currentAttributeType) && (attribute.Name == currentAttributeName);
-
-                    if (!additionalFragment && fragments.Count > 0)
-                    {
-                        NonResidentAttributeRecord assembledAttribute = AssembleFragments(fragments, segments[0].NextAttributeInstance);
-                        segments[0].NextAttributeInstance++;
-                        result.Add(assembledAttribute);
-                        fragments.Clear();
-                    }
-
                     if (attribute is ResidentAttributeRecord)
                     {
-                        result.Add(attribute);
+                        result.Add(attribute.Clone());
                     }
                     else
                     {
                         fragments.Add((NonResidentAttributeRecord)attribute);
-                        if (!additionalFragment)
-                        {
-                            currentAttributeType = attribute.AttributeType;
-                            currentAttributeName = attribute.Name;
-                        }
                     }
                 }
             }
 
-            if (fragments.Count > 0)
+            // Windows NTFS v5.1 driver will sometimes put in the base record segment resident attributes that sort after an attribute from the second segment,
+            // and will sometimes put non-resident fragment with a non-zero LowestVCN in a segment with a lower segment number than the segment containing the first fragment (LowestVCN == 0),
+            // (while keeping the attribute sorting rules within each segment).
+            fragments.Sort(CompareNonResidentAttributes);
+
+            AttributeType currentAttributeType = AttributeType.None;
+            string currentAttributeName = String.Empty;
+            List<NonResidentAttributeRecord> currentAttributeFragments = new List<NonResidentAttributeRecord>();
+            foreach (NonResidentAttributeRecord fragment in fragments)
             {
-                NonResidentAttributeRecord assembledAttribute = AssembleFragments(fragments, segments[0].NextAttributeInstance);
-                segments[0].NextAttributeInstance++;
+                bool additionalFragment = (currentAttributeFragments.Count > 0) &&
+                                          (fragment.AttributeType == currentAttributeType) &&
+                                          (fragment.Name == currentAttributeName);
+
+                if (!additionalFragment && currentAttributeFragments.Count > 0)
+                {
+                    NonResidentAttributeRecord assembledAttribute = AssembleFragments(currentAttributeFragments);
+                    result.Add(assembledAttribute);
+                    currentAttributeFragments.Clear();
+                }
+
+                currentAttributeFragments.Add(fragment);
+                if (!additionalFragment)
+                {
+                    currentAttributeType = fragment.AttributeType;
+                    currentAttributeName = fragment.Name;
+                }
+            }
+
+            if (currentAttributeFragments.Count > 0)
+            {
+                NonResidentAttributeRecord assembledAttribute = AssembleFragments(currentAttributeFragments);
                 result.Add(assembledAttribute);
             }
 
+            result.Sort(CompareAttributeTypes);
             return result;
         }
 
-        private static NonResidentAttributeRecord AssembleFragments(List<NonResidentAttributeRecord> attributeFragments, ushort nextAttributeInstance)
+        private static NonResidentAttributeRecord AssembleFragments(List<NonResidentAttributeRecord> attributeFragments)
         {
             // Attribute fragments are written to disk sorted by LowestVCN
             NonResidentAttributeRecord firstFragment = attributeFragments[0];
@@ -83,7 +93,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 throw new InvalidDataException(message);
             }
 
-            NonResidentAttributeRecord attribute = NonResidentAttributeRecord.Create(firstFragment.AttributeType, firstFragment.Name, nextAttributeInstance);
+            NonResidentAttributeRecord attribute = NonResidentAttributeRecord.Create(firstFragment.AttributeType, firstFragment.Name);
             attribute.Flags = firstFragment.Flags;
             attribute.LowestVCN = 0;
             attribute.HighestVCN = -1;
@@ -104,7 +114,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     long relativeOffset = absoluteOffset - previousLCN;
 
                     int runIndex = attribute.DataRunSequence.Count;
-                    attribute.DataRunSequence.AddRange(attributeFragment.DataRunSequence);
+                    attribute.DataRunSequence.AddRange(attributeFragment.DataRunSequence.Clone());
                     attribute.DataRunSequence[runIndex] = new DataRun(runLength, relativeOffset);
                     attribute.HighestVCN = attributeFragment.HighestVCN;
                 }
@@ -117,7 +127,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             return attribute;
         }
 
-        public static void SliceAttributes(List<FileRecordSegment> segments, List<AttributeRecord> attributes, int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public static void SliceAttributes(List<FileRecordSegment> segments, List<AttributeRecord> attributes, int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int bytesAvailableInSegment = FileRecordSegment.GetNumberOfBytesAvailable(bytesPerFileRecordSegment, minorNTFSVersion);
             LinkedList<KeyValuePair<AttributeRecord, bool>> remainingAttributes = new LinkedList<KeyValuePair<AttributeRecord, bool>>();
@@ -129,12 +139,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 if (attribute.AttributeType == AttributeType.StandardInformation ||
                     attribute.AttributeType == AttributeType.FileName)
                 {
-                    baseFileRecordSegment.ImmediateAttributes.Add(attribute);
+                    baseFileRecordSegment.AddAttributeRecord(attribute.Clone());
                 }
                 else if (isMftFileRecord && attribute.AttributeType == AttributeType.Data)
                 {
                     List<NonResidentAttributeRecord> slices = SliceAttributeRecord((NonResidentAttributeRecord)attribute, bytesPerFileRecordSegment / 2, bytesAvailableInSegment);
-                    baseFileRecordSegment.ImmediateAttributes.Add(slices[0]);
+                    baseFileRecordSegment.AddAttributeRecord(slices[0]);
                     slices.RemoveAt(0);
                     foreach (NonResidentAttributeRecord slice in slices)
                     {
@@ -165,13 +175,12 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 if (attribute.RecordLength <= remainingLengthInCurrentSegment)
                 {
                     remainingLengthInCurrentSegment -= (int)attribute.RecordLength;
-                    segments[segmentIndex].ImmediateAttributes.Add(attribute);
-                    remainingAttributes.RemoveFirst();
-                    // Instead of renumbering each attribute slice in the new FileRecordSegment, we use the original Instance number.
-                    if (segments[segmentIndex].NextAttributeInstance <= attribute.Instance)
+                    if (attribute is ResidentAttributeRecord)
                     {
-                        segments[segmentIndex].NextAttributeInstance = (ushort)(attribute.Instance + 1);
+                        attribute = attribute.Clone();
                     }
+                    segments[segmentIndex].AddAttributeRecord(attribute);
+                    remainingAttributes.RemoveFirst();
                 }
                 else
                 {
@@ -182,7 +191,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     }
                     else
                     {
-                        NonResidentAttributeRecord nonResidentAttribute = ((NonResidentAttributeRecord)attribute);
+                        NonResidentAttributeRecord nonResidentAttribute = (NonResidentAttributeRecord)attribute;
                         List<NonResidentAttributeRecord> slices = SliceAttributeRecord((NonResidentAttributeRecord)attribute, remainingLengthInCurrentSegment, bytesAvailableInSegment);
                         remainingAttributes.RemoveFirst();
                         slices.Reverse();
@@ -218,8 +227,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             // Each attribute record is aligned to 8-byte boundary, we must have enough room for padding
             availableLength = (int)Math.Floor((double)availableLength / 8) * 8;
-            // Note that we're using the original record Instance instead of using the FileRecordSegment.NextAttributeInstance
-            NonResidentAttributeRecord slice = new NonResidentAttributeRecord(record.AttributeType, record.Name, record.Instance);
+            NonResidentAttributeRecord slice = new NonResidentAttributeRecord(record.AttributeType, record.Name);
             DataRunSequence dataRuns = record.DataRunSequence;
             long clusterCount = 0;
             for (int index = 0; index < runIndex; index++)
@@ -227,7 +235,6 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 clusterCount += dataRuns[index].RunLength;
             }
             slice.LowestVCN = clusterCount;
-            slice.DataRunSequence.Add(dataRuns[runIndex]);
             
             if (runIndex == 0)
             {
@@ -235,13 +242,14 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 slice.AllocatedLength = record.AllocatedLength;
                 slice.FileSize = record.FileSize;
                 slice.ValidDataLength = record.ValidDataLength;
+                slice.DataRunSequence.Add(dataRuns[runIndex].Clone());
             }
             else
             {
                 // The DataRunSequence of each NonResidentDataRecord fragment starts at absolute LCN
                 long runLength = dataRuns[runIndex].RunLength;
                 long runStartLCN = dataRuns.GetDataClusterLCN(clusterCount);
-                slice.DataRunSequence[0] = new DataRun(runLength, runStartLCN);
+                slice.DataRunSequence.Add(new DataRun(runLength, runStartLCN));
             }
             clusterCount += dataRuns[runIndex].RunLength;
 
@@ -254,7 +262,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             runIndex++;
             while (runIndex < dataRuns.Count && sliceRecordLength + dataRuns[runIndex].RecordLength <= availableLength)
             {
-                slice.DataRunSequence.Add(record.DataRunSequence[runIndex]);
+                slice.DataRunSequence.Add(record.DataRunSequence[runIndex].Clone());
                 sliceRecordLength += dataRuns[runIndex].RecordLength;
                 clusterCount += dataRuns[runIndex].RunLength;
                 runIndex++;
@@ -267,7 +275,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         /// <remarks>
         /// An attribute list MUST be sorted by AttributeType with a secondary sort by AttributeName.
         /// </remarks>
-        public static List<AttributeListEntry> BuildAttributeList(List<FileRecordSegment> segments, int bytesPerFileRecordSegment, ushort minorNTFSVersion)
+        public static List<AttributeListEntry> BuildAttributeList(List<FileRecordSegment> segments, int bytesPerFileRecordSegment, byte minorNTFSVersion)
         {
             int bytesAvailableInSegment = FileRecordSegment.GetNumberOfBytesAvailable(bytesPerFileRecordSegment, minorNTFSVersion);
 
@@ -306,6 +314,16 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             if (result == 0)
             {
                 result = String.Compare(attribute1.Name, attribute2.Name, StringComparison.OrdinalIgnoreCase);
+            }
+            return result;
+        }
+
+        private static int CompareNonResidentAttributes(NonResidentAttributeRecord attribute1, NonResidentAttributeRecord attribute2)
+        {
+            int result = CompareAttributeTypes(attribute1, attribute2);
+            if (result == 0)
+            {
+                result = attribute1.LowestVCN.CompareTo(attribute2.LowestVCN);
             }
             return result;
         }

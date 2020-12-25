@@ -6,8 +6,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Text;
-using DiskAccessLibrary;
 using Utilities;
 
 namespace DiskAccessLibrary.LogicalDiskManager
@@ -147,8 +145,8 @@ namespace DiskAccessLibrary.LogicalDiskManager
             BigEndianWriter.WriteUInt64(buffer, 0x15B, LogSizeLBA);
 
             BigEndianWriter.WriteUInt32(buffer, 0x163, DiskSignature);
-            BigEndianWriter.WriteGuidBytes(buffer, 0x167, DiskSetGuid);
-            BigEndianWriter.WriteGuidBytes(buffer, 0x177, DiskSetGuidRepeat);
+            BigEndianWriter.WriteGuid(buffer, 0x167, DiskSetGuid);
+            BigEndianWriter.WriteGuid(buffer, 0x177, DiskSetGuidRepeat);
 
             uint checksum = CalculateChecksum(buffer);
             BigEndianWriter.WriteUInt32(buffer, 0x08, checksum);

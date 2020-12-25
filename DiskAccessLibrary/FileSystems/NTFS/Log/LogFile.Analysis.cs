@@ -4,9 +4,7 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
 using System.Collections.Generic;
-using Utilities;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
 {
@@ -31,7 +29,7 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                     return null;
                 }
 
-                ushort clientSeqNumber = m_restartPage.LogRestartArea.LogClientArray[clientIndex].SeqNumber;
+                ushort clientSeqNumber = m_restartPage.RestartArea.LogClientArray[clientIndex].SeqNumber;
                 if (record.ClientIndex == clientIndex && record.ClientSeqNumber == clientSeqNumber)
                 {
                     return record;
@@ -63,8 +61,8 @@ namespace DiskAccessLibrary.FileSystems.NTFS
                 m_restartPage = ReadRestartPage();
             }
 
-            return (lsn >= m_restartPage.LogRestartArea.LogClientArray[clientIndex].OldestLsn &&
-                    lsn <= m_restartPage.LogRestartArea.CurrentLsn);
+            return (lsn >= m_restartPage.RestartArea.LogClientArray[clientIndex].OldestLsn &&
+                    lsn <= m_restartPage.RestartArea.CurrentLsn);
         }
     }
 }

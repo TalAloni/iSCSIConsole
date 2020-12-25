@@ -1,11 +1,9 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace DiskAccessLibrary.FileSystems.NTFS
@@ -35,6 +33,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
         {
             int runOffsetSize = buffer[offset] >> 4;
             int runLengthSize = buffer[offset] & 0x0F;
+
+            if (runOffsetSize > 8 || runLengthSize > 8)
+            {
+                throw new InvalidDataException("Invalid Data Run record");
+            }
 
             RunLength = ReadVarLong(ref buffer, offset + 1, runLengthSize);
             if (RunLength < 0)
@@ -72,6 +75,11 @@ namespace DiskAccessLibrary.FileSystems.NTFS
             byte[] buffer = new byte[RecordLength];
             WriteBytes(buffer, 0);
             return buffer;
+        }
+
+        public DataRun Clone()
+        {
+            return (DataRun)this.MemberwiseClone();
         }
 
         private static long ReadVarLong(ref byte[] buffer, int offset, int size)

@@ -91,7 +91,7 @@ namespace DiskAccessLibrary.VHD
             BigEndianWriter.WriteUInt32(buffer, 0x1C, MaxTableEntries);
             BigEndianWriter.WriteUInt32(buffer, 0x20, BlockSize);
             // We'll write the checksum later
-            BigEndianWriter.WriteGuidBytes(buffer, 0x28, ParentUniqueID);
+            BigEndianWriter.WriteGuid(buffer, 0x28, ParentUniqueID);
             BigEndianWriter.WriteUInt32(buffer, 0x38, ParentTimeStamp);
             BigEndianWriter.WriteUInt32(buffer, 0x3C, Reserved);
             ByteWriter.WriteUTF16String(buffer, 0x40, ParentUnicodeName, 256);

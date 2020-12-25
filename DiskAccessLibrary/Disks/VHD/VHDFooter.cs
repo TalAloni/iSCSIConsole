@@ -5,8 +5,6 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Utilities;
 
 namespace DiskAccessLibrary.VHD
@@ -103,7 +101,7 @@ namespace DiskAccessLibrary.VHD
             BigEndianWriter.WriteUInt32(buffer, 0x38, DiskGeometry);
             BigEndianWriter.WriteUInt32(buffer, 0x3C, (uint)DiskType);
             // We'll write the checksum later
-            BigEndianWriter.WriteGuidBytes(buffer, 0x44, UniqueId);
+            BigEndianWriter.WriteGuid(buffer, 0x44, UniqueId);
             ByteWriter.WriteByte(buffer, 0x54, SavedState);
 
             uint checksum = CalculateChecksum(buffer);

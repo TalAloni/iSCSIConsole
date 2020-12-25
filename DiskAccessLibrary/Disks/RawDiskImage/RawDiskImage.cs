@@ -1,12 +1,12 @@
-/* Copyright (C) 2014-2018 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2014-2020 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using Utilities;
 
 namespace DiskAccessLibrary
@@ -18,9 +18,7 @@ namespace DiskAccessLibrary
         private const FileOptions FILE_FLAG_NO_BUFFERING = (FileOptions)0x20000000;
         private const FileOptions FILE_FLAG_OVERLAPPED = (FileOptions)0x40000000;
         private bool m_isExclusiveLock;
-#if Win32
         private bool m_useOverlappedIO;
-#endif
         private Stream m_stream;
         private int m_bytesPerSector;
         private long m_size;
@@ -68,16 +66,19 @@ namespace DiskAccessLibrary
             }
         }
 
-#if Win32
         public override bool ExclusiveLock(bool useOverlappedIO)
         {
+            if (!IsWin32() && useOverlappedIO)
+            {
+                throw new PlatformNotSupportedException("useOverlappedIO can only be used under Windows");
+            }
+
             if (!m_isExclusiveLock)
             {
                 m_useOverlappedIO = useOverlappedIO;
             }
             return ExclusiveLock();
         }
-#endif
 
         public override bool ReleaseLock()
         {
@@ -100,28 +101,31 @@ namespace DiskAccessLibrary
             // Note: KB99794 provides information about FILE_FLAG_WRITE_THROUGH and FILE_FLAG_NO_BUFFERING.
             // We must avoid using buffered writes, using it will negatively affect the performance and reliability.
             // Note: once the file system write buffer is filled, Windows may delay any (buffer-dependent) pending write operations, which will create a deadlock.
-#if Win32
-            uint flags = unchecked((uint)(FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough));
-            if (m_useOverlappedIO)
+            if (IsWin32())
             {
-                flags |= (uint)FILE_FLAG_OVERLAPPED;
-            }
-            Microsoft.Win32.SafeHandles.SafeFileHandle handle = HandleUtils.GetFileHandle(this.Path, fileAccess, ShareMode.Read, flags);
-            if (!handle.IsInvalid)
-            {
-                return new FileStreamEx(handle, fileAccess);
+                uint flags = unchecked((uint)(FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough));
+                if (m_useOverlappedIO)
+                {
+                    flags |= (uint)FILE_FLAG_OVERLAPPED;
+                }
+                Microsoft.Win32.SafeHandles.SafeFileHandle handle = HandleUtils.GetFileHandle(this.Path, fileAccess, ShareMode.Read, flags);
+                if (!handle.IsInvalid)
+                {
+                    return new FileStreamEx(handle, fileAccess);
+                }
+                else
+                {
+                    // we always release invalid handle
+                    int errorCode = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+                    string message = String.Format("Failed to obtain file handle for file '{0}'.", this.Path);
+                    IOExceptionHelper.ThrowIOError(errorCode, message);
+                    return null; // this line will not be reached
+                }
             }
             else
             {
-                // we always release invalid handle
-                int errorCode = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-                string message = String.Format("Failed to obtain file handle for file '{0}'.", this.Path);
-                IOExceptionHelper.ThrowIOError(errorCode, message);
-                return null; // this line will not be reached
+                return new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, m_bytesPerSector, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
             }
-#else
-            return new FileStream(this.Path, FileMode.Open, fileAccess, FileShare.Read, m_bytesPerSector, FILE_FLAG_NO_BUFFERING | FileOptions.WriteThrough);
-#endif
         }
 
         /// <summary>
@@ -136,19 +140,15 @@ namespace DiskAccessLibrary
             }
             long offset = sectorIndex * BytesPerSector;
             byte[] result = new byte[BytesPerSector * sectorCount];
-#if Win32
             if (m_useOverlappedIO)
             {
                 ((FileStreamEx)m_stream).ReadOverlapped(result, 0, result.Length, offset);
             }
             else
             {
-#endif
                 m_stream.Seek(offset, SeekOrigin.Begin);
                 m_stream.Read(result, 0, BytesPerSector * sectorCount);
-#if Win32
             }
-#endif
             if (!m_isExclusiveLock)
             {
                 m_stream.Close();
@@ -169,19 +169,16 @@ namespace DiskAccessLibrary
                 m_stream = OpenFileStream();
             }
             long offset = sectorIndex * BytesPerSector;
-#if Win32
             if (m_useOverlappedIO)
             {
                 ((FileStreamEx)m_stream).WriteOverlapped(data, 0, data.Length, offset);
             }
             else
             {
-#endif
                 m_stream.Seek(offset, SeekOrigin.Begin);
                 m_stream.Write(data, 0, data.Length);
-#if Win32
             }
-#endif
+
             if (!m_isExclusiveLock)
             {
                 m_stream.Close();
@@ -195,11 +192,15 @@ namespace DiskAccessLibrary
             {
                 throw new ArgumentException("numberOfAdditionalBytes must be a multiple of BytesPerSector");
             }
-#if Win32
-            // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
-            // We can work around the issue by obtaining the privilege before obtaining the handle.
-            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
-#endif
+
+            bool hasManageVolumePrivilege = false;
+            if (IsWin32())
+            {
+                // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
+                // We can work around the issue by obtaining the privilege before obtaining the handle.
+                hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
+            }
+
             if (!m_isExclusiveLock)
             {
                 m_stream = OpenFileStream();
@@ -213,7 +214,7 @@ namespace DiskAccessLibrary
 
             m_stream.SetLength(m_size + numberOfAdditionalBytes);
             m_size += numberOfAdditionalBytes;
-#if Win32
+
             if (hasManageVolumePrivilege)
             {
                 try
@@ -224,7 +225,7 @@ namespace DiskAccessLibrary
                 {
                 }
             }
-#endif
+
             if (!m_isExclusiveLock)
             {
                 m_stream.Close();
@@ -265,11 +266,15 @@ namespace DiskAccessLibrary
             {
                 throw new ArgumentException("size must be a multiple of bytesPerSector");
             }
-#if Win32
-            // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
-            // We can work around the issue by obtaining the privilege before obtaining the handle.
-            bool hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
-#endif
+
+            bool hasManageVolumePrivilege = false;
+            if (IsWin32())
+            {
+                // calling AdjustTokenPrivileges and then immediately calling SetFileValidData will sometimes result in ERROR_PRIVILEGE_NOT_HELD.
+                // We can work around the issue by obtaining the privilege before obtaining the handle.
+                hasManageVolumePrivilege = SecurityUtils.ObtainManageVolumePrivilege();
+            }
+
             FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             try
             {
@@ -288,7 +293,7 @@ namespace DiskAccessLibrary
                 }
                 throw;
             }
-#if Win32
+
             if (hasManageVolumePrivilege)
             {
                 try
@@ -299,7 +304,7 @@ namespace DiskAccessLibrary
                 {
                 }
             }
-#endif
+
             stream.Close();
             return new RawDiskImage(path, bytesPerSector);
         }
@@ -318,6 +323,15 @@ namespace DiskAccessLibrary
             {
                 return DefaultBytesPerSector;
             }
+        }
+
+        private static bool IsWin32()
+        {
+#if NETSTANDARD2_0
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+#else
+            return true;
+#endif
         }
     }
 }
