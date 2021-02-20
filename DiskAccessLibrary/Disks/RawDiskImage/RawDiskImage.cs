@@ -327,7 +327,7 @@ namespace DiskAccessLibrary
 
         private static bool IsWin32()
         {
-#if NETSTANDARD2_0
+#if NET472 || NETSTANDARD2_0
             return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 #else
             return true;

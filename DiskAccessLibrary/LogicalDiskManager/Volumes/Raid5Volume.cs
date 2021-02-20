@@ -19,7 +19,7 @@ namespace DiskAccessLibrary.LogicalDiskManager
         private int m_sectorsPerStripe;
         private long m_size;
         
-        /// <param name="diskArray">One of the disks in the array can be null</param>
+        /// <param name="columns">One of the disks can be null</param>
         public Raid5Volume(List<DynamicColumn> columns, int sectorsPerStripe, Guid volumeGuid, Guid diskGroupGuid) : base(volumeGuid, diskGroupGuid)
         {
             m_columns = columns;
