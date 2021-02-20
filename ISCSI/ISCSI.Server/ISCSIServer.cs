@@ -84,7 +84,7 @@ namespace ISCSI.Server
             Start(listenerEndPoint, TimeSpan.FromMinutes(5));
         }
 
-        /// <param name="listenerEP">The endpoint on which the iSCSI server will listen</param>
+        /// <param name="listenerEndPoint">The endpoint on which the iSCSI server will listen</param>
         /// <param name="keepAliveTime">The duration between keep-alive transmissions</param>        
         /// <exception cref="System.Net.Sockets.SocketException"></exception>
         public void Start(IPEndPoint listenerEndPoint, TimeSpan? keepAliveTime)
