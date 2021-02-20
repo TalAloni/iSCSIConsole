@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>ISCSI</AssemblyName>
+    <Version>1.5.0</Version>
+    <NoWarn>1573;1591</NoWarn>
+    <RootNamespace>ISCSI</RootNamespace>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Authors>Tal Aloni</Authors>
+    <PackageDescription>ISCSILibrary is an open-source C# library for creating iSCSI Target server and client implementations</PackageDescription>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/TalAloni/iSCSIConsole</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TalAloni/iSCSIConsole</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Configurations>Debug;Release;Publish</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' != 'Publish'">
+    <ProjectReference Include="..\Utilities\Utilities.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net20;net40;netcoreapp3.1</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Version>1.5.1</Version>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net20' ">
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\DiskAccessLibrary.Win32\DiskAccessLibrary.Win32.csproj" />
+    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj" />
+    <ProjectReference Include="..\ISCSI\ISCSI.csproj" />
+  </ItemGroup>
+
+</Project>
