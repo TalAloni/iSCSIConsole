@@ -96,6 +96,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helpers\RuntimeHelper.cs" />
     <Compile Include="Win32\SecurityHelper.cs" />
     <Compile Include="Win32\SelectPhysicalDiskForm.cs">
       <SubType>Form</SubType>

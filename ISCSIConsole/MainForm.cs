@@ -48,12 +48,11 @@ namespace ISCSIConsole
             comboIPAddress.DisplayMember = "Key";
             comboIPAddress.ValueMember = "Value";
             lblStatus.Text = "Author: Tal Aloni (tal.aloni.il@gmail.com)";
-#if Win32
-            if (!SecurityHelper.IsAdministrator())
+
+            if (RuntimeHelper.IsWin32 && !SecurityHelper.IsAdministrator())
             {
                 lblStatus.Text = "Some features require administrator privileges and have been disabled";
             }
-#endif
         }
 
         private void btnStart_Click(object sender, EventArgs e)

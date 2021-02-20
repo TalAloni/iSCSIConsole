@@ -32,8 +32,7 @@ namespace ISCSIConsole
             {
                 ((RAMDisk)disk).Free();
             }
-#if Win32
-            else if (disk is PhysicalDisk)
+            else if (disk is PhysicalDisk) // Win32 only
             {
                 if (!DiskAccessLibrary.LogicalDiskManager.DynamicDisk.IsDynamicDisk(disk))
                 {
@@ -47,7 +46,7 @@ namespace ISCSIConsole
                     }
                 }
             }
-            else if (disk is VolumeDisk)
+            else if (disk is VolumeDisk) // Win32 only
             {
                 bool skippedLock = (Environment.OSVersion.Version.Major >= 6 && VolumeInfo.IsOffline(((VolumeDisk)disk).Volume));
                 if (!skippedLock)
@@ -59,7 +58,6 @@ namespace ISCSIConsole
                     }
                 }
             }
-#endif
         }
     }
 }

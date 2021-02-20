@@ -23,15 +23,16 @@ namespace ISCSIConsole
         public AddTargetForm()
         {
             InitializeComponent();
-#if Win32
-            btnAddPhysicalDisk.Visible = true;
-            btnAddVolume.Visible = true;
-            if (!SecurityHelper.IsAdministrator())
+            if (RuntimeHelper.IsWin32)
             {
-                btnAddPhysicalDisk.Enabled = false;
-                btnAddVolume.Enabled = false;
+                btnAddPhysicalDisk.Visible = true;
+                btnAddVolume.Visible = true;
+                if (!SecurityHelper.IsAdministrator())
+                {
+                    btnAddPhysicalDisk.Enabled = false;
+                    btnAddVolume.Enabled = false;
+                }
             }
-#endif
         }
 
         private void AddTargetForm_Load(object sender, EventArgs e)
@@ -76,19 +77,16 @@ namespace ISCSIConsole
 
         private void btnAddPhysicalDisk_Click(object sender, EventArgs e)
         {
-#if Win32
             SelectPhysicalDiskForm selectPhysicalDisk = new SelectPhysicalDiskForm();
             DialogResult result = selectPhysicalDisk.ShowDialog();
             if (result == DialogResult.OK)
             {
                 AddDisk(selectPhysicalDisk.SelectedDisk);
             }
-#endif
         }
 
         private void btnAddVolume_Click(object sender, EventArgs e)
         {
-#if Win32
             SelectVolumeForm selectVolume = new SelectVolumeForm();
             DialogResult result = selectVolume.ShowDialog();
             if (result == DialogResult.OK)
@@ -96,7 +94,6 @@ namespace ISCSIConsole
                 VolumeDisk volumeDisk = new VolumeDisk(selectVolume.SelectedVolume, selectVolume.IsReadOnly);
                 AddDisk(volumeDisk);
             }
-#endif
         }
 
         private void AddDisk(Disk disk)
@@ -111,16 +108,15 @@ namespace ISCSIConsole
             {
                 description = "RAM Disk";
             }
-#if Win32
-            else if (disk is PhysicalDisk)
+            else if (disk is PhysicalDisk) // Win32 only
             {
                 description = String.Format("Physical Disk {0}", ((PhysicalDisk)disk).PhysicalDiskIndex);
             }
-            else if (disk is VolumeDisk)
+            else if (disk is VolumeDisk) // Win32 only
             {
                 description = String.Format("Volume");
             }
-#endif
+
             ListViewItem item = new ListViewItem(description);
             item.SubItems.Add(sizeString);
             listDisks.Items.Add(item);
