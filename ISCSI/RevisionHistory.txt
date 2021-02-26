@@ -143,3 +143,6 @@ Revision History:
 1.4.9 - Corrected handling of unsolicited Data Out PDU when InitialR2T=No.
 
 1.5.0 - Corrected logging typo.
+
+1.5.2 - ISCSIClient: Fixed a bug related to localhost communication.
+        ISCSIServer: Corrected documentation.

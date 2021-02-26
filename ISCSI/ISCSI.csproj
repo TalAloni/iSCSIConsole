@@ -4,7 +4,7 @@
     <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>ISCSI</AssemblyName>
-    <Version>1.5.0</Version>
+    <Version>1.5.2</Version>
     <NoWarn>1573;1591</NoWarn>
     <RootNamespace>ISCSI</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
