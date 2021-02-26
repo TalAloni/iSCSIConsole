@@ -11,6 +11,8 @@ Any storage object you wish to share needs to implement the abstract Disk class,
 The library was written with extensibility in mind, and was designed to fit multitude of projects.  
 iSCSI Console is merely a demo project that exposes some of the capabilities of this library.  
 
+A NuGet package of the library [is available](https://www.nuget.org/packages/ISCSI/).
+
 Notes:
 ------
 In addition to a full fledged iSCSI Target server implementation, the iSCSI library also contain a very basic iSCSI initiator implementation.
@@ -22,8 +24,8 @@ What this program can do:
 3. Serve basic volumes as disks.
 4. Serve dynamic volumes as disks.
 5. Create VHDs.
-6. Could run from Windows PE using Mono.
-7. Could run from Linux / OSX using Mono (Download the Cross Platform Edition) 
+6. Can run under Windows PE using Mono.
+7. Can run under Linux / OSX using Mono (use the release targeting .NET Framework 4.7.2)
 
 ![iSCSI Console UI](ISCSIConsole_UI.png)
 
