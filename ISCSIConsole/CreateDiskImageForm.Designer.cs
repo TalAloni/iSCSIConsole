@@ -61,7 +61,7 @@ namespace ISCSIConsole
             0});
             this.numericDiskSize.Name = "numericDiskSize";
             this.numericDiskSize.Size = new System.Drawing.Size(86, 20);
-            this.numericDiskSize.TabIndex = 0;
+            this.numericDiskSize.TabIndex = 4;
             this.numericDiskSize.ThousandsSeparator = true;
             this.numericDiskSize.Value = new decimal(new int[] {
             100,
@@ -75,7 +75,7 @@ namespace ISCSIConsole
             this.lblSize.Location = new System.Drawing.Point(12, 43);
             this.lblSize.Name = "lblSize";
             this.lblSize.Size = new System.Drawing.Size(30, 13);
-            this.lblSize.TabIndex = 1;
+            this.lblSize.TabIndex = 3;
             this.lblSize.Text = "Size:";
             // 
             // label1
@@ -84,7 +84,7 @@ namespace ISCSIConsole
             this.label1.Location = new System.Drawing.Point(148, 43);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(23, 13);
-            this.label1.TabIndex = 2;
+            this.label1.TabIndex = 5;
             this.label1.Text = "MB";
             // 
             // lblFilePath
@@ -93,7 +93,7 @@ namespace ISCSIConsole
             this.lblFilePath.Location = new System.Drawing.Point(12, 18);
             this.lblFilePath.Name = "lblFilePath";
             this.lblFilePath.Size = new System.Drawing.Size(26, 13);
-            this.lblFilePath.TabIndex = 3;
+            this.lblFilePath.TabIndex = 0;
             this.lblFilePath.Text = "File:";
             // 
             // txtFilePath
@@ -101,14 +101,14 @@ namespace ISCSIConsole
             this.txtFilePath.Location = new System.Drawing.Point(56, 15);
             this.txtFilePath.Name = "txtFilePath";
             this.txtFilePath.Size = new System.Drawing.Size(243, 20);
-            this.txtFilePath.TabIndex = 4;
+            this.txtFilePath.TabIndex = 1;
             // 
             // btnBrowse
             // 
             this.btnBrowse.Location = new System.Drawing.Point(305, 13);
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(75, 23);
-            this.btnBrowse.TabIndex = 5;
+            this.btnBrowse.TabIndex = 2;
             this.btnBrowse.Text = "Browse..";
             this.btnBrowse.UseVisualStyleBackColor = true;
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
