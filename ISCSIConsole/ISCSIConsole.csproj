@@ -18,4 +18,8 @@
     <ProjectReference Include="..\ISCSI\ISCSI.csproj" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release' And '$(TargetFramework)' != 'netcoreapp3.1'">
+      <Exec Command="&quot;$(ProjectDir)ILMerge\ILMerge.bat&quot; $(TargetFramework)" WorkingDirectory="$(ProjectDir)ILMerge" />
+  </Target>
+
 </Project>
