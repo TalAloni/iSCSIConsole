@@ -18,6 +18,11 @@
     <ProjectReference Include="..\ISCSI\ISCSI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Update="Win32\SelectPhysicalDiskForm.resx" ManifestResourceName="ISCSIConsole.SelectPhysicalDiskForm" />
+    <EmbeddedResource Update="Win32\SelectVolumeForm.resx" ManifestResourceName="ISCSIConsole.SelectVolumeForm" />
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release' And '$(TargetFramework)' != 'netcoreapp3.1'">
       <Exec Command="&quot;$(ProjectDir)ILMerge\ILMerge.bat&quot; $(TargetFramework)" WorkingDirectory="$(ProjectDir)ILMerge" />
   </Target>
