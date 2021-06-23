@@ -6,6 +6,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Version>1.5.2.1</Version>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Icons\SCSI.ico</ApplicationIcon>
   </PropertyGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' == 'net20' ">
