@@ -8,6 +8,7 @@ namespace SCSI
         ControlModePage = 0x0A,
         PowerConditionModePage = 0x1A,
         InformationalExceptionsControlModePage = 0x1C,
+        MMCapabilitiesAndMechanicalStatus = 0x2A,
         ReturnAllPages = 0x3F,
     }
 }
