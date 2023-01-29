@@ -20,7 +20,18 @@ namespace SCSI
         {
             switch(_format)
             {
-                case 0: return GetFormattedTOC();
+                case 0:
+                    {
+                        FormattedToc toc = new FormattedToc(_msf);
+                        toc.FirstTrackNumber = 1;
+                        toc.LastTrackNumber = 1;
+                        toc.SetTocTrackDescriptor(0, 1, 4, 1, 0);
+                        // Lead-Out
+                        toc.SetTocTrackDescriptor(1, 1, 4, 0xAA, (uint)_disk.TotalSectors);
+                        toc.UpdateDataLength(2);
+
+                        return toc.GetBytes();
+                    }
                 case 1: return MultiSessionInformation();
                 case 2: return RawTOC();
                 default: return null;
@@ -219,80 +230,6 @@ namespace SCSI
 
             /* TOC Data Length */
             // DSET16(&data[0], hlen + len - 2);
-            BigEndianWriter.WriteInt16(data, 0, (short)(hlen + len - 2));
-
-            return data;
-        }
-
-        internal byte[] GetFormattedTOC()
-        {
-            sbyte hlen;
-            sbyte len = 0, plen;
-
-            byte[] data = new byte[Length];
-
-            /* First Track Number */
-            data[2] = 1;
-            /* Last Track Number */
-            data[3] = 1;
-            hlen = 4;
-
-            /* TOC Track Descriptor */
-            /* Track 1 Descriptor */
-            int offset = hlen + len;
-
-            /* Reserved */
-            data[offset + 0] = 0;
-            /* ADR(7-4) CONTROL(3-0) */
-            data[offset + 1] = 0x14;
-            /* Track Number */
-            data[offset + 2] = 1;
-            /* Reserved */
-            data[offset + 3] = 0;
-
-            /* Track Start Address */
-            if (_msf)
-            {
-                // DSET32(&cp[4], istgt_lba2msf(0));
-                BigEndianWriter.WriteInt32(data, offset + 4, /*lba2msf*/ 0);
-            }
-            else
-            {
-                BigEndianWriter.WriteInt32(data, offset + 4, 0);
-            }
-
-            plen = 8;
-            len += plen;
-
-            /* Track AAh (Lead-out) Descriptor */
-            // cp = &data[hlen + len];
-            offset = hlen + len;
-
-            /* Reserved */
-            data[offset + 0] = 0;
-            /* ADR(7-4) CONTROL(3-0) */
-            data[offset + 1] = 0x14;
-            /* Track Number */
-            data[offset + 2] = 0xaa;
-            /* Reserved */
-            data[offset + 3] = 0;
-            /* Track Start Address */
-            if (_msf)
-            {
-                // DSET32(&cp[4], istgt_lba2msf(spec->blockcnt));
-                BigEndianWriter.WriteInt32(data, offset + 4, /*lba2msf*/ (int)_disk.TotalSectors);
-            }
-            else
-            {
-                // DSET32(&cp[4], spec->blockcnt);
-                BigEndianWriter.WriteInt32(data, offset + 4, (int)_disk.TotalSectors);
-            }
-
-            plen = 8;
-            len += plen;
-
-            /* TOC Data Length */
-            // DSET16(&data[0], hlen + len - 2)
             BigEndianWriter.WriteInt16(data, 0, (short)(hlen + len - 2));
 
             return data;

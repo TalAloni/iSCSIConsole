@@ -41,7 +41,7 @@ namespace SCSI
             {
                 case 0x00:
                     /* all of features */
-                    for (fc = _cmd.SFN; fc < 0xffff; fc++)
+                    for (fc = _cmd.StartingFeatureNumber; fc < 0xffff; fc++)
                     {
                         plen = istgt_lu_dvd_get_feature_descriptor(fc, data, hlen + len);
                         len += plen;
@@ -50,7 +50,7 @@ namespace SCSI
 
                 case 0x01:
                     /* current of features */
-                    for (fc = _cmd.SFN; fc < 0xffff; fc++)
+                    for (fc = _cmd.StartingFeatureNumber; fc < 0xffff; fc++)
                     {
                         plen = istgt_lu_dvd_get_feature_descriptor(fc, data, hlen + len);
                         if (data[hlen + 2] == 1)
@@ -66,7 +66,7 @@ namespace SCSI
 
                 case 0x02:
                     /* specified feature */
-                    fc = _cmd.SFN;
+                    fc = _cmd.StartingFeatureNumber;
                     plen = istgt_lu_dvd_get_feature_descriptor(fc, data, hlen + len);
                     len += plen;
                     break;
