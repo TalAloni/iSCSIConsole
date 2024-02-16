@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>ISCSI</AssemblyName>
+    <AssemblyTitle>iSCSI Library</AssemblyTitle>
+    <Product>iSCSI Library</Product>
     <Version>1.5.2</Version>
     <NoWarn>1573;1591</NoWarn>
     <RootNamespace>ISCSI</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>Tal Aloni</Authors>
+    <Copyright>Copyright © Tal Aloni 2012-2024</Copyright>
     <PackageDescription>ISCSILibrary is an open-source C# library for creating iSCSI Target server and client implementations</PackageDescription>
     <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/TalAloni/iSCSIConsole</PackageProjectUrl>

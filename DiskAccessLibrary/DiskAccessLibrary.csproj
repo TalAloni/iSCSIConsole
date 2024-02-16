@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <TargetFrameworks>net20;net40;net472;netstandard2.0</TargetFrameworks>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>DiskAccessLibrary</AssemblyName>
     <Version>1.5.9.1</Version>
     <NoWarn>1573;1591</NoWarn>
     <RootNamespace>DiskAccessLibrary</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>Tal Aloni</Authors>
+    <Copyright>Copyright © Tal Aloni 2012-2024</Copyright>
     <PackageDescription>DiskAccessLibrary is an open-source C# library allowing access to physical and virtual disks (IMG/VHD/VMDK) including reading and writing various on-disk structutes (MBR/GPT, Logical Disk Manager Database) and filesystems (NTFS)</PackageDescription>
     <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/TalAloni/DynamicDiskPartitioner</PackageProjectUrl>
@@ -20,6 +20,15 @@
   <ItemGroup>
     <ProjectReference Include="..\DiskAccessLibrary.FileSystems.Abstractions\DiskAccessLibrary.FileSystems.Abstractions.csproj" />
     <ProjectReference Include="..\Utilities\Utilities.csproj" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DiskAccessLibrary.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DiskAccessLibrary.Win32</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <Target Name="ILRepack" Condition="'$(Configuration)' == 'Publish'" AfterTargets="AfterBuild">

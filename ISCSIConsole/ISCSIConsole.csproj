@@ -3,10 +3,13 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFrameworks>net20;net40;net472;netcoreapp3.1</TargetFrameworks>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyTitle>iSCSI Console</AssemblyTitle>
+    <Product>iSCSI Console</Product>
     <Version>1.5.2.2</Version>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Icons\SCSI.ico</ApplicationIcon>
+    <Authors>Tal Aloni</Authors>
+    <Copyright>Copyright © Tal Aloni 2012-2024</Copyright>
   </PropertyGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' == 'net20' ">
