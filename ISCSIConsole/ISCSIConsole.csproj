@@ -17,9 +17,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\DiskAccessLibrary.Win32\DiskAccessLibrary.Win32.csproj" />
-    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj" />
     <ProjectReference Include="..\ISCSI\ISCSI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DiskAccessLibrary.Win32" Version="1.6.1" />
   </ItemGroup>
 
   <ItemGroup>

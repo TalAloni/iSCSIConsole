@@ -8,4 +8,4 @@ if %TargetFramework%==net472 set TargetPlaform=4.0
 set binaryPath=%CD%\..\bin\Release\%TargetFramework%
 set outputPath=%CD%\..\bin\ILMerge\%TargetFramework%
 IF NOT EXIST "%outputPath%" MKDIR "%outputPath%"
-%ilmergePath%\ilmerge /targetplatform=%TargetPlaform% /ndebug /target:winexe /out:"%outputPath%\ISCSIConsole.exe" "%binaryPath%\ISCSIConsole.exe" "%binaryPath%\Utilities.dll" "%binaryPath%\DiskAccessLibrary.FileSystems.Abstractions.dll" "%binaryPath%\DiskAccessLibrary.dll" "%binaryPath%\DiskAccessLibrary.Win32.dll" "%binaryPath%\ISCSI.dll"
+%ilmergePath%\ilmerge /targetplatform=%TargetPlaform% /ndebug /target:winexe /out:"%outputPath%\ISCSIConsole.exe" "%binaryPath%\ISCSIConsole.exe" "%binaryPath%\Utilities.dll" "%binaryPath%\DiskAccessLibrary.dll" "%binaryPath%\DiskAccessLibrary.Win32.dll" "%binaryPath%\ISCSI.dll"

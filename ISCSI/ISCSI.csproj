@@ -16,15 +16,15 @@
     <PackageProjectUrl>https://github.com/TalAloni/iSCSIConsole</PackageProjectUrl>
     <RepositoryUrl>https://github.com/TalAloni/iSCSIConsole</RepositoryUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Configurations>Debug;Release;Publish</Configurations>
+    <Configurations>Debug;Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DiskAccessLibrary\DiskAccessLibrary.csproj" />
+    <ProjectReference Include="..\Utilities\Utilities.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(Configuration)' != 'Publish'">
-    <ProjectReference Include="..\Utilities\Utilities.csproj" />
+  <ItemGroup>
+    <PackageReference Include="DiskAccessLibrary" Version="1.6.1" />
   </ItemGroup>
 
 </Project>
