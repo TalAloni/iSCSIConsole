@@ -109,3 +109,10 @@ Revision History:
         Updates to the ISCSI library.
 
 1.5.1 - Bugfix: 'Read only' checkbox was ignored.
+
+1.5.2 - ISCSIClient: Fixed a bug related to localhost communication.
+        ISCSIConsole: Add .NET Framework 4.7.2 target.
+        Create Disk Image form: Updated tab index.
+
+1.5.3 - StandardInquiryData: Fix bug in GetBytes not reporting PeripheralDeviceType correctly.
+        Updated DiskAccessLibrary to v1.6.1 (VMDK related improvements).
