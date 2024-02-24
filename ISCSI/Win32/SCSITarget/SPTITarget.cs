@@ -9,8 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
 using DiskAccessLibrary;
+using ISCSI.Logging;
+using Microsoft.Win32.SafeHandles;
 using Utilities;
 
 namespace SCSI.Win32

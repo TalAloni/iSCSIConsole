@@ -6,8 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Text;
+using ISCSI.Logging;
 using Utilities;
 
 namespace ISCSI.Server
