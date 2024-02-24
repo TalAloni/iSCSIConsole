@@ -4,11 +4,11 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
+using DiskAccessLibrary;
+using SCSI;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Text;
-using SCSI;
 using Utilities;
 
 namespace ISCSI.Server
