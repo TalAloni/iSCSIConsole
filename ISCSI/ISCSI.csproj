@@ -20,11 +20,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Utilities\Utilities.csproj" />
+    <ProjectReference Include="..\Utilities\Utilities.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DiskAccessLibrary" Version="1.6.3" />
   </ItemGroup>
+
+  <Target Name="ILRepack" Condition="'$(Configuration)' == 'Release'" AfterTargets="AfterBuild">
+    <Exec Command="&quot;$(ProgramW6432)\ILRepack\ILRepack.exe&quot; /internalize /out=&quot;$(OutputPath)\ISCSI.dll&quot; &quot;$(OutputPath)\ISCSI.dll&quot; &quot;$(OutputPath)\Utilities.dll&quot;"></Exec>
+  </Target>
 
 </Project>

@@ -18,6 +18,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\ISCSI\ISCSI.csproj" />
+    <ProjectReference Include="..\Utilities\Utilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>
