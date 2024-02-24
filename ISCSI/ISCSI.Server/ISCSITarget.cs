@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -95,7 +95,7 @@ namespace ISCSI.Server
             return true;
         }
 
-        internal KeyValuePairList<string, string> GetTextResponse(KeyValuePairList<string, string> requestParameters)
+        internal List<KeyValuePair<string, string>> GetTextResponse(KeyValuePairList<string, string> requestParameters)
         {
             EventHandler<TextRequestArgs> handler = OnTextRequest;
             if (handler != null)
@@ -104,7 +104,7 @@ namespace ISCSI.Server
                 handler(this, args);
                 return args.ResponseParaemeters;
             }
-            return new KeyValuePairList<string, string>();
+            return new List<KeyValuePair<string, string>>();
         }
 
         internal void NotifySessionTermination(string initiatorName, ulong isid, SessionTerminationReason reason)

@@ -5,16 +5,16 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
-using Utilities;
+using System.Collections.Generic;
 
 namespace ISCSI.Server
 {
     public class TextRequestArgs : EventArgs
     {
-        public KeyValuePairList<string, string> RequestParaemeters;
-        public KeyValuePairList<string, string> ResponseParaemeters = new KeyValuePairList<string, string>();
+        public List<KeyValuePair<string, string>> RequestParaemeters;
+        public List<KeyValuePair<string, string>> ResponseParaemeters = new List<KeyValuePair<string, string>>();
 
-        public TextRequestArgs(KeyValuePairList<string, string> requestParaemeters)
+        public TextRequestArgs(List<KeyValuePair<string, string>> requestParaemeters)
         {
             RequestParaemeters = requestParaemeters;
         }
