@@ -61,7 +61,7 @@ namespace ISCSI
             return base.GetBytes();
         }
 
-        public KeyValuePairList<string, string> TextParameters
+        public List<KeyValuePair<string, string>> TextParameters
         {
             set
             {

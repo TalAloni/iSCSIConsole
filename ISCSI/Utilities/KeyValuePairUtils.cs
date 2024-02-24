@@ -29,7 +29,7 @@ namespace Utilities
             return result;
         }
 
-        public static string ToNullDelimitedString(KeyValuePairList<string, string> list)
+        public static string ToNullDelimitedString(List<KeyValuePair<string, string>> list)
         {
             StringBuilder builder = new StringBuilder();
             foreach (KeyValuePair<string, string> pair in list)

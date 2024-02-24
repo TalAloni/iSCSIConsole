@@ -82,7 +82,7 @@ namespace ISCSI
             return base.GetBytes();
         }
 
-        public KeyValuePairList<string, string> LoginParameters
+        public List<KeyValuePair<string, string>> LoginParameters
         {
             set
             {
