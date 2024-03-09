@@ -45,7 +45,7 @@ namespace ISCSIConsole
             this.btnCancel.Location = new System.Drawing.Point(405, 191);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 23);
-            this.btnCancel.TabIndex = 1;
+            this.btnCancel.TabIndex = 3;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
@@ -66,7 +66,7 @@ namespace ISCSIConsole
             this.chkReadOnly.Location = new System.Drawing.Point(12, 195);
             this.chkReadOnly.Name = "chkReadOnly";
             this.chkReadOnly.Size = new System.Drawing.Size(76, 17);
-            this.chkReadOnly.TabIndex = 3;
+            this.chkReadOnly.TabIndex = 1;
             this.chkReadOnly.Text = "Read Only";
             this.chkReadOnly.UseVisualStyleBackColor = true;
             // 
@@ -81,7 +81,7 @@ namespace ISCSIConsole
             this.listPhysicalDisks.Location = new System.Drawing.Point(12, 12);
             this.listPhysicalDisks.Name = "listPhysicalDisks";
             this.listPhysicalDisks.Size = new System.Drawing.Size(468, 173);
-            this.listPhysicalDisks.TabIndex = 4;
+            this.listPhysicalDisks.TabIndex = 0;
             this.listPhysicalDisks.UseCompatibleStateImageBehavior = false;
             this.listPhysicalDisks.View = System.Windows.Forms.View.Details;
             this.listPhysicalDisks.ColumnWidthChanging += new System.Windows.Forms.ColumnWidthChangingEventHandler(this.listPhysicalDisks_ColumnWidthChanging);

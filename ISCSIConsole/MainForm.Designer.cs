@@ -48,7 +48,7 @@ namespace ISCSIConsole
             this.btnStart.Location = new System.Drawing.Point(354, 12);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(106, 23);
-            this.btnStart.TabIndex = 0;
+            this.btnStart.TabIndex = 4;
             this.btnStart.Text = "Start";
             this.btnStart.UseVisualStyleBackColor = true;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
@@ -59,7 +59,7 @@ namespace ISCSIConsole
             this.lblPort.Location = new System.Drawing.Point(232, 17);
             this.lblPort.Name = "lblPort";
             this.lblPort.Size = new System.Drawing.Size(53, 13);
-            this.lblPort.TabIndex = 1;
+            this.lblPort.TabIndex = 2;
             this.lblPort.Text = "TCP Port:";
             // 
             // txtPort
@@ -67,7 +67,7 @@ namespace ISCSIConsole
             this.txtPort.Location = new System.Drawing.Point(291, 14);
             this.txtPort.Name = "txtPort";
             this.txtPort.Size = new System.Drawing.Size(53, 20);
-            this.txtPort.TabIndex = 2;
+            this.txtPort.TabIndex = 3;
             this.txtPort.Text = "3260";
             // 
             // lblIPAddress
@@ -76,7 +76,7 @@ namespace ISCSIConsole
             this.lblIPAddress.Location = new System.Drawing.Point(12, 16);
             this.lblIPAddress.Name = "lblIPAddress";
             this.lblIPAddress.Size = new System.Drawing.Size(61, 13);
-            this.lblIPAddress.TabIndex = 3;
+            this.lblIPAddress.TabIndex = 0;
             this.lblIPAddress.Text = "IP Address:";
             // 
             // comboIPAddress
@@ -86,14 +86,14 @@ namespace ISCSIConsole
             this.comboIPAddress.Location = new System.Drawing.Point(79, 13);
             this.comboIPAddress.Name = "comboIPAddress";
             this.comboIPAddress.Size = new System.Drawing.Size(136, 21);
-            this.comboIPAddress.TabIndex = 4;
+            this.comboIPAddress.TabIndex = 1;
             // 
             // btnAddTarget
             // 
             this.btnAddTarget.Location = new System.Drawing.Point(354, 57);
             this.btnAddTarget.Name = "btnAddTarget";
             this.btnAddTarget.Size = new System.Drawing.Size(106, 23);
-            this.btnAddTarget.TabIndex = 5;
+            this.btnAddTarget.TabIndex = 7;
             this.btnAddTarget.Text = "Add Target";
             this.btnAddTarget.UseVisualStyleBackColor = true;
             this.btnAddTarget.Click += new System.EventHandler(this.btnAddTarget_Click);
@@ -104,7 +104,7 @@ namespace ISCSIConsole
             this.lblTargets.Location = new System.Drawing.Point(12, 57);
             this.lblTargets.Name = "lblTargets";
             this.lblTargets.Size = new System.Drawing.Size(46, 13);
-            this.lblTargets.TabIndex = 7;
+            this.lblTargets.TabIndex = 5;
             this.lblTargets.Text = "Targets:";
             // 
             // btnRemoveTarget
@@ -124,7 +124,7 @@ namespace ISCSIConsole
             this.listTargets.Location = new System.Drawing.Point(79, 57);
             this.listTargets.Name = "listTargets";
             this.listTargets.Size = new System.Drawing.Size(265, 95);
-            this.listTargets.TabIndex = 9;
+            this.listTargets.TabIndex = 6;
             this.listTargets.SelectedIndexChanged += new System.EventHandler(this.listTargets_SelectedIndexChanged);
             // 
             // statusStrip1
