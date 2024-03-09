@@ -146,3 +146,11 @@ Revision History:
 
 1.5.2 - ISCSIClient: Fixed a bug related to localhost communication.
         ISCSIServer: Corrected documentation.
+
+1.5.3 - StandardInquiryData: Fix bug in GetBytes not reporting PeripheralDeviceType correctly.
+        Replace DiskAccessLibrary project reference with NuGet package reference.
+
+1.5.4 - Bugfix: TextRequestArgs: Set RequestParaemeters.
+        ISCSIServer: Use CancellationToken for keep alive thread if available.
+        Updated DiskAccessLibrary to v1.6.3
+        Internalized Utilities.
