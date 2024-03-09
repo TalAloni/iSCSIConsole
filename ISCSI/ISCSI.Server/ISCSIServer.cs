@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -24,6 +24,9 @@ namespace ISCSI.Server
         private Socket m_listenerSocket;
         private bool m_listening;
         private Thread m_keepAliveThread;
+#if !NET20
+        private CancellationTokenSource m_keepAliveCancellationTokenSource;
+#endif
         private TargetList m_targets = new TargetList();
         private SessionManager m_sessionManager = new SessionManager();
         private ConnectionManager m_connectionManager = new ConnectionManager();
@@ -99,11 +102,22 @@ namespace ISCSI.Server
 
                 if (keepAliveTime.HasValue)
                 {
+#if !NET20
+                    m_keepAliveCancellationTokenSource = new CancellationTokenSource();
+#endif
                     m_keepAliveThread = new Thread(delegate()
                     {
                         while (m_listening)
                         {
+#if NET20
                             Thread.Sleep(keepAliveTime.Value);
+#else
+                            bool cancelled = m_keepAliveCancellationTokenSource.Token.WaitHandle.WaitOne(keepAliveTime.Value);
+                            if (cancelled)
+                            {
+                                return;
+                            }
+#endif
                             m_connectionManager.SendKeepAlive();
                         }
                     });
@@ -168,7 +182,11 @@ namespace ISCSI.Server
             m_listening = false;
             if (m_keepAliveThread != null)
             {
+#if NET20
                 m_keepAliveThread.Abort();
+#else
+                m_keepAliveCancellationTokenSource?.Cancel();
+#endif
             }
             SocketUtils.ReleaseSocket(m_listenerSocket);
             lock (m_targets.Lock)
