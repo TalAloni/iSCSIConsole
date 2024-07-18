@@ -306,6 +306,11 @@ namespace ISCSI.Client
 
         public bool PingTarget()
         {
+            return PingTarget(new byte[0]);
+        }
+
+        public bool PingTarget(byte[] pingData)
+        {
             if (!m_isConnected)
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
@@ -317,6 +322,7 @@ namespace ISCSI.Client
             }
 
             NOPOutPDU request = ClientHelper.GetPingRequest(m_connection);
+            request.Data = pingData;
             SendPDU(request);
             NOPInPDU response = WaitForPDU(request.InitiatorTaskTag) as NOPInPDU;
             return response != null;
