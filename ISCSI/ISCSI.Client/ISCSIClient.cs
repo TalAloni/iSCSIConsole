@@ -311,6 +311,11 @@ namespace ISCSI.Client
 
         public bool PingTarget(byte[] pingData)
         {
+            return PingTarget(pingData, out _);
+        }
+
+        public bool PingTarget(byte[] pingData, out byte[] replyData)
+        {
             if (!m_isConnected)
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
@@ -325,6 +330,7 @@ namespace ISCSI.Client
             request.Data = pingData;
             SendPDU(request);
             NOPInPDU response = WaitForPDU(request.InitiatorTaskTag) as NOPInPDU;
+            replyData = response?.Data;
             return response != null;
         }
 
