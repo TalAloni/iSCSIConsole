@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using SCSI;
 using Utilities;
@@ -123,6 +122,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to ping target");
+            }
+
             TextRequestPDU request = ClientHelper.GetSendTargetsRequest(m_connection);
             SendPDU(request);
             TextResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as TextResponsePDU;
@@ -148,6 +153,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to retrieve LUN list");
+            }
+
             SCSICommandPDU reportLUNs = ClientHelper.GetReportLUNsCommand(m_connection, ReportLUNsParameter.MinimumAllocationLength);
             SendPDU(reportLUNs);
             SCSIDataInPDU data = WaitForPDU(reportLUNs.InitiatorTaskTag) as SCSIDataInPDU;
@@ -188,6 +199,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to send SCSI commands");
+            }
+
             SCSICommandPDU readCapacity = ClientHelper.GetReadCapacity10Command(m_connection, LUN);
             SendPDU(readCapacity);
             // SCSIResponsePDU with CheckCondition could be returned in case of an error
@@ -222,6 +239,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to send SCSI commands");
+            }
+
             SCSICommandPDU readCommand = ClientHelper.GetRead16Command(m_connection, LUN, sectorIndex, sectorCount, bytesPerSector);
             SendPDU(readCommand);
             // RFC 3720: Data payload is associated with a specific SCSI command through the Initiator Task Tag
@@ -252,6 +275,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to send SCSI commands");
+            }
+
             SCSICommandPDU writeCommand = ClientHelper.GetWrite16Command(m_connection, LUN, sectorIndex, data, bytesPerSector);
             SendPDU(writeCommand);
             ISCSIPDU response = WaitForPDU(writeCommand.InitiatorTaskTag);
@@ -281,6 +310,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to ping target");
+            }
+
             NOPOutPDU request = ClientHelper.GetPingRequest(m_connection);
             SendPDU(request);
             NOPInPDU response = WaitForPDU(request.InitiatorTaskTag) as NOPInPDU;
