@@ -18,11 +18,14 @@ namespace ISCSI.Client
 {
     public partial class ISCSIClient
     {
+        private static readonly int DefaultResponseTimeoutInMilliseconds = 5000;
+
         private ConnectionParameters m_connection = new ConnectionParameters();
 
         private string m_initiatorName;
         private IPAddress m_targetAddress;
         private int m_targetPort;
+        private int m_responseTimeoutInMilliseconds;
         private bool m_isConnected;
         private Socket m_clientSocket;
         
@@ -40,8 +43,14 @@ namespace ISCSI.Client
 
         public bool Connect(IPAddress targetAddress, int targetPort)
         {
+            return Connect(targetAddress, targetPort, DefaultResponseTimeoutInMilliseconds);
+        }
+
+        public bool Connect(IPAddress targetAddress, int targetPort, int responseTimeoutInMilliseconds)
+        {
             m_targetAddress = targetAddress;
             m_targetPort = targetPort;
+            m_responseTimeoutInMilliseconds = responseTimeoutInMilliseconds;
             if (!m_isConnected)
             {
                 m_clientSocket = new Socket(m_targetAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -446,10 +455,9 @@ namespace ISCSI.Client
 
         public ISCSIPDU WaitForPDU(uint initiatorTaskTag)
         {
-            const int TimeOut = 5000;
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            while (stopwatch.ElapsedMilliseconds < TimeOut)
+            while (stopwatch.ElapsedMilliseconds < m_responseTimeoutInMilliseconds)
             {
                 lock (m_incomingQueueLock)
                 {
