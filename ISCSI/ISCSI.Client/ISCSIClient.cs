@@ -347,11 +347,6 @@ namespace ISCSI.Client
         {
             ConnectionState state = (ConnectionState)ar.AsyncState;
 
-            if (!m_clientSocket.Connected)
-            {
-                return;
-            }
-
             int numberOfBytesReceived = 0;
             try
             {
