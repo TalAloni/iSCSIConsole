@@ -457,7 +457,7 @@ namespace ISCSI.Client
         {
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            while (stopwatch.ElapsedMilliseconds < m_responseTimeoutInMilliseconds)
+            while (stopwatch.ElapsedMilliseconds < m_responseTimeoutInMilliseconds && m_clientSocket.Connected)
             {
                 lock (m_incomingQueueLock)
                 {
