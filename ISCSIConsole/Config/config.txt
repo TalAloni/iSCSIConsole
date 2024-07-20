@@ -1,0 +1,4 @@
+iqn.1991-05.com.microsoft:target1=PhysicalDisk:6,
+iqn.1991-05.com.microsoft:target1=
+	PhysicalDisk:7,
+	PhysicalDisk:8,

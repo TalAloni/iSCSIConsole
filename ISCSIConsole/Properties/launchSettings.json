@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ISCSIConsole": {
+      "commandName": "Project",
+      "commandLineArgs": "/cfg Config/config.txt"
+    }
+  }
+}

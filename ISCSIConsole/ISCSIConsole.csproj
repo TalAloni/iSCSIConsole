@@ -30,6 +30,12 @@
     <EmbeddedResource Update="Win32\SelectVolumeForm.resx" ManifestResourceName="ISCSIConsole.SelectVolumeForm" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Config\config.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release' And '$(TargetFramework)' != 'netcoreapp3.1'">
       <Exec Command="&quot;$(ProjectDir)ILMerge\ILMerge.bat&quot; $(TargetFramework)" WorkingDirectory="$(ProjectDir)ILMerge" />
   </Target>

@@ -30,7 +30,7 @@ namespace ISCSIConsole
                 {
                     
                 }
-                if (args[0] == "/log")
+                else if (args[0] == "/log")
                 {
                     string path = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
                     if (!path.EndsWith(@"\"))
@@ -43,6 +43,10 @@ namespace ISCSIConsole
                     {
                         MessageBox.Show("Cannot open log file", "Error");
                     }
+                }
+                else if (args[0] == "/cfg")
+                {
+                    Config.Instance.Load(args[1]);
                 }
                 else
                 {

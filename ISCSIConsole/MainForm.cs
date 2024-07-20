@@ -53,6 +53,50 @@ namespace ISCSIConsole
             {
                 lblStatus.Text = "Some features require administrator privileges and have been disabled";
             }
+
+            LoadConfigTarget();
+        }
+
+        private void LoadConfigTarget()
+        {
+            if (Config.Instance.Targets.Count > 0)
+            {
+                foreach (var target in Config.Instance.Targets)
+                {
+                    List<Disk> m_disks = new List<Disk>();
+
+                    foreach (var targetDisk in target.Disks)
+                    {
+                        switch (targetDisk.DiskType)
+                        {
+                            case Config.DiskType.PhysicalDisk:
+                                var disk = new SelectPhysicalDiskForm().GetDisk(targetDisk);
+                                if(disk != null) 
+                                    m_disks.Add(disk);
+                                break;
+                        }
+                    }
+
+                    if (m_disks.Count > 0)
+                    {
+                        try
+                        {
+                            var m_target = new ISCSITarget(target.Name, m_disks);
+                            m_targets.Add(m_target);
+                            m_server.AddTarget(m_target);
+                            listTargets.Items.Add(m_target.TargetName);
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            Console.WriteLine(ex.Message, "Error");
+                            continue;
+                        }
+                    }
+                }
+                if(m_targets.Count > 0)
+                    btnStart_Click(null, null);
+            }
+
         }
 
         private void btnStart_Click(object sender, EventArgs e)

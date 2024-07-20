@@ -11,7 +11,7 @@ using Utilities;
 
 namespace ISCSIConsole
 {
-    public partial class SelectPhysicalDiskForm : Form
+    public partial class SelectPhysicalDiskForm : Form, IGetDiskFromConfig
     {
         private PhysicalDisk m_selectedDisk;
 
@@ -149,6 +149,65 @@ namespace ISCSIConsole
         {
             e.NewWidth = ((ListView)sender).Columns[e.ColumnIndex].Width;
             e.Cancel = true;
+        }
+
+        public Disk GetDisk(Config.BaseDisk config)
+        {
+            if (RuntimeHelper.IsWin32 && !SecurityHelper.IsAdministrator())
+                return null;
+            List<PhysicalDisk> physicalDisks = PhysicalDiskHelper.GetPhysicalDisks();
+            foreach (PhysicalDisk physicalDisk in physicalDisks)
+            {
+                if (physicalDisk.PhysicalDiskIndex == config.Index)
+                {
+
+                    if (Environment.OSVersion.Version.Major >= 6)
+                    {
+                        bool isDiskReadOnly;
+                        bool isOnline = physicalDisk.GetOnlineStatus(out isDiskReadOnly);
+                        if (isDiskReadOnly)
+                        {
+                            Console.WriteLine("The selected disk is set to readonly", "Error");
+                            return null;
+                        }
+
+                        if (isOnline)
+                        {
+                            bool success = physicalDisk.SetOnlineStatus(false);
+                            if (!success)
+                            {
+                                Console.WriteLine("Was not able to take the disk offline", "Error");
+                                return null;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (DynamicDisk.IsDynamicDisk(physicalDisk))
+                        {
+                        }
+                        else
+                        {
+                            // Locking a disk does not prevent Windows from accessing mounted volumes on it. (it does prevent creation of new volumes).
+                            // For basic disks we need to lock the Disk and Volumes, and we should also call UpdateDiskProperties() after releasing the lock.
+                            LockStatus status = LockHelper.LockBasicDiskAndVolumesOrNone(physicalDisk);
+                            if (status == LockStatus.CannotLockDisk)
+                            {
+                                Console.WriteLine("Unable to lock the disk", "Error");
+                                return null;
+                            }
+                            else if (status == LockStatus.CannotLockVolume)
+                            {
+                                Console.WriteLine("Unable to lock one of the volumes on the disk", "Error");
+                                return null;
+                            }
+                        }
+                    }
+
+                    return physicalDisk;
+                }
+            }
+            return null;
         }
     }
 }
