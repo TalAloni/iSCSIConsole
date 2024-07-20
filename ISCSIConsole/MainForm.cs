@@ -59,7 +59,7 @@ namespace ISCSIConsole
 
         private void LoadConfigTarget()
         {
-            if (Config.Instance.Targets.Count > 0)
+            if (Config.Instance.Targets != null)
             {
                 foreach (var target in Config.Instance.Targets)
                 {
