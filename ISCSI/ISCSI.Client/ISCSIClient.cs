@@ -88,6 +88,7 @@ namespace ISCSI.Client
             }
             m_connection.Session = new ISCSISession();
             m_connection.Session.ISID = ClientHelper.GetRandomISID();
+            m_connection.Session.TSIH = 0; // 0 is used on the first connection for a new session
             m_connection.CID = m_connection.Session.GetNextCID();
             // p.s. It's possible to perform a single stage login (stage 1 to stage 3, tested against Microsoft iSCSI Target v3.1)
             LoginRequestPDU request = ClientHelper.GetFirstStageLoginRequest(m_initiatorName, targetName, m_connection);

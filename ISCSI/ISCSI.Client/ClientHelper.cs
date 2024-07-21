@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -21,7 +21,7 @@ namespace ISCSI.Client
             LoginRequestPDU request = new LoginRequestPDU();
             request.InitiatorTaskTag = session.GetNextTaskTag();
             request.ISID = session.ISID;
-            request.TSIH = 0; // used on the first connection for a new session
+            request.TSIH = session.TSIH;
             request.CID = connection.CID;
             request.CmdSN = session.GetNextCmdSN(false);
             request.ExpStatSN = 0; 
@@ -46,7 +46,6 @@ namespace ISCSI.Client
                 // RFC 3720: For any connection within a session whose type is not "Discovery", the first Login Request MUST also include the TargetName key=value pair.
                 loginParameters.Add("SessionType", "Normal");
                 loginParameters.Add("TargetName", targetName);
-                
             }
             request.LoginParameters = loginParameters;
             return request;
