@@ -452,10 +452,15 @@ namespace ISCSI.Client
         {
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            while (stopwatch.ElapsedMilliseconds < m_responseTimeoutInMilliseconds && m_clientSocket.Connected)
+            while (stopwatch.ElapsedMilliseconds < m_responseTimeoutInMilliseconds)
             {
                 lock (m_incomingQueueLock)
                 {
+                    if (!m_clientSocket.Connected && m_incomingQueue.Count == 0)
+                    {
+                        return null;
+                    }
+
                     for (int index = 0; index < m_incomingQueue.Count; index++)
                     {
                         ISCSIPDU pdu = m_incomingQueue[index];
