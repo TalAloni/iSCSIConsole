@@ -119,6 +119,12 @@ namespace ISCSI.Client
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
+
+            if (m_connection.Session == null)
+            {
+                throw new InvalidOperationException("A login session must be successfully established before attempting to logout");
+            }
+
             LogoutRequestPDU request = ClientHelper.GetLogoutRequest(m_connection);
             SendPDU(request);
             LogoutResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LogoutResponsePDU;
