@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -114,6 +114,8 @@ namespace ISCSI
                     return new LogoutResponsePDU(buffer, offset);
                 case ISCSIOpCodeName.ReadyToTransfer:
                     return new ReadyToTransferPDU(buffer, offset);
+                case ISCSIOpCodeName.Reject:
+                    return new RejectPDU(buffer, offset);
                 default:
                     return new ISCSIPDU(buffer, offset);
             }
