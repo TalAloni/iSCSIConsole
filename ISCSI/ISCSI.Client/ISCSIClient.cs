@@ -82,14 +82,20 @@ namespace ISCSI.Client
         /// <param name="targetName">Set to null for discovery session</param>
         public bool Login(string targetName)
         {
+            return Login(targetName, null, null, null);
+        }
+
+        /// <param name="targetName">Set to null for discovery session</param>
+        protected internal bool Login(string targetName, ulong? isid, ushort? tsih, ushort? cid)
+        {
             if (!m_isConnected)
             {
                 throw new InvalidOperationException("iSCSI client is not connected");
             }
             m_connection.Session = new ISCSISession();
-            m_connection.Session.ISID = ClientHelper.GetRandomISID();
-            m_connection.Session.TSIH = 0; // 0 is used on the first connection for a new session
-            m_connection.CID = m_connection.Session.GetNextCID();
+            m_connection.Session.ISID = isid ?? ClientHelper.GetRandomISID();
+            m_connection.Session.TSIH = tsih ?? 0; // 0 is used on the first connection for a new session
+            m_connection.CID = cid ?? m_connection.Session.GetNextCID();
             // p.s. It's possible to perform a single stage login (stage 1 to stage 3, tested against Microsoft iSCSI Target v3.1)
             LoginRequestPDU request = ClientHelper.GetFirstStageLoginRequest(m_initiatorName, targetName, m_connection);
             SendPDU(request);
