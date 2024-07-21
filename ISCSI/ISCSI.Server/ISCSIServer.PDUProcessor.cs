@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2016 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+/* Copyright (C) 2012-2024 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -54,7 +54,7 @@ namespace ISCSI.Server
         {
             LogTrace("Entering ProcessPDU");
             
-            if (state.Session == null || !state.Session.IsFullFeaturePhase)
+            if (!state.ConnectionParameters.IsFullFeaturePhase)
             {
                 if (pdu is LoginRequestPDU)
                 {

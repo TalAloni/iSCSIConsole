@@ -30,7 +30,7 @@ namespace ISCSI.Server
         public readonly ulong ISID; // Initiator Session ID
         public readonly ushort TSIH; // Target Session Identifying Handle
         public bool IsDiscovery; // Indicate whether this is a discovery session
-        public bool IsFullFeaturePhase; // Indicate whether login has been completed
+        public bool IsFullFeaturePhase; // Indicate whether login has been completed for this session
         public bool CommandNumberingStarted;
         public uint ExpCmdSN;
 

@@ -207,6 +207,7 @@ namespace ISCSI.Server
                 {
                     if (request.NextStage == 3)
                     {
+                        connection.IsFullFeaturePhase = true;
                         session.IsFullFeaturePhase = true;
                     }
                     else if (request.NextStage != 1)
@@ -226,6 +227,7 @@ namespace ISCSI.Server
                 {
                     if (request.NextStage == 3)
                     {
+                        connection.IsFullFeaturePhase = true;
                         session.IsFullFeaturePhase = true;
                     }
                     else
