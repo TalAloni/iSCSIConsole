@@ -513,6 +513,30 @@ namespace ISCSI.Client
             }
         }
 
+        public ulong ISID
+        {
+            get
+            {
+                return m_connection.Session.ISID;
+            }
+        }
+
+        public ushort TSIH
+        {
+            get
+            {
+                return m_connection.Session.TSIH;
+            }
+        }
+
+        public ushort CID
+        {
+            get
+            {
+                return m_connection.CID;
+            }
+        }
+
         public static void Log(string message, params object[] args)
         {
             Log(String.Format(message, args));
