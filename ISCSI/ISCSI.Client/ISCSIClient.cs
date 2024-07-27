@@ -54,6 +54,7 @@ namespace ISCSI.Client
             if (!m_isConnected)
             {
                 m_clientSocket = new Socket(m_targetAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                m_clientSocket.NoDelay = true;
                 try
                 {
                     m_clientSocket.Connect(m_targetAddress, m_targetPort);
