@@ -368,16 +368,19 @@ namespace ISCSI.Client
             }
             catch (ArgumentException) // The IAsyncResult object was not returned from the corresponding synchronous method on this class.
             {
+                m_isConnected = false;
                 return;
             }
             catch (ObjectDisposedException)
             {
                 Log("[ReceiveCallback] EndReceive ObjectDisposedException");
+                m_isConnected = false;
                 return;
             }
             catch (SocketException ex)
             {
                 Log("[ReceiveCallback] EndReceive SocketException: " + ex.Message);
+                m_isConnected = false;
                 return;
             }
 
