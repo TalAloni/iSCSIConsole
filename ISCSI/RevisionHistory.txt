@@ -154,3 +154,11 @@ Revision History:
         ISCSIServer: Use CancellationToken for keep alive thread if available.
         Updated DiskAccessLibrary to v1.6.3
         Internalized Utilities.
+
+1.5.5 - ISCSIServer: Bugfix: Use IsFullFeaturePhase per connection.
+        ISCSIClient: Throw InvalidOperationException instead of NullReferenceException if session is required but not established.
+        ISCSIClient: PingTarget: Added overload accepting ping data and providing reply data.
+        ISCSIClient: Connect: Allow setting response timeout.
+        ISCSIClient: Improve client response time when server disconnects.
+        ISCSIClient: Throw InvalidOperationException instead of NullReferenceException if logout is attempted without login.
+        ISCSIClient: Add ISID, TSIH and CID properties.
