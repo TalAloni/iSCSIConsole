@@ -477,7 +477,16 @@ namespace ISCSI.Client
                     for (int index = 0; index < m_incomingQueue.Count; index++)
                     {
                         ISCSIPDU pdu = m_incomingQueue[index];
-                        if (pdu.InitiatorTaskTag == initiatorTaskTag)
+                        if (pdu is RejectPDU rejectPDU)
+                        {
+                            uint rejectedTaskTag = ISCSIPDU.GetInitiatorTaskTag(rejectPDU.Data, 0);
+                            if (rejectedTaskTag == initiatorTaskTag)
+                            {
+                                m_incomingQueue.RemoveAt(index);
+                                return pdu;
+                            }
+                        }
+                        else if (pdu.InitiatorTaskTag == initiatorTaskTag)
                         {
                             m_incomingQueue.RemoveAt(index);
                             return pdu;
