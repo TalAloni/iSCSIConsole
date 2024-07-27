@@ -100,7 +100,7 @@ namespace ISCSI.Client
             // p.s. It's possible to perform a single stage login (stage 1 to stage 3, tested against Microsoft iSCSI Target v3.1)
             LoginRequestPDU request = ClientHelper.GetFirstStageLoginRequest(m_initiatorName, targetName, m_connection);
             SendPDU(request);
-            LoginResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
+            LoginResponsePDU response = WaitForPDU<LoginResponsePDU>(request.InitiatorTaskTag);
             if (response != null && response.Status == LoginResponseStatusName.Success)
             {
                 m_connection.Session.TSIH = response.TSIH;
@@ -110,7 +110,7 @@ namespace ISCSI.Client
 
                 request = ClientHelper.GetSecondStageLoginRequest(response, m_connection, targetName == null);
                 SendPDU(request);
-                response = WaitForPDU(request.InitiatorTaskTag) as LoginResponsePDU;
+                response = WaitForPDU<LoginResponsePDU>(request.InitiatorTaskTag);
                 if (response != null && response.Status == LoginResponseStatusName.Success)
                 {
                     KeyValuePairList<string, string> loginParameters = KeyValuePairUtils.GetKeyValuePairList(response.LoginParametersText);
@@ -135,7 +135,7 @@ namespace ISCSI.Client
 
             LogoutRequestPDU request = ClientHelper.GetLogoutRequest(m_connection);
             SendPDU(request);
-            LogoutResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as LogoutResponsePDU;
+            LogoutResponsePDU response = WaitForPDU<LogoutResponsePDU>(request.InitiatorTaskTag);
             return (response != null && response.Response == LogoutResponse.ClosedSuccessfully);
         }
 
@@ -153,7 +153,7 @@ namespace ISCSI.Client
 
             TextRequestPDU request = ClientHelper.GetSendTargetsRequest(m_connection);
             SendPDU(request);
-            TextResponsePDU response = WaitForPDU(request.InitiatorTaskTag) as TextResponsePDU;
+            TextResponsePDU response = WaitForPDU<TextResponsePDU>(request.InitiatorTaskTag);
             if (response != null && response.Final)
             {
                 KeyValuePairList<string, string> entries = KeyValuePairUtils.GetKeyValuePairList(response.Text);
@@ -184,7 +184,7 @@ namespace ISCSI.Client
 
             SCSICommandPDU reportLUNs = ClientHelper.GetReportLUNsCommand(m_connection, ReportLUNsParameter.MinimumAllocationLength);
             SendPDU(reportLUNs);
-            SCSIDataInPDU data = WaitForPDU(reportLUNs.InitiatorTaskTag) as SCSIDataInPDU;
+            SCSIDataInPDU data = WaitForPDU<SCSIDataInPDU>(reportLUNs.InitiatorTaskTag);
             if (data != null && data.StatusPresent && data.Status == SCSIStatusCodeName.Good)
             {
                 uint requiredAllocationLength = ReportLUNsParameter.GetRequiredAllocationLength(data.Data);
@@ -192,7 +192,7 @@ namespace ISCSI.Client
                 {
                     reportLUNs = ClientHelper.GetReportLUNsCommand(m_connection, requiredAllocationLength);
                     m_clientSocket.Send(reportLUNs.GetBytes());
-                    data = WaitForPDU(reportLUNs.InitiatorTaskTag) as SCSIDataInPDU;
+                    data = WaitForPDU<SCSIDataInPDU>(reportLUNs.InitiatorTaskTag);
 
                     if (data == null || !data.StatusPresent || data.Status != SCSIStatusCodeName.Good)
                     {
@@ -231,7 +231,7 @@ namespace ISCSI.Client
             SCSICommandPDU readCapacity = ClientHelper.GetReadCapacity10Command(m_connection, LUN);
             SendPDU(readCapacity);
             // SCSIResponsePDU with CheckCondition could be returned in case of an error
-            SCSIDataInPDU data = WaitForPDU(readCapacity.InitiatorTaskTag) as SCSIDataInPDU;
+            SCSIDataInPDU data = WaitForPDU<SCSIDataInPDU>(readCapacity.InitiatorTaskTag);
             if (data != null && data.StatusPresent && data.Status == SCSIStatusCodeName.Good)
             {
                 ReadCapacity10Parameter capacity = new ReadCapacity10Parameter(data.Data);
@@ -243,7 +243,7 @@ namespace ISCSI.Client
 
                 readCapacity = ClientHelper.GetReadCapacity16Command(m_connection, LUN);
                 m_clientSocket.Send(readCapacity.GetBytes());
-                data = WaitForPDU(readCapacity.InitiatorTaskTag) as SCSIDataInPDU;
+                data = WaitForPDU<SCSIDataInPDU>(readCapacity.InitiatorTaskTag);
                 if (data != null && data.StatusPresent && data.Status == SCSIStatusCodeName.Good)
                 {
                     ReadCapacity16Parameter capacity16 = new ReadCapacity16Parameter(data.Data);
@@ -271,7 +271,7 @@ namespace ISCSI.Client
             SCSICommandPDU readCommand = ClientHelper.GetRead16Command(m_connection, LUN, sectorIndex, sectorCount, bytesPerSector);
             SendPDU(readCommand);
             // RFC 3720: Data payload is associated with a specific SCSI command through the Initiator Task Tag
-            SCSIDataInPDU data = WaitForPDU(readCommand.InitiatorTaskTag) as SCSIDataInPDU;
+            SCSIDataInPDU data = WaitForPDU<SCSIDataInPDU>(readCommand.InitiatorTaskTag);
             byte[] result = new byte[sectorCount * bytesPerSector];
             while (data != null)
             {
@@ -280,7 +280,7 @@ namespace ISCSI.Client
                 {
                     break;
                 }
-                data = WaitForPDU(readCommand.InitiatorTaskTag) as SCSIDataInPDU;
+                data = WaitForPDU<SCSIDataInPDU>(readCommand.InitiatorTaskTag);
             }
             if (data != null && data.Status == SCSIStatusCodeName.Good)
             {
@@ -352,7 +352,7 @@ namespace ISCSI.Client
             NOPOutPDU request = ClientHelper.GetPingRequest(m_connection);
             request.Data = pingData;
             SendPDU(request);
-            NOPInPDU response = WaitForPDU(request.InitiatorTaskTag) as NOPInPDU;
+            NOPInPDU response = WaitForPDU<NOPInPDU>(request.InitiatorTaskTag);
             replyData = response?.Data;
             return response != null;
         }
@@ -460,6 +460,21 @@ namespace ISCSI.Client
                 m_incomingQueue.Add(pdu);
                 m_incomingQueueEventHandle.Set();
             }
+        }
+
+        public T WaitForPDU<T>(uint initiatorTaskTag) where T : ISCSIPDU
+        {
+            ISCSIPDU response = WaitForPDU(initiatorTaskTag);
+            if (response is RejectPDU rejectPDU)
+            {
+                throw new InvalidOperationException($"Request rejected, reason: {rejectPDU.Reason}");
+            }
+            else if (response != null && !(response is T))
+            {
+                throw new InvalidDataException($"Server returned invalid PDU type, OpCode returned: {response.OpCode}");
+            }
+
+            return response as T;
         }
 
         public ISCSIPDU WaitForPDU(uint initiatorTaskTag)
