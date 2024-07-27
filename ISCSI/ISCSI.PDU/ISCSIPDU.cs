@@ -136,5 +136,10 @@ namespace ISCSI
 
             return length;
         }
+
+        public static uint GetInitiatorTaskTag(byte[] buffer, int offset)
+        {
+            return BigEndianConverter.ToUInt32(buffer, offset + 16);
+        }
     }
 }
