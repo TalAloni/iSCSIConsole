@@ -349,6 +349,16 @@ namespace ISCSI.Client
                 throw new InvalidOperationException("A login session must be successfully established before attempting to ping target");
             }
 
+            if (pingData.Length > m_connection.TargetMaxRecvDataSegmentLength)
+            {
+                throw new InvalidOperationException($"Attempted to send {pingData.Length} bytes which exceed the maximum allowed by the target ({m_connection.TargetMaxRecvDataSegmentLength})");
+            }
+
+            if (pingData.Length > m_connection.InitiatorMaxRecvDataSegmentLength)
+            {
+                throw new InvalidOperationException($"Attempted to request {pingData.Length} bytes which exceed the maximum allowed by the initiator ({m_connection.InitiatorMaxRecvDataSegmentLength})");
+            }
+
             NOPOutPDU request = ClientHelper.GetPingRequest(m_connection);
             request.Data = pingData;
             SendPDU(request);
