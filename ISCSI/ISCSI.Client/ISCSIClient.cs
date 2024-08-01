@@ -148,7 +148,7 @@ namespace ISCSI.Client
 
             if (m_connection.Session == null)
             {
-                throw new InvalidOperationException("A login session must be successfully established before attempting to ping target");
+                throw new InvalidOperationException("A login session must be successfully established before attempting to list targets");
             }
 
             TextRequestPDU request = ClientHelper.GetSendTargetsRequest(m_connection);
