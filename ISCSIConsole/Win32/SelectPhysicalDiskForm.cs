@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using DiskAccessLibrary;
@@ -40,9 +41,27 @@ namespace ISCSIConsole
                 item.SubItems.Add(sizeString);
                 if (Environment.OSVersion.Version.Major >= 6)
                 {
-                    bool isOnline = physicalDisk.GetOnlineStatus();
-                    string status = isOnline ? "Online" : "Offline";
-                    item.SubItems.Add(status);
+                    try
+                    {
+                        bool isOnline = physicalDisk.GetOnlineStatus();
+                        string status = isOnline ? "Online" : "Offline";
+                        item.SubItems.Add(status);
+                    } catch (IOException ex)
+                    {
+                        /* GetOnlineStatus() doesn't really pass us the last Win32 error code
+                         * but an error code of 32 (ERROR_SHARING_VIOLATION) is acceptable for
+                         * system disks. (The disk is probably in use by the OS).
+                         * 
+                         * Win32 Error: 32 is "The process cannot access the file because it is being used by another process".
+                         */
+                        if (ex.Message.EndsWith("Win32 Error: 32"))
+                        {
+                            item.SubItems.Add("Unknown");
+                        } else
+                        {
+                            throw ex;
+                        }
+                    }
                 }
                 item.Tag = physicalDisk;
                 listPhysicalDisks.Items.Add(item);
