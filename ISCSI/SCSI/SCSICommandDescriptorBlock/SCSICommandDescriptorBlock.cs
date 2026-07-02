@@ -49,6 +49,8 @@ namespace SCSI
                     return new SCSICommandDescriptorBlock6(buffer, offset);
                 case SCSIOpCodeName.ModeSense6:
                     return new ModeSense6CommandDescriptorBlock(buffer, offset);
+                case SCSIOpCodeName.ModeSense10:
+                    return new ModeSense10CommandDescriptorBlock(buffer, offset);
                 case SCSIOpCodeName.ReadCapacity10:
                     return new SCSICommandDescriptorBlock10(buffer, offset);
                 case SCSIOpCodeName.Read10:
@@ -73,6 +75,12 @@ namespace SCSI
                     return new SCSICommandDescriptorBlock16(buffer, offset);
                 case SCSIOpCodeName.ReportLUNs:
                     return new SCSICommandDescriptorBlock12(buffer, offset);
+                case SCSIOpCodeName.ReadDiscInformation:
+                    return new SCSICommandDescriptorBlock12(buffer, offset);
+                case SCSIOpCodeName.ReadToc:
+                    return new ReadTocCommand(buffer, offset);
+                case SCSIOpCodeName.GetConfiguration:
+                    return new GetConfigurationCommand(buffer, offset);
                 default:
                     throw new UnsupportedSCSICommandException(String.Format("Unknown SCSI command: 0x{0}", opCode.ToString("x")));
             }
